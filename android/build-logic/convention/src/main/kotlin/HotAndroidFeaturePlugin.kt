@@ -11,7 +11,7 @@ import org.gradle.kotlin.dsl.configure
  * feature; it gets routes from :core:model and UI kit from :core:ui (checkModuleGraph).
  */
 class HotAndroidFeaturePlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("hot.android.library")
         pluginManager.apply("hot.hilt")
         extensions.configure<LibraryExtension> {

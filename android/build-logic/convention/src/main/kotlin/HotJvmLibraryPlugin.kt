@@ -6,7 +6,7 @@ import org.gradle.api.Project
 
 /** hot.jvm.library: pure Kotlin modules without Android (core:model, domain:*). */
 class HotJvmLibraryPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.jvm")
         configureKotlinJvm()
         dependencies.apply {

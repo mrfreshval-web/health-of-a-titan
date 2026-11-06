@@ -5,7 +5,7 @@ import org.gradle.api.Project
 
 /** hot.hilt: Hilt via KSP for Android modules. */
 class HotHiltPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("com.google.devtools.ksp")
         pluginManager.apply("com.google.dagger.hilt.android")
         dependencies.apply {

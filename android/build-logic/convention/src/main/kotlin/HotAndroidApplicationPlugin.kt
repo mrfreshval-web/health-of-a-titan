@@ -8,7 +8,7 @@ import org.gradle.kotlin.dsl.configure
 
 /** hot.android.application: the :app module (Compose, Hilt). */
 class HotAndroidApplicationPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("com.android.application")
         extensions.configure<ApplicationExtension> {
             configureKotlinAndroid(this)

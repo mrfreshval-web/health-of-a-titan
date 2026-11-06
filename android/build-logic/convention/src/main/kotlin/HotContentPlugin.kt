@@ -10,7 +10,7 @@ import org.gradle.kotlin.dsl.register
  * output to every variant's assets. Apply after hot.android.application.
  */
 class HotContentPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         val contentCompile = tasks.register<ContentCompileTask>("contentCompile") {
             group = "build"
             description = "Validates content/*.yaml and compiles it to JSON assets (A14 §2)."

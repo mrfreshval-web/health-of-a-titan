@@ -9,7 +9,7 @@ import org.gradle.kotlin.dsl.configure
 
 /** hot.android.library: core:* Android modules (no Compose unless they opt in). */
 class HotAndroidLibraryPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("com.android.library")
         extensions.configure<LibraryExtension> {
             configureKotlinAndroid(this)

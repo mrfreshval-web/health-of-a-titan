@@ -14,7 +14,7 @@ import org.gradle.kotlin.dsl.withType
  * inspect the exported schema.
  */
 class HotRoomPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
+    override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("androidx.room")
         pluginManager.apply("com.google.devtools.ksp")
         val schemaDir = layout.projectDirectory.dir("schemas")

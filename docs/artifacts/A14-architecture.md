@@ -279,7 +279,7 @@ YAML-контент разбирается **на этапе сборки** в G
 **AppAuth.** `Authorization: Bearer <WHOOP access token>`. При первой встрече токена Worker вызывает `GET /developer/v2/user/profile/basic` и сравнивает `user_id` с `ALLOWED_WHOOP_USER_IDS`. Результат кэшируется в KV под `sha256(token)` на 50 минут, поэтому лишних вызовов WHOOP нет. Секретов в APK по-прежнему нет.
 
 **Риски Worker:**
-- 10 мс CPU на бесплатном тарифе. Тяжёлые места: base64 для аудио и подпись RS256 для FCM (WebCrypto, токен кэшируется на 55 минут). Если упрёмся в лимит, переходим на Workers Paid за $5 в месяц.
+- Workers Paid ($5 в месяц) с первого дня (D-021): лимит CPU на бесплатном тарифе (10 мс) слишком мал для стриминга Claude, подписи RS256 для FCM и base64-аудио.
 - Вебхуки WHOOP иногда не доходят [Факт: форум сообщества WHOOP, «Sleep webhook not coming through»]. Поэтому есть запасной опрос (ADR-11).
 
 **Секреты Worker** (передаются из GitHub Secrets через `wrangler-action`): `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `ALLOWED_WHOOP_USER_IDS`, `ANTHROPIC_API_KEY`, `GOOGLE_TTS_API_KEY`, `FCM_SERVICE_ACCOUNT_JSON`. Несекретные значения в `vars`: `LLM_MODELS`, `DAILY_TOKEN_CAP`, `FCM_PROJECT_ID`.

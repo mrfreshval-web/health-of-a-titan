@@ -25,7 +25,7 @@ class HotRoomPlugin : Plugin<Project> {
             schemaDirectory(schemaDir.asFile.path)
         }
         dependencies.apply {
-            add("implementation", libs.lib("room-runtime"))
+            add("api", libs.lib("room-runtime")) // HotDatabase exposes RoomDatabase in its public API
             add("implementation", libs.lib("room-ktx"))
             add("ksp", libs.lib("room-compiler"))
         }

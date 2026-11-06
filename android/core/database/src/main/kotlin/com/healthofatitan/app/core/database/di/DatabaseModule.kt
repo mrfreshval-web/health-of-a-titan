@@ -1,0 +1,49 @@
+package com.healthofatitan.app.core.database.di
+
+import android.content.Context
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.security.DatabaseKeyProvider
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DatabaseModule {
+
+    /**
+     * SQLCipher-encrypted Room database (A14 §3.1): key K_db from Android Keystore,
+     * `PRAGMA secure_delete = ON` on every open. Opening the file with plain `sqlite3`
+     * fails with "file is not a database".
+     */
+    @Provides
+    @Singleton
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        keyProvider: DatabaseKeyProvider,
+    ): HotDatabase {
+        System.loadLibrary("sqlcipher")
+        val factory = SupportOpenHelperFactory(keyProvider.getOrCreateKey())
+        return Room.databaseBuilder(context, HotDatabase::class.java, HotDatabase.FILE_NAME)
+            .openHelperFactory(factory)
+            .addCallback(
+                object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        db.query("PRAGMA secure_delete = ON").use { it.moveToFirst() }
+                    }
+                },
+            )
+            .build()
+    }
+
+    @Provides
+    fun provideConsentDao(db: HotDatabase): ConsentDao = db.consentDao()
+}

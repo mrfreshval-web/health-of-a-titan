@@ -1,0 +1,29 @@
+# Secrets — never commit (CLAUDE.md red lines, A14 §9 step 9)
+local.properties
+*.jks
+*.keystore
+google-services.json
+.dev.vars
+.env
+.env.*
+
+# Gradle / Android
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.iml
+.idea/
+.kotlin/
+
+# Node / Worker
+node_modules/
+.wrangler/
+dist/
+coverage/
+
+# OS
+.DS_Store

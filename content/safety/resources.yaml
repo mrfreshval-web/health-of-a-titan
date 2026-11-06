@@ -1,0 +1,16 @@
+# Emergency resources by country (A07 §4.5, A11 §8.1). Used offline by the SOS screen.
+# Slice 0: pipeline example only — the SOS screen still uses built-in US numbers.
+# Crisis content: changes only with review by Agent 10.
+version: 1
+reviewedBy: []
+status: draft
+countries:
+  US:
+    emergency:
+      number: "911"
+      label: "911"
+    crisisLine:
+      number: "988"
+      label: "988 — поговорить"
+      sms: "988"
+      chatUrl: "https://988lifeline.org/chat/"

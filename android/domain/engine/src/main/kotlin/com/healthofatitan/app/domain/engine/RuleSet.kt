@@ -1,7 +1,7 @@
 package com.healthofatitan.app.domain.engine
 
 /**
- * Rule ids and versions this engine implements (A09 §3, `content/rules/*.yaml`; A19 §1.2).
+ * Rule ids and versions this engine implements (A09 §3, the YAML files in `content/rules`; A19 §1.2).
  * A changed condition or text means `version + 1` here and in the YAML (A09 §6); stored days keep
  * the `ruleId@ver` they were built with and are never recomputed.
  */

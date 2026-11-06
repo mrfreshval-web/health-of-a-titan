@@ -120,4 +120,53 @@ function columnSil(h, w, { rim = 'rgba(255,214,160,.55)' } = {}) {
   </svg>`;
 }
 
-module.exports = { pulsePath, axisGlyph, ring, modeGlyph, icon, columnSil, PULSE };
+
+// ---------------------------------------------------------------- Titan pictograms (24 grid, monoline 1.6)
+// Base grammar: two columns (support) + the Titan (head, arms reaching the capitals, drape-free body).
+const COLS = 'M4 5v14.5M20 5v14.5M2.6 4.6h2.8M18.6 4.6h2.8M2.6 19.6h2.8M18.6 19.6h2.8';
+const T_HEAD = (cx = 12, cy = 6.4, r = 1.7) => `<circle cx="${cx}" cy="${cy}" r="${r}"/>`;
+const T_BODY = 'M5.6 6.4C8.2 8.7 9.7 9.5 12 9.5s3.8-.8 6.4-3.1M12 9.5v4.9M12 14.4l-2.1 5.1M12 14.4l2.1 5.1';
+const PICTO = {
+  // spheres
+  body: `<path d="${COLS}"/>${T_HEAD()}<path d="${T_BODY}"/>`,
+  sleep: `<path d="${COLS}"/><circle cx="7.6" cy="16.2" r="1.4"/><path d="M9.4 16.6h8.6M9.4 18.4h8.6"/><path d="M13.2 6.6a3.2 3.2 0 1 0 3.6 3.9 2.6 2.6 0 0 1-3.6-3.9Z"/>`,
+  work: `<path d="M2.6 4.6h18.8M4 5v14.5M20 5v14.5M2.6 19.6h2.8M18.6 19.6h2.8"/><path d="M9.6 4.9 10.4 9.6M14.4 4.9 13.6 9.6"/><circle cx="12" cy="7.6" r="1.5"/><path d="M10.4 9.6h3.2M12 9.6v4.8M12 14.4l-2.1 5.1M12 14.4l2.1 5.1"/>`,
+  food: `<path d="${COLS}"/>${T_HEAD(12, 6.6, 1.6)}<path d="M12 8.4v2.4M7.4 11.6h9.2a4.6 4.6 0 0 1-9.2 0Z"/><path d="M10 19.4h4"/>`,
+  people: `<path d="${COLS}"/><circle cx="9" cy="7.4" r="1.4"/><circle cx="15" cy="7.4" r="1.4"/><path d="M5.6 7.2 9 10.4l3 1 3-1 3.4-3.2M9 9.4v5M15 9.4v5M9 14.4l-1.3 5.1M9 14.4l1.3 5.1M15 14.4l-1.3 5.1M15 14.4l1.3 5.1"/>`,
+  mind: `<path d="${COLS}"/><circle cx="12" cy="10.4" r="2.4"/><circle cx="12" cy="10.4" r="5.2" stroke-dasharray="1.4 2"/><path d="M7.6 19.5c.6-2.6 2.2-3.8 4.4-3.8s3.8 1.2 4.4 3.8"/>`,
+  goal: `<path d="${COLS}"/>${T_HEAD(11, 6.6, 1.6)}<path d="M11 8.4l1 5M12 13.4l-2.6 2.4-.4 3.7M12 13.4l3 2.2.8 3.8M11.2 9.6 7.6 11M11.4 9.4l3.4-2.6 2.4.2"/>`,
+  // modes: the sun is a ring around the Titan
+  razgon: `<path d="M2 19.6h20"/><circle cx="12" cy="11.2" r="6.6"/><path d="M12 1.6v1.4M4.2 4.4l1 1M19.8 4.4l-1 1"/>${T_HEAD(12, 9.6, 1.3)}<path d="M8.2 9.8 12 12l3.8-2.2M12 12v3.6M12 15.6l-1.4 4M12 15.6l1.4 4"/>`,
+  rovno: `<path d="M2 19.6h20"/><path d="M4.6 19.6a7.4 7.4 0 0 1 14.8 0"/>${T_HEAD(12, 10.6, 1.3)}<path d="M8.6 11.4 12 13.2l3.4-1.8M12 13.2v3M12 16.2l-1.3 3.4M12 16.2l1.3 3.4"/>`,
+  berezhno: `<path d="M2 14.6h20"/><path d="M4.6 14.6a7.4 7.4 0 0 0 14.8 0" stroke-dasharray="1.6 2.2"/>${T_HEAD(12, 6.4, 1.3)}<path d="M12 8v3.6M10 9.6 12 9l2 .6M12 11.6l-2.4 3M12 11.6l2.4 3"/>`,
+  // statuses
+  seal: `<circle cx="12" cy="12" r="8.6"/><path d="m8.2 12.2 2.6 2.6 5-5.2"/>`,
+  self: `<circle cx="12" cy="12" r="8.6" stroke-dasharray="2 2.2"/><path d="m8.2 12.2 2.6 2.6 5-5.2"/>`,
+  changed: `<path d="M5 9h13l-3-3M19 15H6l3 3"/>`,
+  now: `<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/>`,
+  nodata: `<path d="${COLS}" opacity=".5"/><g stroke-dasharray="1.2 2">${T_HEAD()}<path d="${T_BODY}"/></g>`,
+  // feelings after training
+  easy: `<path d="${COLS}" opacity=".55"/>${T_HEAD(12, 7.4, 1.5)}<path d="M8.6 2.8 10.4 9.4h3.2l1.8-6.6M12 9.4v5M12 14.4l-2.4 5.1M12 14.4l2.4 5.1"/>`,
+  steady: `<path d="${COLS}"/>${T_HEAD()}<path d="${T_BODY}"/>`,
+  heavy: `<path d="M2.6 8.4h18.8M4 8.8v10.7M20 8.8v10.7M2.6 19.6h2.8M18.6 19.6h2.8"/><circle cx="12" cy="11.2" r="1.5"/><path d="M9.4 8.7 10.6 12.4M14.6 8.7 13.4 12.4M10.6 12.6h2.8M12 12.6v3.2M12 15.8l-2.6 1.4.6 2.4M12 15.8l2.6 1.4-.6 2.4"/>`,
+  // camera poses
+  front: `${T_HEAD(12, 4.6, 1.7)}<path d="M12 6.4v7.6M7 9.2 12 8l5 1.2M7 9.2l-1.4 4.6M17 9.2l1.4 4.6M12 14l-2 6M12 14l2 6"/>`,
+  side: `${T_HEAD(12, 4.6, 1.7)}<path d="M13.6 4.6h.8M12 6.4v7.6M12 8.6l1.2 5M12 14l-.6 6M12 14l1.4 6"/>`,
+  back: `${T_HEAD(12, 4.6, 1.7)}<path d="M12 6.4v7.6M7 9.2 12 8l5 1.2M7 9.2l-1.4 4.6M17 9.2l1.4 4.6M12 14l-2 6M12 14l2 6"/><path d="M12 7.6v6" stroke-dasharray="1 1.4" stroke-width="2.6" opacity=".45"/>`,
+  // data
+  heart: `<path d="M12 19.2S4 14.6 4 9.2A4 4 0 0 1 12 7.6a4 4 0 0 1 8 1.6c0 5.4-8 10-8 10Z"/><path d="M7.2 12h2.6l1.2-2 2 4 1.2-2h2.6"/>`,
+  charge: `<circle cx="12" cy="12" r="8.6" stroke-dasharray="40 100" transform="rotate(-90 12 12)"/><circle cx="12" cy="12" r="8.6" opacity=".3"/><path d="M12.8 7.6 9.8 12.4h2.8l-.8 4 3-4.8H12l.8-4Z"/>`,
+  ceiling: `<path d="M3 6.4h18" stroke-dasharray="2 2"/><path d="M4 19.6c3-1.2 4.4-6 6.4-6s2.6 3 4.2 3 2.6-4.4 5.4-6.6"/>`,
+  steps: `<path d="M8.5 4.5c1.7 0 2.6 2 2.3 4.4-.2 1.6-1 2.6-2.4 2.6S6 10.5 6 8.9C6 6.5 6.9 4.5 8.5 4.5Z"/><path d="M15.5 7.5c1.6 0 2.5 1.8 2.3 4-.2 1.5-1 2.5-2.3 2.5s-2.2-1-2.2-2.5c0-2.2.6-4 2.2-4Z"/><path d="M7 14.4h3.4M13.6 17h3.4"/>`,
+  zones: `<path d="M4 18V14M9 18V9M14 18V11M19 18v-3"/>`,
+  // camera checks
+  level: `<path d="M3 12h18"/><circle cx="12" cy="12" r="3"/><path d="M6 8v8M18 8v8"/>`,
+  distance: `<path d="M4 12h16M7 9l-3 3 3 3M17 9l3 3-3 3"/>`,
+  lightq: `<circle cx="12" cy="12" r="3.6"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M6 18l1.4-1.4M16.6 7.4 18 6"/>`,
+  flip: `<path d="M4 8.5h11.5a4 4 0 0 1 0 8H9"/><path d="m7 5.5-3 3 3 3"/>`,
+};
+function picto(name, size = 24, sw = 1.6, color = 'currentColor') {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${PICTO[name]}</svg>`;
+}
+
+module.exports = { pulsePath, axisGlyph, ring, modeGlyph, icon, columnSil, PULSE, picto, PICTO };

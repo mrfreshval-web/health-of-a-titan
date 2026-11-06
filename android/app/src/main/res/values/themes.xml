@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme only; UI colors come from Compose HotTheme (A11 §12.1). Dark by default. -->
+    <style name="Theme.Hot" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/hot_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

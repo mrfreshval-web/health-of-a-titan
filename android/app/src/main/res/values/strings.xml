@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HoT</string>
+    <string name="tile_sos_label">HoT SOS</string>
+    <string name="shortcut_sos_short">SOS</string>
+    <string name="shortcut_sos_long">SOS: срочная поддержка</string>
+</resources>

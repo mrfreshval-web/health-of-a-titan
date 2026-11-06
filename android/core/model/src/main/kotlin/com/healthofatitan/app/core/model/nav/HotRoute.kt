@@ -10,6 +10,9 @@ object HotRoute {
     const val WEEK = "week"
     const val ME = "me"
 
+    /** «Я → Подключения → WHOOP» (A11 §11, A18 И1.1); lives under the «Я» tab. */
+    const val WHOOP = "whoop"
+
     /** Outside the tabs: reachable in 1 tap from every screen, tile and shortcut. */
     const val SOS = "sos"
 

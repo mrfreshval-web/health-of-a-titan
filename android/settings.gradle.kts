@@ -40,3 +40,7 @@ include(":feature:mentor")
 include(":feature:week")
 include(":feature:me")
 include(":feature:sos")
+// Slice 1 (WHOOP, personal norm):
+include(":core:network")
+include(":domain:metrics")
+include(":integration:whoop")

@@ -14,6 +14,9 @@ class HotAndroidApplicationPlugin : Plugin<Project> {
             configureKotlinAndroid(this)
             configureCompose(this)
             defaultConfig.targetSdk = HotSdk.TARGET
+            // AppAuth's redirect activity (WHOOP OAuth, A14 ADR-03) needs the custom scheme in every
+            // merged manifest, also in library unit tests: com.healthofatitan.app://oauth/whoop.
+            defaultConfig.manifestPlaceholders["appAuthRedirectScheme"] = HotSdk.OAUTH_REDIRECT_SCHEME
             defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
             testOptions.unitTests.isIncludeAndroidResources = true
             lint.abortOnError = true

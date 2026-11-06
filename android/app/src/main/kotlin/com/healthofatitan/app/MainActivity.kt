@@ -14,13 +14,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
+import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.navigation.HotApp
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var whoop: WhoopConnection
 
     private var pendingRoute by mutableStateOf<String?>(null)
 
@@ -54,6 +61,12 @@ class MainActivity : ComponentActivity() {
                 HotApp(pendingRoute = pendingRoute, onPendingRouteConsumed = { pendingRoute = null })
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // A18 И1.2 ①: every app start refreshes the 28-day window unless it is fresh (WorkManager).
+        lifecycleScope.launch { runCatching { whoop.onAppOpen() } }
     }
 
     override fun onNewIntent(intent: Intent) {

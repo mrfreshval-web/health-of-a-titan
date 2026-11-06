@@ -19,7 +19,6 @@ const val WEEK_SCREEN_TAG = "screen_week"
 @Composable
 fun WeekScreen(modifier: Modifier = Modifier) {
     StubScreen(
-        headline = "Неделя",
         lead = "Паспорт недели: Монограмма, грани по дням, одно наблюдение и цель недели.",
         blocks = listOf("Монограмма недели", "Грани по дням", "Наблюдение недели", "Цель недели"),
         testTag = WEEK_SCREEN_TAG,

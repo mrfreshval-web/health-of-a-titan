@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window theme only; UI colors come from Compose HotTheme (A11 §12.1). Dark by default. -->
+    <!-- Window theme only; UI colours come from Compose HotTheme «Колоннада» (A36). Always dark:
+         the window is «Ночь», bars are transparent (edge-to-edge) with light icons. -->
     <style name="Theme.Hot" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/hot_background</item>
+        <item name="android:windowBackground">@color/hot_night</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Launch theme (androidx.core:core-splashscreen): «Графит» background and the animated mark,
+         «пульс оживляет титана», 1000 ms (brand/mark-v2 §7). Then MainActivity switches to Theme.Hot. -->
+    <style name="Theme.Hot.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/hot_graphite</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_hot_splash</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.Hot</item>
     </style>
 </resources>

@@ -1,19 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shortcut icon: gold lifebuoy on the brand background (red is reserved for flags, A11 §12.1). -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-    <path
-        android:fillColor="@color/hot_background"
-        android:pathData="M24,0A24,24 0,1 1,24,48A24,24 0,1 1,24,0Z" />
-    <group
-        android:translateX="12"
-        android:translateY="12">
-        <path
-            android:fillColor="@color/hot_gold"
-            android:fillType="evenOdd"
-            android:pathData="M12,2A10,10 0,1 1,12,22A10,10 0,1 1,12,2ZM12,7A5,5 0,1 0,12,17A5,5 0,1 0,12,7ZM10.5,2.5h3v4.3h-3zM10.5,17.2h3v4.3h-3zM2.5,10.5h4.3v3h-4.3zM17.2,10.5h4.3v3h-4.3z" />
-    </group>
-</vector>
+<!-- Long-press shortcut «SOS»: adaptive, so the launcher masks it like the app icon.
+     Sober on purpose (A36 §11 rule 7): ivory lifebuoy on «Ночь», no gold, no glow; red stays for flags. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/hot_night" />
+    <foreground android:drawable="@drawable/ic_shortcut_sos_foreground" />
+    <monochrome android:drawable="@drawable/ic_shortcut_sos_foreground" />
+</adaptive-icon>

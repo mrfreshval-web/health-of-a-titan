@@ -19,10 +19,10 @@ const val TODAY_SCREEN_TAG = "screen_today"
 @Composable
 fun TodayScreen(modifier: Modifier = Modifier) {
     StubScreen(
-        headline = "Сегодня",
         lead = "Утро за пару минут: состояние, план и одно главное. Карточки появятся с первыми данными WHOOP.",
         blocks = listOf("Состояние и Монограмма дня", "Утро · 1 мин", "Тренировка дня", "Тарелка дня", "Работа", "Стек · утро"),
         testTag = TODAY_SCREEN_TAG,
+        columns = 2,
         modifier = modifier,
     )
 }

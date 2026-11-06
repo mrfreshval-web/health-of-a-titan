@@ -18,6 +18,8 @@ class RedOnlyForFlagsTest {
         "facetWeatherHeavy" to facetWeatherHeavy, "facetConnections" to facetConnections,
         "facetFuel" to facetFuel, "facetBackpack" to facetBackpack, "modeRazgon" to modeRazgon,
         "modeRovno" to modeRovno, "modeBerezhno" to modeBerezhno,
+        "rule" to rule, "ruleSoft" to ruleSoft, "hairline" to hairline, "textTertiary" to textTertiary,
+        "skyTop" to skyTop,
     )
 
     private fun isRed(c: Color): Boolean {
@@ -35,6 +37,21 @@ class RedOnlyForFlagsTest {
         for ((theme, colors) in listOf("dark" to DarkHotColors, "light" to LightHotColors)) {
             colors.all().forEach { (name, color) ->
                 assertTrue(!isRed(color), "$theme.$name looks red; red is only for flags (A11 §12.1)")
+            }
+        }
+    }
+
+    @Test
+    fun `no colour scheme role outside error is red`() {
+        for ((theme, scheme) in listOf("dark" to HotDarkScheme, "light" to HotLightScheme)) {
+            mapOf(
+                "primary" to scheme.primary, "primaryContainer" to scheme.primaryContainer,
+                "secondary" to scheme.secondary, "tertiary" to scheme.tertiary,
+                "background" to scheme.background, "surface" to scheme.surface,
+                "surfaceContainer" to scheme.surfaceContainer, "onSurface" to scheme.onSurface,
+                "outline" to scheme.outline,
+            ).forEach { (name, color) ->
+                assertTrue(!isRed(color), "$theme.$name looks red; red is only for flags (A36 §2.1)")
             }
         }
     }

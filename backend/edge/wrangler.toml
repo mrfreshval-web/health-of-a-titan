@@ -1,5 +1,5 @@
-# hot-edge — stateless Worker (A14 §5). No secrets in this file: they are set from GitHub
-# Secrets by .github/workflows/backend-deploy.yml (wrangler secret put) or `wrangler secret put`.
+# hot-edge — thin Worker (A14 §5). No secrets in this file: they are set from GitHub Secrets by
+# .github/workflows/backend.yml (wrangler secret put) or by hand with `wrangler secret put`.
 name = "hot-edge"
 main = "src/index.ts"
 compatibility_date = "2026-10-15"
@@ -9,7 +9,24 @@ workers_dev = true
 [ai]
 binding = "AI"
 
-# KV: only FCM tokens and rate-limit counters (A14 §5). Create once, then uncomment:
+# Durable Object WhoopVault: the single owner of each user's WHOOP refresh token, sealed with
+# AES-256-GCM under TOKEN_ENC_KEY (D-025, A18 И1.1a). SQLite-backed storage.
+[[durable_objects.bindings]]
+name = "WHOOP_VAULT"
+class_name = "WhoopVault"
+
+[[migrations]]
+tag = "v1-whoop-vault"
+new_sqlite_classes = ["WhoopVault"]
+
+# Rate limit for the unauthenticated OAuth routes (/whoop/authorize, /whoop/token): 20 per
+# minute per IP. namespace_id is any account-unique integer string.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1101"
+simple = { limit = 20, period = 60 }
+
+# KV: only FCM tokens and rate-limit counters (A14 §5, slice 3). Create once, then uncomment:
 #   npx wrangler kv namespace create HOT_KV
 # [[kv_namespaces]]
 # binding = "HOT_KV"
@@ -20,7 +37,8 @@ binding = "AI"
 LLM_MODELS = "claude-opus-5-5"
 DAILY_TOKEN_CAP = "2000000"
 FCM_PROJECT_ID = ""
+WHOOP_REDIRECT_URI = "com.healthofatitan.app://oauth/whoop"
 
 # Secrets (names only, values never here):
-#   WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, ALLOWED_WHOOP_USER_IDS,
+#   WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, ALLOWED_WHOOP_USER_IDS, TOKEN_ENC_KEY,
 #   ANTHROPIC_API_KEY, GOOGLE_TTS_API_KEY, FCM_SERVICE_ACCOUNT_JSON

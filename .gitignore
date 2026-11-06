@@ -27,3 +27,6 @@ coverage/
 
 # OS
 .DS_Store
+
+# Local agent worktrees
+.claude/worktrees/

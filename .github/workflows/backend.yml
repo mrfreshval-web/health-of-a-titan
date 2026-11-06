@@ -1,0 +1,109 @@
+# Worker hot-edge (A14 §5, §9 step 10): typecheck + tests on every push/PR touching backend;
+# deploy to Cloudflare only from main and only if CLOUDFLARE_* secrets exist (else skipped).
+name: Backend (hot-edge)
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend/edge
+
+jobs:
+  test:
+    name: Typecheck and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/edge/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Bundle check (no upload)
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/hot-edge-dist"
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cloudflare secrets available?
+        id: cf
+        working-directory: .
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Worker deploy skipped::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID are not set (A14 §10 step 2)."
+          fi
+
+      - if: steps.cf.outputs.enabled == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - if: steps.cf.outputs.enabled == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/edge/package-lock.json
+
+      - if: steps.cf.outputs.enabled == 'true'
+        run: npm ci
+
+      - name: Deploy and sync secrets
+        id: deploy
+        if: steps.cf.outputs.enabled == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WHOOP_CLIENT_ID: ${{ secrets.WHOOP_CLIENT_ID }}
+          WHOOP_CLIENT_SECRET: ${{ secrets.WHOOP_CLIENT_SECRET }}
+          ALLOWED_WHOOP_USER_IDS: ${{ secrets.ALLOWED_WHOOP_USER_IDS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+          FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+        run: |
+          npx wrangler deploy | tee "$RUNNER_TEMP/deploy.log"
+          # Upload only the secrets that are set; values never reach the log.
+          for name in WHOOP_CLIENT_ID WHOOP_CLIENT_SECRET ALLOWED_WHOOP_USER_IDS ANTHROPIC_API_KEY GOOGLE_TTS_API_KEY FCM_SERVICE_ACCOUNT_JSON; do
+            if [ -n "${!name}" ]; then
+              printf '%s' "${!name}" | npx wrangler secret put "$name" > /dev/null
+              echo "secret $name: updated"
+            fi
+          done
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n1 || true)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test /health
+        if: steps.cf.outputs.enabled == 'true' && steps.deploy.outputs.url != ''
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ steps.deploy.outputs.url }}/health") && [ "$code" = 200 ] && { echo "/health = 200"; exit 0; }
+            sleep 5
+          done
+          echo "::error::/health did not return 200 (last: $code)"; exit 1

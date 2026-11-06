@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthofatitan.app/content/_schema/common.schema.json",
+  "title": "HoT content file (common header)",
+  "description": "Every file in content/ must carry its version and who reviewed it (A14 §7, ADR-05). contentCompile enforces `required`; per-type schemas come with the first real content.",
+  "type": "object",
+  "required": ["version", "reviewedBy"],
+  "properties": {
+    "version": { "type": ["integer", "string"], "description": "Content version, bumped on every change; recorded as <id>@<version>." },
+    "reviewedBy": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Agents/people who approved this version, e.g. [\"agent-10\"]. Empty list = draft, not for release."
+    },
+    "status": { "enum": ["draft", "reviewed"] }
+  }
+}

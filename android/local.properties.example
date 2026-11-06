@@ -1,0 +1,12 @@
+# Copy to local.properties (git-ignored) for local builds. Never commit real values.
+# sdk.dir=/path/to/Android/sdk
+
+# Non-secret build config (A14 §9 step 9). Env vars with the same names win over this file.
+# WHOOP_CLIENT_ID=
+# EDGE_BASE_URL=https://hot-edge.<account>.workers.dev
+
+# Release signing (normally only in GitHub Secrets; see android/README.md).
+# HOT_KEYSTORE_FILE=/absolute/path/to/hot.jks
+# HOT_KEYSTORE_PASSWORD=
+# HOT_KEY_ALIAS=hot
+# HOT_KEY_PASSWORD=

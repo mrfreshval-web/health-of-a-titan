@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press on the app icon → SOS (A11 §1.2). Deck and voice shortcuts arrive with their slices. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sos"
+        android:shortcutId="sos"
+        android:shortcutLongLabel="@string/shortcut_sos_long"
+        android:shortcutShortLabel="@string/shortcut_sos_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="hot://sos"
+            android:targetClass="com.healthofatitan.app.MainActivity"
+            android:targetPackage="com.healthofatitan.app" />
+    </shortcut>
+</shortcuts>

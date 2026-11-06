@@ -1,0 +1,151 @@
+# Android CI (A14 §9 step 8): gitleaks → module graph + content → unit tests → lint → debug APK
+# → (only if HOT_KEYSTORE_* secrets exist) signed release APK → pre-release on main.
+# Actions are pinned by commit SHA; the tag is in the trailing comment.
+name: Android CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks 8.30.1 (checksum-verified)
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tgz" \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP" gitleaks
+      - name: Scan full history
+        run: |
+          "$RUNNER_TEMP/gitleaks" git --redact --verbose --exit-code 1 .
+
+  android:
+    name: Build, test, APK
+    needs: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # pre-release on main only
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Validates the wrapper jar and caches Gradle.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      # A stable debug key across runs, so a debug APK installs over the previous one.
+      - name: Cache debug keystore
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.android/debug.keystore
+          key: hot-debug-keystore-v1
+
+      - name: Module graph (A14 §7)
+        run: ./gradlew checkModuleGraph --stacktrace
+
+      - name: Content pipeline (YAML → JSON assets)
+        run: ./gradlew :app:contentCompile --stacktrace
+
+      - name: Unit tests (JVM + Robolectric)
+        run: ./gradlew :core:model:test testDebugUnitTest --stacktrace
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Assemble debug APK
+        run: |
+          ./gradlew :app:assembleDebug --stacktrace
+          mv app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/matuta-debug-${GITHUB_RUN_NUMBER}.apk"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matuta-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/matuta-debug-*.apk
+          retention-days: 30
+
+      # Exported Room schema: commit it to android/core/database/schemas/ (needed for migrations).
+      - name: Upload Room schema
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: room-schemas-${{ github.run_number }}
+          path: android/core/database/schemas/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload test and lint reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports-${{ github.run_number }}
+          path: |
+            android/**/build/reports/
+            android/**/build/test-results/
+          retention-days: 7
+
+      - name: Release signing available?
+        id: signing
+        env:
+          HOT_KEYSTORE_BASE64: ${{ secrets.HOT_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$HOT_KEYSTORE_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Release signing skipped::HOT_KEYSTORE_* secrets are not set. Only the debug APK was built (see android/README.md)."
+          fi
+
+      - name: Assemble signed release APK
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          HOT_KEYSTORE_BASE64: ${{ secrets.HOT_KEYSTORE_BASE64 }}
+          HOT_KEYSTORE_PASSWORD: ${{ secrets.HOT_KEYSTORE_PASSWORD }}
+          HOT_KEY_ALIAS: ${{ secrets.HOT_KEY_ALIAS }}
+          HOT_KEY_PASSWORD: ${{ secrets.HOT_KEY_PASSWORD }}
+        run: |
+          export HOT_KEYSTORE_FILE="$RUNNER_TEMP/hot.jks"
+          printf '%s' "$HOT_KEYSTORE_BASE64" | base64 -d > "$HOT_KEYSTORE_FILE"
+          trap 'rm -f "$HOT_KEYSTORE_FILE"' EXIT
+          ./gradlew :app:assembleRelease --stacktrace
+          mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/matuta-${GITHUB_RUN_NUMBER}.apk"
+
+      - name: Upload release APK
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: matuta-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/matuta-*.apk
+          retention-days: 30
+
+      - name: Pre-release on main
+        if: steps.signing.outputs.enabled == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${GITHUB_RUN_NUMBER}" \
+            "app/build/outputs/apk/release/matuta-${GITHUB_RUN_NUMBER}.apk" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "MATUTA build ${GITHUB_RUN_NUMBER}" \
+            --notes "Automatic build from ${GITHUB_SHA}. Install over the previous version (see android/README.md)."

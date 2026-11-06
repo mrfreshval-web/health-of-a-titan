@@ -1,0 +1,26 @@
+# hot-edge — stateless Worker (A14 §5). No secrets in this file: they are set from GitHub
+# Secrets by .github/workflows/backend-deploy.yml (wrangler secret put) or `wrangler secret put`.
+name = "hot-edge"
+main = "src/index.ts"
+compatibility_date = "2026-10-15"
+workers_dev = true
+
+# Workers AI (Whisper STT, slice 5b). Free tier; no id needed.
+[ai]
+binding = "AI"
+
+# KV: only FCM tokens and rate-limit counters (A14 §5). Create once, then uncomment:
+#   npx wrangler kv namespace create HOT_KV
+# [[kv_namespaces]]
+# binding = "HOT_KV"
+# id = "<id printed by the command above>"
+
+# Non-secret configuration (A14 §5). DAILY_TOKEN_CAP is a placeholder [Оценка], tuned in slice 5a.
+[vars]
+LLM_MODELS = "claude-opus-5-5"
+DAILY_TOKEN_CAP = "2000000"
+FCM_PROJECT_ID = ""
+
+# Secrets (names only, values never here):
+#   WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, ALLOWED_WHOOP_USER_IDS,
+#   ANTHROPIC_API_KEY, GOOGLE_TTS_API_KEY, FCM_SERVICE_ACCOUNT_JSON

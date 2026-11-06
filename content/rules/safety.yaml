@@ -1,0 +1,189 @@
+# A09 §3 — safety rules. Evaluated FIRST and override everything (A04 §4, A19 §1.2 step 0).
+# The user can never override them upward. Crisis wording belongs to Agent 10 (A07 §4.4).
+# Medical content: changes only with review by Agent 3; crisis — Agent 10; wording on doctors — Agent 7.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+rules:
+  - id: SAF-01
+    version: 1
+    title_ru: "Экстренные симптомы"
+    domain: safety
+    stage: safety
+    priority: 1000
+    when:
+      any:
+        - {fact: card.U5, op: has, value: pain_chest}
+        - {fact: label.bod_acute, op: eq, value: true}
+        - {fact: safety.stop_flag_active, op: eq, value: true}
+    then:
+      - {do: route, value: emergency_screen}
+      - {do: set_flag, value: EMERGENCY}
+      - {do: lock_training, value: none}
+      - {do: drop_optional, value: all}
+      - {do: defer, value: [insights, regime_text]}
+    user_override: none
+    why_ru: "Ты отметил {symptom}. Если это происходит сейчас — звони {emergency_number}. Тренировки на паузе, пока врач не разрешит."
+    evidence:
+      level: C
+      kind: safety
+      sources: ["A04 §4 (экстренно)", "A19 §6.2 F1-F5", "Riebe 2015, MSSE 47(11), скрининг ACSM (A19 K9, DOI требует проверки)"]
+      note_ru: "Правило безопасности, а не рекомендация: аналитику не показываем, диагнозов не называем."
+    contraindications_ru: []
+    red_flags_ru: ["Боль или давление в груди, обморок, внезапная одышка, слабость или онемение половины тела, нарушение речи → 911 (номер по стране)"]
+    review: [agent-3, agent-7]
+
+  - id: SAF-02
+    version: 1
+    title_ru: "Кризисные сигналы"
+    domain: safety
+    stage: safety
+    priority: 990
+    when:
+      any:
+        - {fact: safety.crisis_level, op: ge, value: 2}
+        - {fact: safety.mood_floor_2d, op: eq, value: true}
+    then:
+      - {do: route, value: crisis_protocol}
+      - {do: defer, value: [negative_insights, goal_pressure, proactive_nudges]}
+      - {do: set_flag, value: CARE}
+    user_override: none
+    why_ru: "{crisis_text_a07}"
+    evidence:
+      level: C
+      kind: safety
+      sources: ["A07 §4 кризисный протокол", "A25 §2.3 кризисная страховка"]
+      note_ru: "Тексты — только дословно из A07 §4.4 (Агент 10). Уровень 1 (мягкий вопрос «Как ты на самом деле?») ведёт CrisisGuard, план при этом не меняется."
+    contraindications_ru: []
+    red_flags_ru: ["Мысли о смерти или самоповреждении → 988 / 911 (США), номер по стране пользователя"]
+    review: [agent-10, agent-7]
+
+  - id: SAF-03
+    version: 1
+    title_ru: "Симптомы болезни"
+    domain: safety
+    stage: safety
+    priority: 950
+    when: {pred: sick}
+    then:
+      - {do: cap_regime, value: GENTLE, liftable_by_self_report: false}
+      - {do: set_flag, value: SICK}
+      - {do: lock_training, value: rest_or_walk, walk: {zone: Z1, minutes_max: 20}}
+      - {do: limit, key: work.main_tasks_max, value: 1}
+      - {do: shift_anchor, anchor: bedtime, offset_min: -30}
+      - {do: add_item, domain: nutrition, content: N04}
+    variants:
+      - id: see_doctor
+        when:
+          any:
+            - {fact: rhr.z_streak_ge2, op: ge, value: 3}
+            - {fact: card.U5, op: has, value: something_wrong}
+        then:
+          - {do: nudge, kind: doctor, text_key: sick_persisting}
+        why_ru: "Третий день пульс покоя заметно выше твоей нормы и есть симптомы. Это стоит обсудить с врачом, особенно если становится хуже."
+    user_override: down_only
+    why_ru: "Ты отметил, что простужен. Сегодня без нагрузок: тело и так работает. Если хочется — короткая прогулка в лёгком темпе. Возвращаться будем по шагам (TR-04)."
+    evidence:
+      level: C/D
+      kind: estimate
+      sources: ["A04 §4 «скоро к врачу»", "A19 TR-04 (возврат после болезни, консервативно)"]
+      note_ru: "Запрет интенсива при лихорадке — консенсус практики, источник требует проверки (A04 Передача)."
+    contraindications_ru: []
+    red_flags_ru: ["Температура и пульс покоя ≥ +2 SD от нормы 3+ ночи", "Ухудшение, одышка, боль в груди → SAF-01"]
+    review: [agent-3, agent-12]
+
+  - id: SAF-04
+    version: 1
+    title_ru: "Физиология сдвинулась без понятной причины"
+    domain: safety
+    stage: safety
+    priority: 940
+    when:
+      all:
+        - {pred: physio_usable}
+        - {fact: rhr.z_day, op: ge, value: 2.0}
+        - {fact: rr.z_day, op: ge, value: 1.5}
+        - not: {pred: known_cause}
+        - not: {pred: sick}
+    then:
+      - {do: ask, card: SYMPTOM_CHECK}
+      - {do: cap_regime, value: STEADY}
+      - {do: forbid, value: [intervals]}
+    user_override: down_only
+    why_ru: "Ночью пульс покоя и дыхание заметно выше твоей нормы, а алкоголя, перелёта и тяжёлой тренировки не было. Так бывает при жаре, стрессе или начале простуды. Как ты? Пока без интервалов."
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["A04 §2: RHR и частота дыхания ночью как личный тренд", "Miller 2020, PLoS One (дыхание до болезни; DOI требует проверки)"]
+      note_ru: "Не диагноз и не «мониторинг болезни»: только вопрос и осторожность (граница wellness — Агент 7)."
+    contraindications_ru: []
+    red_flags_ru: ["Если вместе с этим есть симптомы → SAF-03"]
+    review: [agent-3, agent-9, agent-7]
+
+  - id: SAF-05
+    version: 1
+    title_ru: "Долгие сигналы → к специалисту"
+    domain: safety
+    stage: weekly
+    priority: 930
+    when:
+      any:
+        - {fact: count.low_days_7, op: ge, value: 7}
+        - {fact: count.mood_low_14, op: ge, value: 10}
+        - {fact: count.bad_sleep_21, op: ge, value: 9}
+        - {fact: label.snoring_apnea, op: eq, value: true}
+    then:
+      - {do: set_flag, value: SEE_SPECIALIST}
+    variants:
+      - id: low_state
+        when: {fact: count.low_days_7, op: ge, value: 7}
+        then: [{do: nudge, kind: doctor, text_key: low_state_week}]
+        why_ru: "Уже неделю и данные, и самочувствие ниже твоей нормы, а понятной причины нет. Стоит показаться терапевту — исключить простые вещи. План пока держу бережным."
+      - id: low_mood
+        when: {fact: count.mood_low_14, op: ge, value: 10}
+        then: [{do: nudge, kind: psychologist, text_key: low_mood_2w}]
+        why_ru: "{a07_low_mood_text}"
+      - id: insomnia
+        when: {fact: count.bad_sleep_21, op: ge, value: 9}
+        then:
+          - {do: nudge, kind: sleep_doctor, text_key: insomnia_pattern}
+          - {do: forbid, value: [nap]}
+        why_ru: "Три недели сон чаще плохой, чем хороший. Если это мешает днём, стоит обсудить с врачом: при бессоннице лучше всего работает КПТ-И — это не таблетки. Дневной сон пока не предлагаю."
+      - id: apnea
+        when: {fact: label.snoring_apnea, op: eq, value: true}
+        then: [{do: nudge, kind: doctor, text_key: snoring}]
+        why_ru: "Громкий храп с паузами в дыхании и сонливость днём — повод показаться врачу. Это не лечится советами в приложении."
+    user_override: any
+    why_ru: "{variant_why}"
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Meeusen 2013 (A04 #21)", "Riemann 2023, Европейское руководство по бессоннице (A04 #7, DOI требует проверки)", "A04 §4 плановый визит"]
+      note_ru: "Пороги 7 дней, 10 из 14, 9 из 21 — [Оценка]; формулировки — «стоит обсудить с врачом», без названий болезней. Через 21 день проверяем частоту ≥ 3 ночей в неделю; полный критерий «≥ 3 месяцев» продукт не ждёт."
+    contraindications_ru: []
+    red_flags_ru: ["Мысли о самоповреждении → SAF-02"]
+    review: [agent-3, agent-10, agent-7]
+
+  - id: SAF-06
+    version: 1
+    title_ru: "Признаки РПП → питание без цифр"
+    domain: safety
+    stage: safety
+    priority: 920
+    when: {fact: ed.signals, op: eq, value: true}
+    then:
+      - {do: forbid, value: [nutrition_numbers, weight_talk, extra_training, fasting_experiments]}
+      - {do: set_flag, value: ED_CARE}
+      - {do: route, value: ed_protocol_a19}
+    user_override: none
+    why_ru: "{a10_ed_text}"
+    evidence:
+      level: A
+      kind: safety
+      sources: ["Mountjoy 2023, IOC REDs consensus, BJSM, PMID 37752011 (A19 K13)", "A19 §6.3", "A04 §4"]
+      note_ru: "Тексты пишет Агент 10; тема мягко останавливается, без спора и цифр."
+    contraindications_ru: []
+    red_flags_ru: ["Пропадание цикла, обмороки, ИМТ < 18,5 (если пользователь сам указал) → врач"]
+    review: [agent-10, agent-3, agent-12]

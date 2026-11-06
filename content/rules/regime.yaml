@@ -1,0 +1,409 @@
+# A09 §2 — day regime (Разгон / Ровно / Бережно), facts, signals, «Карта дня».
+# Engine: :domain:engine (A14 ADR-14). Pure functions, no network, no LLM.
+# Medical content: changes only with review by Agent 3 (+12 for training, +10 for wording).
+# All thresholds are relative to the personal norm (robust z, A25 P1) unless marked absolute.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+# Metric versions these rules were tuned on (A25 metricId@ver). A new metric version
+# requires a review of the thresholds below and a bump of this file (A09 §6).
+metrics_required: ["ORS@1", "SLP@1", "REG@1", "LRB@1", "TRL@1", "SWB@1", "CLR@1", "EMB@1", "CON@1", "WLD@1"]
+
+# ---------------------------------------------------------------------------
+# Facts the engine must provide (A25 metrics, cards, labels, context).
+# class = sensitivity class (A14 §3.1). "day" = WHOOP cycle (wake → wake).
+# ---------------------------------------------------------------------------
+facts:
+  # physiology (WHOOP → :domain:metrics; raw values only in memory, D-009)
+  - {id: ors.z_day,        type: number, source: "A25 ORS for last night, before EWMA", class: S3}
+  - {id: ors.ewma7,        type: number, source: "A25 ORS EWMA 7 days", class: S3}
+  - {id: hrv.z_day,        type: number, source: "z(ln rMSSD) last night", class: S3}
+  - {id: rhr.z_day,        type: number, source: "z(RHR) last night", class: S3}
+  - {id: rhr.z_streak_ge2, type: integer, source: "nights in a row with rhr.z_day >= 2", class: S3}
+  - {id: rr.z_day,         type: number, source: "z(respiratory rate) last night", class: S3}
+  - {id: sleep.hours,      type: number, source: "WHOOP sleep or manual answer, hours", class: S3}
+  - {id: sleep.prev_hours, type: number, source: "the night before last", class: S3}
+  - {id: sleep.debt7_h,    type: number, source: "A25 SLP debt, capped at 10", class: S3}
+  - {id: sleep.onset_shift_min, type: number, source: "last sleep onset minus 28-day median, minutes", class: S3}
+  - {id: reg.wake_sd7_min, type: number, source: "SD of wake time over 7 days, minutes", class: S3}
+  - {id: reg.weekend_shift_min, type: number, source: "mean weekend wake minus weekday wake, minutes", class: S3}
+  - {id: lrb.value,        type: number, source: "A25 LRB (z units)", class: S3}
+  - {id: lrb.days_above_1, type: integer, source: "days in a row with LRB > +1", class: S3}
+  - {id: trl.z_yesterday,  type: number, source: "A25 TRL of yesterday vs norm", class: S3}
+  - {id: train.yesterday_type, type: enum, values: [none, strength, intervals, zone2, mobility, rest], class: S3}
+  - {id: train.yesterday_rpe, type: integer, source: "sRPE card, 1-10", class: S3}
+  - {id: whoop.recovery_pct, type: number, source: "WHOOP Recovery %, in memory only, calibration fallback, never stored", class: S3}
+  # data quality
+  - {id: data.baseline_n,  type: integer, source: "nights in the 28-day baseline (incl. WHOOP history loaded at connect)", class: S1}
+  - {id: data.coverage,    type: number, source: "share of ORS input weight available today, 0-1 (A25 P5)", class: S1}
+  - {id: data.whoop_today, type: boolean, source: "WHOOP cycle for today is scored", class: S1}
+  - {id: data.manual_mode, type: boolean, source: "no WHOOP by fallback time (09:30) or API down > 24 h (A10 C8)", class: S1}
+  - {id: data.atypical_physiology, type: boolean, source: "onboarding: meds affecting HR, chronic disease, pregnancy (A04 §2 p.4)", class: S3}
+  # morning cards (A25 §2.2); missing = skipped, never 0
+  - {id: card.U1, type: integer, source: "how did you sleep, 1-5", class: S3}
+  - {id: card.U2, type: integer, source: "energy now, 1-10", class: S3}
+  - {id: card.U2_z, type: number, source: "z of U2 vs own 28-day answers (n >= 10)", class: S3}
+  - {id: card.U3, type: integer, source: "mood, 1-5", class: S4}
+  - {id: card.U3_z, type: number, source: "z of U3", class: S4}
+  - {id: card.U3_chips, type: set, values: [calm, inspired, anxious, irritated, sad, empty], class: S4}
+  - {id: card.U5, type: set, values: [fresh, sore, pain_chest, pain_head, pain_joint, cold, something_wrong], class: S3}
+  - {id: card.U6, type: integer, source: "expected strain of the day, 1-10 (rotating)", class: S4}
+  - {id: card.U7, type: set, values: [late_meal, late_screens, late_coffee, alcohol], class: S4}
+  - {id: card.U9, type: enum, values: [no_energy, ok, eager], class: S3}
+  # yesterday evening (A25 §2.3)
+  - {id: eve.B1, type: integer, source: "how was the day, 1-10", class: S4}
+  - {id: eve.B3, type: integer, source: "stress peak, 1-10", class: S4}
+  - {id: eve.B3_src, type: set, values: [work, people, money, family, health, commute, other], class: S4}
+  - {id: eve.B4, type: integer, source: "alcohol servings yesterday, 0-4 (4 = 4+); from B4 or U7", class: S4}
+  - {id: eve.B4_last, type: enum, values: [gt3h, h1to3, lt1h], source: "last drink before sleep", class: S4}
+  - {id: eve.B5, type: set, values: [warm_talk, close_time, lonely, conflict, none_ok], class: S4}
+  - {id: count.lonely_3d, type: integer, source: "days of last 3 with B5 lonely", class: S4}
+  # labels (A25 §3, only confirmed/edited)
+  - {id: label.cnf_open_max, type: integer, source: "max intensity of open CNF labels, 0-3", class: S4}
+  - {id: label.bod_acute, type: boolean, source: "confirmed BOD label with acute symptom words (chest pain, fainting, one-sided weakness, speech)", class: S4}
+  - {id: label.bod_illness, type: boolean, source: "confirmed BOD label: cold / flu / fever", class: S4}
+  - {id: label.snoring_apnea, type: boolean, source: "user said: loud snoring + breathing pauses per partner, or daytime sleepiness", class: S4}
+  - {id: label.work_night_7d, type: integer, source: "WRK 'work at night' labels in 7 days", class: S4}
+  # safety (A07, A19 §6)
+  - {id: safety.crisis_level, type: integer, source: "CrisisGuard max(device, model), 0-3", class: S5}
+  - {id: safety.mood_floor_2d, type: boolean, source: "U3 or B1 at minimum two days in a row (A25 §2.3)", class: S4}
+  - {id: safety.stop_flag_active, type: boolean, source: "F1-F5 reported and not cleared by 'doctor allowed' (A19 §6.2)", class: S3}
+  - {id: screening.status, type: enum, values: [clear, gentle_only, not_done], class: S3}
+  - {id: ed.signals, type: boolean, source: "A19 §6.3 signals", class: S4}
+  # context and chips (A10 C2, A11 §3.2)
+  - {id: ctx.tz_shift_h, type: number, source: "signed shift of local tz vs 7-day home tz; + = east", class: S2}
+  - {id: ctx.days_since_tz_shift, type: integer, class: S2}
+  - {id: ctx.flight_today, type: boolean, source: "chip ✈ or calendar", class: S2}
+  - {id: chip.time_min, type: integer, values: [10, 20, 30, 45, 60], class: S2}
+  - {id: chip.place, type: enum, values: [home_bw, home_dumbbells, gym, outdoor, hotel], class: S2}
+  - {id: chip.recovery, type: enum, values: [better, worse, lighter], source: "🔋 / 'Не согласен'", class: S3}
+  - {id: chip.eating_out, type: boolean, class: S2}
+  - {id: chip.important_day, type: boolean, source: "⭐ or calendar event tagged important", class: S2}
+  - {id: chip.alcohol_tonight, type: boolean, source: "🍷 proposed chip (Agent 4) or calendar tag", class: S4}
+  - {id: cal.connected, type: boolean, class: S2}
+  - {id: cal.longest_block_min, type: integer, source: "longest busy stretch without a 10-min gap", class: S2}
+  - {id: cal.lunch_gap_min, type: integer, source: "longest free gap 11:30-14:30", class: S2}
+  - {id: cal.key_event, type: time, source: "start of the important event, if any", class: S2}
+  - {id: cal.dinner_after_cutoff, type: boolean, source: "a calendar event makes dinner end later than bedtime - 3 h", class: S2}
+  # plan under construction (schedule stage)
+  - {id: plan.training_type, type: enum, values: [strength, intervals, zone2, mobility, rest], source: "A19 selector result", class: S3}
+  - {id: plan.training_slot_end_to_bedtime_h, type: number, class: S2}
+  - {id: plan.focus_minutes_contiguous, type: integer, class: S2}
+  # trends and counters (computed nightly)
+  - {id: regime.yesterday, type: enum, values: [BOOST, STEADY, GENTLE], class: S3}
+  - {id: signals.yesterday, type: set, source: "signal ids that fired yesterday (for exit thresholds, REG-04)", class: S3}
+  - {id: regime.computed, type: enum, values: [BOOST, STEADY, GENTLE], source: "result of REG-02 before conflicts and hysteresis", class: S3}
+  - {id: regime.points, type: integer, class: S3}
+  - {id: regime.final, type: enum, values: [BOOST, STEADY, GENTLE], source: "regime after caps, conflicts and hysteresis (map and schedule stages read it)", class: S3}
+  - {id: regime.data_only_gentle, type: boolean, source: "GENTLE came from physiology/sleep points without self_low and without hard cap", class: S3}
+  - {id: streak.gentle, type: integer, source: "GENTLE days in a row incl. today", class: S3}
+  - {id: count.low_days_7, type: integer, source: "days of last 7 with regime <= STEADY and self_low and no known cause", class: S3}
+  - {id: count.mood_low_14, type: integer, source: "days of last 14 with U3_z <= -1 or U3 <= 2", class: S4}
+  - {id: count.bad_sleep_21, type: integer, source: "nights of last 21 with U1 <= 2", class: S3}
+  - {id: wld.hours_week, type: number, source: "work hours this week (labels, cards, calendar)", class: S4}
+  - {id: wld.z, type: number, source: "A25 WLD", class: S4}
+  - {id: con.level, type: integer, source: "A25 CON level -2..+2", class: S4}
+  - {id: silence.days, type: integer, source: "days without opening the app or any card", class: S1}
+  - {id: relapse.groups_48h, type: integer, source: "A26 §6 signal groups in 48 h (RelapseSignal)", class: S4}
+  - {id: program.week, type: integer, source: "weeks since first day", class: S1}
+  - {id: flag.active, type: set, source: "flags set earlier today or still active from previous days", class: S3}
+  - {id: insight.pair1_ready, type: boolean, source: "A25 §5 pair 1 (alcohol 2+ → ORS) passed n >= 8/8, |Δ| >= 0.5 SD, CI80", class: S4}
+  - {id: anchor.bedtime_target, type: time, source: "settings bedtime target, shifted by rules", class: S2}
+  - {id: anchor.wake, type: time, source: "WHOOP wake or manual", class: S2}
+  # goals and stack
+  - {id: goal.has_weekly, type: boolean, class: S2}
+  - {id: stack.caffeinated_after_cutoff, type: boolean, source: "user-tagged item 'contains caffeine / stimulant' scheduled after caffeine cutoff and not prescribed", class: S4}
+  - {id: stack.prescribed_stimulant_late, type: boolean, source: "same, but item marked 'prescribed by doctor'", class: S4}
+
+# Named conditions reused by rules.
+predicates:
+  self_low:
+    any:
+      - {fact: card.U2, op: le, value: 3}            # absolute floor, A04 §3 S5
+      - {fact: card.U2_z, op: le, value: -1.0}
+      - {fact: card.U1, op: eq, value: 1}
+      - {fact: card.U9, op: eq, value: no_energy}
+      - {fact: chip.recovery, op: eq, value: worse}
+  self_good:
+    all:
+      - any:
+          - {fact: card.U2, op: ge, value: 7}
+          - {fact: card.U2_z, op: ge, value: 1.0}
+      - not: {fact: card.U1, op: le, value: 2}
+  known_cause:
+    any:
+      - {fact: eve.B4, op: ge, value: 2}
+      - {fact: ctx.days_since_tz_shift, op: le, value: 2}
+      - {fact: trl.z_yesterday, op: ge, value: 1.5}
+      - {fact: card.U7, op: has, value: late_meal}
+  physio_usable:
+    all:
+      - {fact: data.baseline_n, op: ge, value: 14}
+      - {fact: data.coverage, op: ge, value: 0.6}
+      - {fact: data.whoop_today, op: eq, value: true}
+  sick:
+    any:
+      - {fact: card.U5, op: has, value: cold}
+      - {fact: label.bod_illness, op: eq, value: true}
+
+# ---------------------------------------------------------------------------
+# Regimes and «Карта дня» defaults (A04 §3 step 4, A19 §1.2 step 1).
+# Context rules may only make the map stricter, never looser.
+# ---------------------------------------------------------------------------
+regimes:
+  - {id: BOOST,  name_ru: "Разгон",  a19_color: green,  order: 2}
+  - {id: STEADY, name_ru: "Ровно",   a19_color: yellow, order: 1}
+  - {id: GENTLE, name_ru: "Бережно", a19_color: red,    order: 0}
+
+map:
+  BOOST:
+    training: {level: L0, allowed: [strength, intervals, zone2, mobility], rpe_max: 9}
+    work: {focus_blocks: 2, block_min: 90, main_tasks_max: 3}
+    sleep: {bedtime_shift_min: 0}
+    stress: {practice: optional}
+    nutrition: [N01, N02, N03]
+    social: optional
+    growth: {goal_step: full, learning_slot: allowed}
+  STEADY:
+    training: {level: L1, allowed: [strength, zone2, mobility], rpe_max: 7}
+    work: {focus_blocks: 2, block_min: 60, main_tasks_max: 3, breaks_every_min: 90}
+    sleep: {bedtime_shift_min: 0}
+    stress: {practice: P3, minutes: 5}
+    nutrition: [N01, N02, N03]
+    social: optional
+    growth: {goal_step: full}
+  GENTLE:
+    training: {level: L2, allowed: [zone2_easy, mobility, rest], rpe_max: 4, minutes: [20, 40]}
+    work: {focus_blocks: 1, block_min: 45, main_tasks_max: 1, breaks_every_min: 60}
+    sleep: {bedtime_shift_min: -30}
+    stress: {practice: P3, minutes: 5, alt: [P5, P6]}
+    nutrition: [N01, N02, N05]
+    social: suggested
+    growth: {goal_step: minimal}
+
+# ---------------------------------------------------------------------------
+# Signals (points of strain). Physiology signals need predicate physio_usable;
+# otherwise REG-05 replaces them. Sleep is absolute (AASM consensus, A04 #1).
+# ---------------------------------------------------------------------------
+signals:
+  - id: SG-ORS-DAY
+    requires: physio_usable
+    points:
+      - {when: {fact: ors.z_day, op: le, value: -2.0}, add: 2}
+      - {when: {fact: ors.z_day, op: le, value: -1.0}, add: 1}
+    exit_threshold: -0.5        # hysteresis: if fired yesterday, keeps firing while z <= -0.5
+    explain_key: ors_low
+  - id: SG-ORS-TREND
+    requires: physio_usable
+    points:
+      - {when: {fact: ors.ewma7, op: le, value: -0.5}, add: 1}   # SWC = 0.5 SD (A25 P2)
+    explain_key: ors_trend_low
+  - id: SG-SLEEP
+    max_points: 1
+    points:
+      - {when: {fact: sleep.hours, op: lt, value: 6.0}, add: 1}
+      - {when: {all: [{fact: sleep.hours, op: lt, value: 7.0}, {fact: sleep.prev_hours, op: lt, value: 7.0}]}, add: 1}
+      - {when: {fact: sleep.debt7_h, op: ge, value: 5.0}, add: 1}
+    explain_key: sleep_short
+  - id: SG-LOAD
+    points:
+      - {when: {fact: lrb.value, op: gt, value: 1.0}, add: 1}
+    exit_threshold: 0.75
+    explain_key: load_accumulates
+  - id: SG-SELF
+    points:
+      - {when: {pred: self_low}, add: 1}
+    explain_key: self_low
+
+scoring:
+  gentle:
+    any:
+      - {fact: regime.points, op: ge, value: 3}
+      - all: [{pred: self_low}, {fact: regime.points, op: ge, value: 2}]
+  boost:                                       # all must hold; otherwise STEADY
+    all:
+      - {fact: regime.points, op: eq, value: 0}
+      - {fact: ors.z_day, op: ge, value: 0.0}
+      - {fact: sleep.hours, op: ge, value: 7.0}
+      - any:
+          - {fact: card.U2, op: ge, value: 6}
+          - all: [{fact: card.U2, op: missing}, {fact: ors.z_day, op: ge, value: 0.5}]
+      - not: {fact: card.U6, op: ge, value: 7}
+  default: STEADY
+
+rules:
+  - id: REG-01
+    version: 1
+    title_ru: "Жёсткие потолки режима"
+    domain: regime
+    stage: regime
+    priority: 900
+    when:
+      any:
+        - {fact: sleep.hours, op: lt, value: 5.0}
+        - {pred: sick}
+    then:
+      - {do: cap_regime, value: GENTLE, liftable_by_self_report: false}
+    user_override: down_only
+    why_ru: "Сон {sleep_h} — меньше 5 часов. После такой ночи внимание и реакция проседают сильнее, чем кажется изнутри, поэтому сегодня Бережно, как бы бодро ни было утром."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Watson 2015, Sleep 38(6), консенсус AASM/SRS (A04 #1)", "Lim & Dinges 2010, Psychol Bull 136(3), doi:10.1037/a0018883 (A04 #2)"]
+      note_ru: "Порог 5 ч — [Оценка] по A04 §3 шаг 2; сама связь недосыпа с вниманием — A."
+    contraindications_ru: []
+    red_flags_ru: ["Если ты спишь < 5 ч регулярно не по своей воле — см. SAF-05 (бессонница)"]
+    review: [agent-3, agent-12]
+
+  - id: REG-02
+    version: 1
+    title_ru: "Баллы напряжения → режим"
+    domain: regime
+    stage: regime
+    priority: 800
+    # Physiology signals switch off by themselves without physio_usable (REG-05);
+    # with no sleep and no self-report at all the regime falls back to scoring.default.
+    when:
+      any:
+        - {fact: sleep.hours, op: present}
+        - {fact: card.U2, op: present}
+        - {pred: physio_usable}
+    then:
+      - {do: score_regime, signals: [SG-ORS-DAY, SG-ORS-TREND, SG-SLEEP, SG-LOAD, SG-SELF], scoring: scoring}
+    user_override: down_only
+    why_ru: "{signals_text}. Поэтому сегодня {regime_name}."
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["A04 §3 (структура баллов)", "Plews 2013, Sports Med 43(9) (A04 #19)", "Buchheit 2014, Front Physiol 5:73 (A04 #19)", "Saw 2016, BJSM 50(5) (A04 #20)"]
+      note_ru: "Структура «баллы → цвет» — [Оценка] уровня C/D; пороги z −1,0 / −2,0 и SWC 0,5 SD проверяем на 30 днях основателя (A25 §7)."
+    contraindications_ru: ["data.atypical_physiology — физиология не опускает режим без самочувствия (REG-05)"]
+    red_flags_ru: []
+    review: [agent-3, agent-12, agent-9]
+
+  - id: REG-03
+    version: 1
+    title_ru: "Самочувствие против данных"
+    domain: regime
+    stage: regime
+    priority: 790
+    when:
+      all:
+        - {fact: regime.data_only_gentle, op: eq, value: true}
+        - {pred: self_good}
+    then:
+      - {do: resolve_conflict, set_regime: STEADY}
+      - {do: forbid, value: [intervals]}
+    user_override: down_only
+    why_ru: "Данные говорят об усталости, а ты чувствуешь себя хорошо. Доверяю обоим: сегодня Ровно — умеренная нагрузка можно, интервалы нет. Во время тренировки прислушивайся к телу."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Saw 2016, BJSM 50(5):281-291, doi:10.1136/bjsports-2015-094758 (A04 #20)"]
+      note_ru: "Обратный случай (данные хорошие, самочувствие плохое) уже учтён баллом SG-SELF."
+    contraindications_ru: ["Не применяется при REG-01 и при правилах SAF"]
+    red_flags_ru: []
+    review: [agent-3, agent-12]
+
+  - id: REG-04
+    version: 1
+    title_ru: "Гистерезис: вниз сразу, вверх по ступеньке"
+    domain: regime
+    stage: regime
+    priority: 780
+    when: {fact: regime.yesterday, op: present}
+    then:
+      - {do: step_limit, up_max_steps_per_day: 1, down: immediate}
+      - {do: set_param, key: signal_exit_thresholds, value: {SG-ORS-DAY: -0.5, SG-LOAD: 0.75}}
+    user_override: down_only
+    why_ru: "Вчера было {regime_yesterday_name}. Поднимаюсь на одну ступень за день, чтобы режим не прыгал от одной хорошей ночи."
+    evidence:
+      level: D
+      kind: estimate
+      note_ru: "Защита от «мигания» режима; мёртвая зона 0,5 SD = SWC (A25 P2)."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-3, agent-5]
+
+  - id: REG-05
+    version: 1
+    title_ru: "Мало данных: калибровка, пропуски, ручной режим"
+    domain: regime
+    stage: data
+    priority: 850
+    when:
+      any:
+        - not: {pred: physio_usable}
+        - {fact: data.atypical_physiology, op: eq, value: true}
+        - {fact: data.manual_mode, op: eq, value: true}
+    then:
+      - {do: set_flag, value: DATA_LIMITED}
+    variants:
+      - id: calibration
+        when: {fact: data.baseline_n, op: lt, value: 14}
+        then:
+          - {do: set_flag, value: CALIBRATION}
+          - {do: set_param, key: physio_signal, value: {source: whoop.recovery_pct, point_if_le: 33, boost_requires_ge: 67}}
+        why_ru: "Я пока изучаю твою норму (нужно ~14 ночей). Сегодня опираюсь на восстановление WHOOP, сон и твоё самочувствие."
+      - id: preliminary
+        when: {all: [{fact: data.baseline_n, op: ge, value: 14}, {fact: data.baseline_n, op: lt, value: 28}]}
+        then:
+          - {do: set_flag, value: PRELIMINARY_NORM}
+          - {do: set_param, key: boost_requires, value: [card.U2]}
+        why_ru: "Норма предварительная ({baseline_n} ночей из 28), поэтому Разгон даю только вместе с твоей оценкой энергии."
+      - id: low_coverage
+        when: {fact: data.coverage, op: lt, value: 0.6}
+        then:
+          - {do: set_param, key: disable_signals, value: [SG-ORS-DAY, SG-ORS-TREND]}
+          - {do: cap_regime, value: STEADY, unless: {all: [{fact: card.U2, op: ge, value: 7}, {fact: sleep.hours, op: ge, value: 7.0}]}}
+        why_ru: "Ночью браслет записал не всё, поэтому восстановление не оцениваю. План — по сну и самочувствию."
+      - id: atypical
+        when: {fact: data.atypical_physiology, op: eq, value: true}
+        then:
+          - {do: set_param, key: physio_cannot_lower_alone, value: true}
+        why_ru: "Ты отметил, что пульс и HRV у тебя могут быть нетипичными. Поэтому режим снижаю только вместе с твоим самочувствием."
+      - id: manual
+        when: {fact: data.manual_mode, op: eq, value: true}
+        then:
+          - {do: set_flag, value: MANUAL}
+          - {do: ask, card: MANUAL_3Q}
+          - {do: cap_regime, value: STEADY, unless: {all: [{fact: sleep.hours, op: ge, value: 7.0}, {fact: card.U1, op: ge, value: 4}, {fact: card.U2, op: ge, value: 7}, {fact: regime.yesterday, op: ne, value: GENTLE}]}}
+        why_ru: "Данных WHOOP пока нет. Собрал день по твоим трём ответам; уточню, когда браслет догонит."
+    user_override: down_only
+    why_ru: "{variant_why}"
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["A04 §2 «личная базовая линия» п. 1-4", "A25 P1, P5"]
+      note_ru: "Минимум 14 значений — A25 P1 (ур. C). Если при подключении WHOOP отдал ≥ 14 ночей истории, калибровки нет с первого дня."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-3, agent-9]
+
+  - id: REG-06
+    version: 1
+    title_ru: "Нагрузка копится → лёгкая неделя"
+    domain: regime
+    stage: regime
+    priority: 760
+    when:
+      any:
+        - {fact: streak.gentle, op: ge, value: 3}
+        - {fact: lrb.days_above_1, op: ge, value: 7}
+    then:
+      - {do: set_flag, value: LIGHT_WEEK, days: 7}
+      - {do: cap_regime, value: STEADY}
+      - {do: training_level, value: L1, volume_delta_pct: -40, forbid: [intervals]}
+      - {do: limit, key: work.late_meetings, value: 0}
+      - {do: ask, card: SYMPTOM_CHECK}
+    user_override: down_only
+    why_ru: "Третий бережный день подряд — похоже, нагрузка накопилась. Предлагаю лёгкую неделю: тренировки легче на ~40 %, без интервалов, вечера без работы. Это часть тренировки, а не откат."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Meeusen 2013, MSSE 45(1), консенсус ECSS/ACSM (A04 #21)", "A19 TR-01"]
+      note_ru: "Консенсус о снижении нагрузки при признаках перегрузки — A; конкретные «3 дня» и «−40 %» — [Оценка] D."
+    contraindications_ru: []
+    red_flags_ru: ["Если и в лёгкую неделю самочувствие не возвращается — SAF-05"]
+    review: [agent-3, agent-12, agent-10]

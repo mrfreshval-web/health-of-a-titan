@@ -1,0 +1,528 @@
+# A09 §3 — day map and schedule rules for the six domains:
+# sleep & energy (SLP), stress & mental (MNT), nutrition (NUT), activity (ACT),
+# work & productivity (WRK), career & growth (GRW, light), plus stack accounting (STK).
+# Training itself is chosen by A19 (content/training/selector.yaml); these rules set slots and limits.
+# Supplements: accounting only, no doses (A19 §7 veto, A26 §3).
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+rules:
+  # ------------------------------------------------------------------ sleep & energy
+  - id: SLP-01
+    version: 1
+    title_ru: "Якорь отбоя и час на «приземление»"
+    domain: sleep
+    stage: schedule
+    priority: 500
+    when: {fact: anchor.bedtime_target, op: present}
+    then:
+      - {do: add_item, domain: sleep, content: WIND_DOWN, slot: {anchor: bedtime, offset_min: -60, duration_min: 60}}
+      - {do: set_param, key: bedtime_shift_bounds_min, value: [-60, 0]}
+    variants:
+      - id: earlier
+        when:
+          any:
+            - {fact: sleep.hours, op: lt, value: 6.0}
+            - {fact: regime.computed, op: eq, value: GENTLE}
+        then: [{do: shift_anchor, anchor: bedtime, offset_min: -30}]
+    user_override: any
+    why_ru: "Отбой в {bedtime}: так у тебя будет ≥ 7 часов на сон. За час до него — приглушить свет и экраны. {earlier_text}"
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Watson 2015 (≥ 7 ч, A04 #1)", "Chang 2015, PNAS (свет экранов вечером, B, A04 #6)"]
+      note_ru: "Сдвиг отбоя раньше — не больше чем на 30–60 мин: долго лежать без сна вредно для сна (принцип КПТ-И, A04 #7); величина сдвига — [Оценка] D."
+    contraindications_ru: ["При признаках бессонницы (SAF-05 insomnia) отбой раньше не сдвигаем"]
+    red_flags_ru: []
+    review: [agent-3, agent-10]
+
+  - id: SLP-02
+    version: 1
+    title_ru: "Кофейный рубеж от твоего отбоя"
+    domain: sleep
+    stage: schedule
+    priority: 495
+    when: {fact: anchor.bedtime_target, op: present}
+    then:
+      - {do: set_param, key: caffeine_cutoff, value: {anchor: bedtime, offset_h: -9}}
+      - {do: add_item, domain: sleep, content: CAFFEINE_CUTOFF, slot: {anchor: caffeine_cutoff}, display: marker}
+    user_override: any
+    why_ru: "Последний кофе — до {caffeine_cutoff}: это 9 часов до твоего отбоя. Кофеин дольше держится в крови, чем ощущается, и укорачивает сон даже за 6 часов."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Gardiner 2023, Sleep Med Rev — систематический обзор и метаанализ (требует проверки выходных данных)", "Drake 2013, JCSM 9(11):1195-1200, doi:10.5664/jcsm.3170 (B, A04 #4)"]
+      note_ru: "9 ч согласует A26 и A19 N17 (14:00 при отбое 23:00); A25 FUEL ③ пишет 8 ч — предлагаю выровнять на 9 ч. Чувствительность индивидуальна → N-of-1 (C1)."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-3, agent-12]
+
+  - id: SLP-03
+    version: 1
+    title_ru: "Утренний свет"
+    domain: sleep
+    stage: schedule
+    priority: 490
+    when:
+      not: {fact: flag.active, op: has, value: TRAVEL}
+    then:
+      - {do: add_item, domain: sleep, content: LIGHT_MORNING, slot: {anchor: wake, offset_min: 0, window_min: 60, duration_min: 15}, merge_with: [constraint.dog_walk, constraint.commute, ACT-01]}
+    user_override: any
+    why_ru: "10–20 минут дневного света в первый час после подъёма помогают часам организма держать ритм — вечером легче заснуть вовремя. {merge_text}"
+    evidence:
+      level: B/C
+      kind: fact
+      sources: ["Blume 2019, Somnologie, обзор (A04 #6; DOI требует проверки)", "A25 §5 пара 10 (утренний свет → REG)"]
+      note_ru: "Если светает поздно — у окна или под ярким светом (D)."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-3]
+
+  - id: SLP-04
+    version: 1
+    title_ru: "Якорь подъёма при «скачущем» сне"
+    domain: sleep
+    stage: map
+    priority: 480
+    when:
+      all:
+        - not: {fact: flag.active, op: has, value: TRAVEL}
+        - any:
+            - {fact: reg.wake_sd7_min, op: ge, value: 60}
+            - {fact: reg.weekend_shift_min, op: ge, value: 90}
+    then:
+      - {do: set_param, key: wake_anchor_tolerance_min, value: 30}
+      - {do: suggest_experiment, value: EXP-WAKE-ANCHOR, weeks: 2}
+    user_override: any
+    why_ru: "Подъём за неделю гуляет на {wake_sd} минут. Регулярность сна связана со здоровьем даже при той же длительности. Попробуем 2 недели вставать в {wake_anchor} ± 30 минут, и в выходные тоже? Посмотрим, что скажет твой Ритм."
+    evidence:
+      level: B
+      kind: fact
+      sources: ["Windred 2024, Sleep 47(1):zsad253, UK Biobank (A04 #3; DOI требует проверки)"]
+      note_ru: "Наблюдательные данные; пороги 60 и 90 мин — [Оценка]."
+    contraindications_ru: ["Сменная работа, маленький ребёнок — LifeConstraint отключает правило"]
+    red_flags_ru: []
+    review: [agent-3, agent-10]
+
+  - id: SLP-05
+    version: 1
+    title_ru: "Короткая ночь: короткий дневной сон и еда"
+    domain: sleep
+    stage: map
+    priority: 485
+    when:
+      all:
+        - {fact: sleep.hours, op: lt, value: 6.0}
+        - not: {pred: sick}
+    then:
+      - {do: add_item, domain: sleep, content: NAP_20, slot: {daypart: early_afternoon, latest_end: "15:00", min_before_bedtime_h: 7, duration_min: 20}, optional: true}
+      - {do: add_item, domain: nutrition, content: N05, slot: {anchor: wake, offset_min: 45}}
+      - {do: explain, key: coffee_no_compensation}
+    user_override: any
+    why_ru: "Ночь была {sleep_h}. Если получится — 10–20 минут дневного сна до 15:00 (не дольше, иначе проснёшься разбитым). Завтрак с белком: после короткой ночи тянет к сладкому, это нормально. Второй кофе после {caffeine_cutoff} ночь не вернёт."
+    evidence:
+      level: C
+      kind: fact
+      sources: ["Brooks & Lack 2006, Sleep 29(6):831-840 — 10-минутный дневной сон после ограничения сна (малое РКИ)", "A19 N05; Al Khatib 2017, Eur J Clin Nutr (A, требует проверки)"]
+    contraindications_ru: ["Признаки бессонницы (SAF-05 insomnia) — дневной сон не предлагаем", "За рулём сонливость → не садиться за руль, а не «перебороть»"]
+    red_flags_ru: ["Засыпаешь днём против воли, особенно за рулём → к врачу"]
+    review: [agent-3, agent-12]
+
+  # ------------------------------------------------------------------ stress & mental
+  - id: MNT-01
+    version: 1
+    title_ru: "Высокое напряжение вчера или впереди"
+    domain: mental
+    stage: schedule
+    priority: 470
+    when:
+      any:
+        - {fact: eve.B3, op: ge, value: 8}
+        - {fact: card.U6, op: ge, value: 8}
+    then:
+      - {do: add_item, domain: mental, content: P3, slot: {anchor: key_event_or_midday, offset_min: -15, duration_min: 5}}
+      - {do: add_item, domain: work, content: WORK_SESSION_5, optional: true}
+      - {do: limit, key: work.after_wind_down, value: 0}
+    user_override: any
+    why_ru: "Вчера пик напряжения был {stress_peak} из 10. Сегодня 5 минут длинного выдоха перед самым трудным моментом и, если хочешь, 5 минут с Винсом, чтобы разложить главное. После {wind_down} — без работы."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Fincham 2023, Sci Rep 13:432 (g ≈ −0,35, A04 #8)", "A07 §3.4 П3"]
+      note_ru: "Эффект небольшой; ценность — в моменте, а не в силе эффекта."
+    contraindications_ru: ["Дыхательные практики могут усиливать тревогу у части людей → П5 (заземление) или П8 (движение)"]
+    red_flags_ru: ["Стресс ≥ 8 ежедневно 2 недели → SAF-05 / Агент 10"]
+    review: [agent-10, agent-3]
+
+  - id: MNT-02
+    version: 1
+    title_ru: "Открытый конфликт: разбор днём, а не ночью"
+    domain: mental
+    stage: schedule
+    priority: 465
+    when:
+      any:
+        - {fact: label.cnf_open_max, op: ge, value: 2}
+        - {fact: eve.B5, op: has, value: conflict}
+    then:
+      - {do: add_item, domain: mental, content: PARKED_TOPIC_15, slot: {daypart: day, latest_end: "19:00", duration_min: 15}}
+      - {do: set_param, key: mentor_park_after, value: "22:00"}
+    user_override: any
+    why_ru: "Конфликт с {role} ещё открыт. Даю ему 15 минут днём — подумать, что ты хочешь сказать. Если мысли полезут ночью, их можно «припарковать» до этого времени."
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["Отложенное беспокойство (stimulus control for worry): McGowan & Behar 2013, Behav Modif (требует проверки источника)", "A07 §1 пример 23:40"]
+      note_ru: "Роль, а не имя (A25 §3.2); без ярлыков о другом человеке."
+    contraindications_ru: ["Насилие или угроза безопасности — не «парковка», а кризисный маршрут A07"]
+    red_flags_ru: []
+    review: [agent-10, agent-8]
+
+  - id: MNT-03
+    version: 1
+    title_ru: "Тяжёлая погода: маленькое действие вместо разбора"
+    domain: mental
+    stage: map
+    priority: 475
+    when:
+      all:
+        - any:
+            - {fact: card.U3_z, op: le, value: -1.5}
+            - {fact: card.U3_chips, op: has, value: sad}
+            - {fact: card.U3_chips, op: has, value: empty}
+        - {fact: safety.crisis_level, op: lt, value: 2}
+    then:
+      - {do: add_item, domain: activity, content: WALK_OUTSIDE_15, slot: {daypart: before_noon_or_lunch}, merge_with: [SLP-03, ACT-01]}
+      - {do: add_item, domain: mental, content: PLEASANT_ACTIVITY_FROM_LIST, optional: true}
+      - {do: defer, value: [negative_insights]}
+    user_override: any
+    why_ru: "Утро тяжёлое — так бывает. Не будем ничего разбирать: 15 минут пешком на улице и одно небольшое дело из твоего списка «что обычно помогает». Этого достаточно."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Noetel 2024, BMJ 384:e075847, doi:10.1136/bmj-2023-075847 (активность и симптомы депрессии, A04 #10)"]
+      note_ru: "Метаанализ — у людей с депрессией; для нас это шаг образа жизни, не лечение. Формат микрошага — D (поведенческая активация)."
+    contraindications_ru: ["SAF-02 активен — правило не применяется"]
+    red_flags_ru: ["10 из 14 дней низкое настроение → SAF-05 low_mood"]
+    review: [agent-10, agent-3]
+
+  - id: MNT-04
+    version: 1
+    title_ru: "Одиночество → один тёплый контакт"
+    domain: mental
+    stage: schedule
+    priority: 440
+    when:
+      any:
+        - {fact: count.lonely_3d, op: ge, value: 2}
+        - {fact: con.level, op: le, value: -1}
+    then:
+      - {do: add_item, domain: social, content: CONTACT_ONE, slot: {daypart: evening, latest_end: "21:00"}, optional: true}
+    user_override: any
+    why_ru: "Пару дней было мало людей рядом. Напиши или позвони одному человеку, с которым тебе тепло — без повода, это нормально."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Holt-Lunstad 2010, PLoS Med 7(7):e1000316 (A04 #11)"]
+      note_ru: "Связь социальных связей со здоровьем — A (наблюдательная); сам микрошаг — D. Про близость и знакомства не подсказываем."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-10]
+
+  # ------------------------------------------------------------------ nutrition
+  - id: NUT-01
+    version: 1
+    title_ru: "Ужин за 3 часа до сна"
+    domain: nutrition
+    stage: schedule
+    priority: 460
+    when: {fact: anchor.bedtime_target, op: present}
+    then:
+      - {do: add_item, domain: nutrition, content: DINNER, slot: {anchor: bedtime, latest_end_offset_min: -180}}
+    variants:
+      - id: late_unavoidable
+        when: {fact: cal.dinner_after_cutoff, op: eq, value: true}
+        then: [{do: add_item, domain: nutrition, content: N15}]
+    user_override: any
+    why_ru: "Ужин до {dinner_end} — за 3 часа до сна. Если вечер занят — поешь полегче: белок и овощи, меньше жирного и острого."
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["A25 §5 пара 4 (поздний ужин → ORS, C)", "A19 N15"]
+    contraindications_ru: ["Голод мешает уснуть — лёгкий перекус лучше, чем лечь голодным"]
+    red_flags_ru: []
+    review: [agent-12, agent-3]
+
+  - id: NUT-02
+    version: 1
+    title_ru: "Вечер с алкоголем — план заранее"
+    domain: nutrition
+    stage: schedule
+    priority: 455
+    when: {fact: chip.alcohol_tonight, op: eq, value: true}
+    then:
+      - {do: add_item, domain: nutrition, content: N16, slot: {anchor: event_or_evening, offset_min: -60}}
+      - {do: set_param, key: last_drink_before, value: {anchor: bedtime, offset_h: -3}}
+      - {do: set_param, key: tomorrow_hint, value: {training: later_or_zone2}}
+    user_override: any
+    why_ru: "Вечером {event_name}. Если пьёшь — поешь заранее, стакан воды на каждую порцию, последняя за 3 часа до сна. Завтра я учту это в плане. Выбор за тобой."
+    evidence:
+      level: A/B
+      kind: fact
+      sources: ["Ebrahim 2013; Pietilä 2018 (A04 #5)", "A19 N16", "модель Drink Less (A10 S7)"]
+    contraindications_ru: ["Никаких «норм» и морали; вариант «сухой вечер» — равноправная кнопка"]
+    red_flags_ru: ["Беременность, препараты, несовместимые с алкоголем — правило не подсказывает, как пить (совет врача)"]
+    review: [agent-10, agent-3, agent-12]
+
+  - id: NUT-03
+    version: 1
+    title_ru: "Нет окна на обед"
+    domain: nutrition
+    stage: schedule
+    priority: 450
+    when:
+      all:
+        - {fact: cal.connected, op: eq, value: true}
+        - {fact: cal.lunch_gap_min, op: lt, value: 20}
+    then:
+      - {do: add_item, domain: nutrition, content: N20, slot: {nearest_gap_min: 5, window: ["11:00", "15:00"]}}
+      - {do: add_item, domain: nutrition, content: N14, optional: true}
+    user_override: any
+    why_ru: "С 11:30 до 14:30 нет ни одного окна. Поставил 5 минут на белковый перекус в {gap_time}, чтобы вечером не наверстывать."
+    evidence:
+      level: D
+      kind: estimate
+      sources: ["A19 N14, N19, N20; A26 §6 (долгий перерыв → поздняя «компенсация»)"]
+    contraindications_ru: ["SAF-06 активен — без подсказок о порциях"]
+    red_flags_ru: []
+    review: [agent-12]
+
+  # ------------------------------------------------------------------ activity
+  - id: ACT-01
+    version: 1
+    title_ru: "Бережно — не значит неподвижно"
+    domain: activity
+    stage: map
+    priority: 430
+    when:
+      all:
+        - {fact: regime.final, op: eq, value: GENTLE}
+        - not: {fact: flag.active, op: has, value: SICK}
+        - not: {fact: flag.active, op: has, value: EMERGENCY}
+    then:
+      - {do: add_item, domain: activity, content: T15, slot: {daypart: any_daylight}, merge_with: [SLP-03, MNT-03]}
+    user_override: any
+    why_ru: "Сегодня без нагрузки, но 20–30 минут спокойной ходьбы помогают и настроению, и сну. Темп — такой, чтобы можно было говорить."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Noetel 2024 (A04 #10)", "Bull 2020, BJSM, руководство ВОЗ (A04 #12)"]
+      note_ru: "Связь с восстановлением — D; с настроением и общим объёмом активности — A."
+    contraindications_ru: ["Лихорадка, SAF-01/03"]
+    red_flags_ru: []
+    review: [agent-12, agent-3]
+
+  - id: ACT-02
+    version: 1
+    title_ru: "Перерывы в долгом сидении"
+    domain: activity
+    stage: schedule
+    priority: 420
+    when:
+      any:
+        - {fact: cal.longest_block_min, op: ge, value: 120}
+        - {fact: plan.focus_minutes_contiguous, op: ge, value: 120}
+    then:
+      - {do: add_item, domain: activity, content: MOVE_BREAK_3, slot: {every_min: 75, inside: busy_blocks}, display: marker}
+    user_override: any
+    why_ru: "У тебя {block_len} подряд без окна. Каждые 60–90 минут — встать и пройтись 3 минуты: бодрость держится дольше."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Albulescu 2022, PLoS One 17(8):e0272460 (микроперерывы, A04 #23; DOI требует проверки)", "Ekelund 2016, Lancet 388 (сидение, A04 #14)"]
+      note_ru: "Эффект на бодрость небольшой, на продуктивность — слабый; обещаем бодрость, не результат."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-12, agent-8]
+
+  - id: ACT-03
+    version: 1
+    title_ru: "Время тренировки в дне"
+    domain: activity
+    stage: schedule
+    priority: 425
+    when: {fact: plan.training_type, op: present}
+    then:
+      - {do: set_param, key: training_slot, value: {prefer: constraint.training_window, avoid_end_within_h_of_bedtime: {vigorous: 2, moderate: 0}}}
+      - {do: add_item, domain: nutrition, content: N07, slot: {anchor: training, offset_min: -120}}
+      - {do: add_item, domain: nutrition, content: N08, slot: {anchor: training_end, offset_min: 60}}
+    variants:
+      - id: only_late_slot
+        when: {fact: plan.training_slot_end_to_bedtime_h, op: lt, value: 1}
+        then: [{do: set_param, key: training_swap, value: {from: [intervals, strength_heavy], to: [zone2, strength_rpe7]}}]
+    user_override: any
+    why_ru: "Тренировка в {training_time} — в твоём окне. Интенсив ставлю так, чтобы он заканчивался не позже чем за 2 часа до сна; спокойная тренировка вечером сну не мешает."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Stutz 2019, Sports Med 49(2), doi:10.1007/s40279-018-1015-0 (A04 #22)", "A19 TR-07, N07, N08"]
+      note_ru: "Запас 2 ч для интенсива — [Оценка], строже TR-07 (1 ч); при единственном позднем окне действует TR-07."
+    contraindications_ru: []
+    red_flags_ru: ["Стоп-сигналы F1-F8 во время тренировки (A19 §6.2)"]
+    review: [agent-12, agent-3]
+
+  # ------------------------------------------------------------------ work & productivity
+  - id: WRK-01
+    version: 1
+    title_ru: "Блоки фокуса по режиму"
+    domain: work
+    stage: schedule
+    priority: 410
+    when: {fact: regime.final, op: present}
+    then:
+      - {do: add_item, domain: work, content: FOCUS_BLOCK, count_from_map: work.focus_blocks, slot: {anchor: wake, offset_min: 120, window_min: 180, duration_from_map: work.block_min, avoid_busy: true}}
+      - {do: set_param, key: learn_focus_time_from, value: [eve.B8, card.U4], after_days: 14}
+    user_override: any
+    why_ru: "Главная задача — {focus_time}: в первые часы после подъёма голова обычно свежее. Через пару недель подстрою время по твоим отметкам ясности."
+    evidence:
+      level: D
+      kind: estimate
+      sources: ["Lim & Dinges 2010 (недосып → внимание, A, A04 #2)"]
+      note_ru: "Универсального «лучшего часа» нет, он зависит от хронотипа — поэтому учимся на тебе (CLR, В8)."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-8, agent-3]
+
+  - id: WRK-02
+    version: 1
+    title_ru: "Бережный день на работе"
+    domain: work
+    stage: map
+    priority: 415
+    when:
+      any:
+        - {fact: regime.final, op: eq, value: GENTLE}
+        - {fact: sleep.hours, op: lt, value: 6.0}
+    then:
+      - {do: limit, key: work.main_tasks_max, value: 1}
+      - {do: set_param, key: decisions_hint, value: morning_or_tomorrow}
+      - {do: limit, key: work.late_meetings, value: 0, soft: true}
+    user_override: any
+    why_ru: "Сегодня одна главная задача — {task_1}. Важные решения — до обеда или завтра: после короткой ночи внимание проседает сильнее, чем кажется. Остальное — по возможности."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Lim & Dinges 2010, Psychol Bull 136(3) (A04 #2)"]
+      note_ru: "Связь недосыпа с вниманием — A; совет переносить решения — D."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-8, agent-3]
+
+  - id: WRK-03
+    version: 1
+    title_ru: "Длинная неделя"
+    domain: work
+    stage: weekly
+    priority: 405
+    when:
+      any:
+        - {fact: wld.hours_week, op: ge, value: 55}
+        - {fact: label.work_night_7d, op: ge, value: 2}
+    then:
+      - {do: add_item, domain: work, content: EVENING_OFF, count: 1, slot: {daypart: evening, next_free: true}}
+      - {do: add_item, domain: work, content: WORK_SESSION_15_PRIORITIES, optional: true}
+    user_override: any
+    why_ru: "На этой неделе уже {hours} часов работы. Предлагаю один вечер полностью без работы и 15 минут с Винсом: что можно отдать, отложить или упростить."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Kivimäki 2015, Lancet 386:1739-1746, doi:10.1016/S0140-6736(15)60295-1 (A04 #24)"]
+      note_ru: "Связь ≥ 55 ч с риском для здоровья — наблюдательная; в интерфейсе не пугаем болезнями (A11, Агент 10)."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-8, agent-10, agent-3]
+
+  # ------------------------------------------------------------------ career & growth (light)
+  - id: GRW-01
+    version: 1
+    title_ru: "Шаг к цели в формате «если — то»"
+    domain: growth
+    stage: schedule
+    priority: 400
+    when: {fact: goal.has_weekly, op: eq, value: true}
+    then:
+      - {do: add_item, domain: growth, content: GOAL_STEP, slot: {free_gap_min: 20, prefer: after_focus}, format: if_then}
+    variants:
+      - id: minimal
+        when:
+          any:
+            - {fact: regime.final, op: eq, value: GENTLE}
+            - {fact: flag.active, op: has, value: RETURN}
+        then: [{do: set_param, key: goal_step_version, value: minimal}]
+    user_override: any
+    why_ru: "Если {slot_time} — то {goal_step}. Так шаг к цели «{goal_title}» не потеряется среди дел."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Gollwitzer & Sheeran 2006, Adv Exp Soc Psychol 38:69-119 — метаанализ намерений реализации («если — то»)"]
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-8, agent-10]
+
+  - id: GRW-02
+    version: 1
+    title_ru: "Окно роста в сильный день"
+    domain: growth
+    stage: schedule
+    priority: 390
+    when:
+      all:
+        - {fact: regime.final, op: eq, value: BOOST}
+        - {fact: wld.z, op: le, value: 0.0}
+        - not: {fact: chip.important_day, op: eq, value: true}
+    then:
+      - {do: add_item, domain: growth, content: LEARNING_25, slot: {free_gap_min: 25, daypart: day}, optional: true}
+    user_override: any
+    why_ru: "Сил сегодня больше обычного, а рюкзак лёгкий. Хороший день для 25 минут на {growth_item} — то, на что обычно не хватает времени."
+    evidence:
+      level: D
+      kind: estimate
+      note_ru: "Лёгкое правило; содержание направления «карьера» — Агент 8."
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-8]
+
+  # ------------------------------------------------------------------ stack (accounting only)
+  - id: STK-01
+    version: 1
+    title_ru: "Кофеин в стеке и кофейный рубеж"
+    domain: stack
+    stage: schedule
+    priority: 380
+    when:
+      any:
+        - {fact: stack.caffeinated_after_cutoff, op: eq, value: true}
+        - {fact: stack.prescribed_stimulant_late, op: eq, value: true}
+    then:
+      - {do: add_item, domain: stack, content: STACK_NOTE, display: note}
+    variants:
+      - id: own_choice
+        when: {fact: stack.caffeinated_after_cutoff, op: eq, value: true}
+        then: [{do: set_param, key: stack_hint, value: move_before_cutoff}]
+        why_ru: "«{item}» ты отметил как содержащий кофеин, а он стоит после {caffeine_cutoff}. Если это твой выбор, а не назначение врача, его можно перенести раньше. Чем больше кофеина в продукте, тем раньше стоит его принимать."
+      - id: prescribed
+        when: {fact: stack.prescribed_stimulant_late, op: eq, value: true}
+        then: [{do: set_param, key: stack_hint, value: ask_doctor_only}]
+        why_ru: "«{item}» назначен врачом — его время и дозу я не трогаю. Если сон страдает, это вопрос к врачу; могу добавить его в список вопросов к визиту."
+    user_override: any
+    why_ru: "{variant_why}"
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Gardiner 2023, Sleep Med Rev (кофеин и сон, метаанализ; требует проверки выходных данных)"]
+      note_ru: "Только учёт и время; дозы не называем и не меняем (вето A19 §7, A26 §3)."
+    contraindications_ru: ["Назначенное врачом не меняем никогда"]
+    red_flags_ru: ["Сердцебиение, тревога, бессонница на фоне стимуляторов → к врачу"]
+    review: [agent-3, agent-7]

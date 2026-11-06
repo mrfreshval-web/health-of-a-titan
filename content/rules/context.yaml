@@ -1,0 +1,177 @@
+# A09 §3 — context of yesterday and today: alcohol, late evening, hard training, travel, important day.
+# Context rules never loosen the map; they explain a "known cause" (A04 §3 step 3) and tighten slots.
+# Alcohol and intimacy wording: no shame, no morals (Drink Less model, A10 S7) — Agent 10 review.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+rules:
+  - id: CTX-01
+    version: 1
+    title_ru: "Алкоголь накануне"
+    domain: context
+    stage: context
+    priority: 700
+    when: {fact: eve.B4, op: ge, value: 2}
+    then:
+      - {do: explain, key: known_cause_alcohol}
+      - {do: add_item, domain: nutrition, content: N04, slot: {anchor: wake, offset_min: 0}}
+      - {do: add_item, domain: nutrition, content: N18, slot: {anchor: wake, offset_min: 45}}
+    variants:
+      - id: low_recovery
+        when: {fact: ors.z_day, op: le, value: -0.5}
+        then: [{do: forbid, value: [intervals]}]
+      - id: heavy_or_late
+        when:
+          any:
+            - {fact: eve.B4, op: ge, value: 3}
+            - {fact: eve.B4_last, op: eq, value: lt1h}
+        then: [{do: training_level, value: L1, forbid: [intervals]}]
+      - id: personal_insight
+        when: {fact: insight.pair1_ready, op: eq, value: true}
+        then: [{do: explain, key: personal_delta_alcohol}]
+    user_override: down_only
+    why_ru: "Вчера было {drinks} порции, последняя — {last_drink_text}. У многих это снижает ночную HRV, и сегодня твоя ниже нормы. Это просто информация, не оценка. {personal_delta_text}"
+    evidence:
+      level: A/B
+      kind: fact
+      sources: ["Ebrahim 2013, Alcohol Clin Exp Res 37(4) (A04 #5)", "Pietilä 2018, JMIR Ment Health 5(1):e23, doi:10.2196/mental.9519 (A04 #5)", "A19 TR-06, N04, N18"]
+      note_ru: "Порог «2 порции + ORS ≤ −0,5 → без интервалов» — [Оценка] D, мягче TR-06 (≥ 3 порций). Личная дельта — только после инсайта A25 §5 пара 1 (n ≥ 8/8)."
+    contraindications_ru: ["Не показываем, если включён SAF-02; в режиме возвращения — без личной дельты"]
+    red_flags_ru: ["Если человек сам пишет, что хочет и не может сократить — мягкий маршрут Агента 10, без ярлыка «зависимость» (A25 §3.4)"]
+    review: [agent-3, agent-10, agent-12]
+
+  - id: CTX-02
+    version: 1
+    title_ru: "Поздний ужин, экраны или кофе накануне"
+    domain: context
+    stage: context
+    priority: 690
+    when:
+      all:
+        - any:
+            - {fact: card.U7, op: has, value: late_meal}
+            - {fact: card.U7, op: has, value: late_screens}
+            - {fact: card.U7, op: has, value: late_coffee}
+        - any:
+            - {fact: sleep.onset_shift_min, op: ge, value: 45}
+            - {fact: ors.z_day, op: le, value: -0.5}
+    then:
+      - {do: explain, key: known_cause_late_evening}
+      - {do: set_param, key: enforce, value: [NUT-01, SLP-01, SLP-02]}
+    user_override: any
+    why_ru: "Вчера {late_items}, и заснул ты на {onset_shift} позже обычного. Сегодня ужин до {dinner_end}, кофе до {caffeine_cutoff}, за час до сна приглушаем свет и экраны."
+    evidence:
+      level: B/C
+      kind: fact
+      sources: ["Chang 2015, PNAS 112(4), doi:10.1073/pnas.1418490112 (экраны, A04 #6)", "Drake 2013, JCSM 9(11) (кофеин, A04 #4)", "A25 §5 пара 4 (поздний ужин → ORS, C)"]
+    contraindications_ru: []
+    red_flags_ru: []
+    review: [agent-3]
+
+  - id: CTX-03
+    version: 1
+    title_ru: "Тяжёлая тренировка вчера"
+    domain: context
+    stage: context
+    priority: 680
+    when:
+      all:
+        - any:
+            - {fact: trl.z_yesterday, op: ge, value: 1.5}
+            - {fact: train.yesterday_type, op: eq, value: intervals}
+            - {fact: train.yesterday_rpe, op: ge, value: 8}
+        - {fact: ors.z_day, op: le, value: -0.5}
+    then:
+      - {do: explain, key: known_cause_training}
+      - {do: forbid, value: [intervals, same_pattern_heavy]}
+      - {do: add_item, domain: activity, content: T14, optional: true}
+    user_override: down_only
+    why_ru: "Вчера была тяжёлая сессия, и восстановление сегодня ниже нормы — это ожидаемо, так тело адаптируется. Сегодня без интервалов; если хочется — 10 минут мобильности."
+    evidence:
+      level: A
+      kind: fact
+      sources: ["Granero-Gallegos 2020, IJERPH 17(21):7999, doi:10.3390/ijerph17217999 (A04 #18)", "A25 §5 пара 5 (C)"]
+      note_ru: "Метаанализ тренировок по HRV — A, но малые выборки; порог TRL z ≥ 1,5 — [Оценка]."
+    contraindications_ru: []
+    red_flags_ru: ["Боль в суставе после вчерашней сессии → A19 TR-09 / F6"]
+    review: [agent-12, agent-3]
+
+  - id: CTX-04
+    version: 1
+    title_ru: "Перелёт и смена часовых поясов"
+    domain: context
+    stage: context
+    priority: 720
+    when:
+      any:
+        - {fact: ctx.flight_today, op: eq, value: true}
+        - all:
+            - {fact: ctx.tz_shift_h, op: present}
+            - any:
+                - {fact: ctx.tz_shift_h, op: ge, value: 2}
+                - {fact: ctx.tz_shift_h, op: le, value: -2}
+            - {fact: ctx.days_since_tz_shift, op: le, value: 3}
+    then:
+      - {do: set_flag, value: TRAVEL}
+      - {do: set_param, key: anchors_timezone, value: local}
+      - {do: set_param, key: pause_metrics, value: [REG, RHY]}
+      - {do: add_item, domain: nutrition, content: N13}
+    variants:
+      - id: flight_day
+        when: {fact: ctx.flight_today, op: eq, value: true}
+        then:
+          - {do: add_item, domain: activity, title_ru: "На длинном перелёте вставай и разминай ноги каждые 1–2 часа", optional: true}
+          - {do: forbid, value: [intervals]}
+      - id: day1_after
+        when: {fact: ctx.days_since_tz_shift, op: le, value: 1}
+        then:
+          - {do: cap_regime, value: STEADY}
+          - {do: forbid, value: [intervals]}
+          - {do: set_param, key: training_template_hint, value: T10}
+      - id: east
+        when: {all: [{fact: ctx.tz_shift_h, op: ge, value: 2}, {fact: ctx.tz_shift_h, op: le, value: 6}]}
+        then: [{do: add_item, domain: sleep, content: LIGHT_MORNING_LOCAL, slot: {anchor: wake, offset_min: 30, duration_min: 30}}]
+      - id: west
+        when: {all: [{fact: ctx.tz_shift_h, op: le, value: -2}, {fact: ctx.tz_shift_h, op: ge, value: -6}]}
+        then: [{do: add_item, domain: sleep, content: LIGHT_AFTERNOON_LOCAL, slot: {daypart: afternoon, duration_min: 30}}]
+      - id: far
+        when:
+          any:
+            - {fact: ctx.tz_shift_h, op: gt, value: 6}
+            - {fact: ctx.tz_shift_h, op: lt, value: -6}
+        then: [{do: add_item, domain: sleep, content: LIGHT_DAYTIME_LOCAL, slot: {daypart: midday}}]
+    user_override: down_only
+    why_ru: "Ты на {tz_shift} от дома. Пару дней сон и пульс будут «не твоими», поэтому регулярность сна не оцениваю, а день строю по местному времени: свет {light_when}, еда по местным часам, кофе до {caffeine_cutoff}."
+    evidence:
+      level: C/D
+      kind: estimate
+      sources: ["Khalsa 2003, J Physiol 549(3) — фазовый ответ на свет (механизм; требует проверки выходных данных)", "A19 T10, N13", "Разминка на длинных перелётах — рекомендации ВОЗ для путешественников (требует проверки источника)"]
+      note_ru: "Правило «1 день на 1 час сдвига» и окно света — [Оценка] D. Мелатонин и снотворные не предлагаем: это вопрос к врачу."
+    contraindications_ru: []
+    red_flags_ru: ["Боль и отёк одной голени после перелёта, внезапная одышка → срочно к врачу / 911"]
+    review: [agent-3, agent-12]
+
+  - id: CTX-05
+    version: 1
+    title_ru: "Важный день"
+    domain: context
+    stage: context
+    priority: 660
+    when: {fact: chip.important_day, op: eq, value: true}
+    then:
+      - {do: add_item, domain: mental, content: P3, slot: {anchor: event, offset_min: -15, duration_min: 3}}
+      - {do: set_param, key: training_not_before_event, value: {forbid_types: [intervals, strength_heavy], window_h: 3}}
+      - {do: add_item, domain: nutrition, content: N07, slot: {anchor: event, offset_min: -150}}
+      - {do: set_param, key: protect_previous_evening, value: true}
+    user_override: any
+    why_ru: "Сегодня {event_name} в {event_time}. Интенсив — после, а не до; за 2–3 часа нормальная еда, за 15 минут — 3 минуты длинного выдоха, чтобы войти спокойным."
+    evidence:
+      level: D
+      kind: estimate
+      sources: ["Fincham 2023, Sci Rep 13:432, doi:10.1038/s41598-022-27247-y (дыхание, A, небольшой эффект; A04 #8)"]
+      note_ru: "Перенос интенсива после важного события — практика (D)."
+    contraindications_ru: ["Дыхательная практика усиливает тревогу → П5 или П8 (A07 §3.4)"]
+    red_flags_ru: []
+    review: [agent-3, agent-10]

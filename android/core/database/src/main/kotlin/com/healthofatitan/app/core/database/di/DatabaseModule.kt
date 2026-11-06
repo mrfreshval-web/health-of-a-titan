@@ -5,7 +5,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.core.database.Migrations
 import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -34,6 +36,7 @@ object DatabaseModule {
         val factory = SupportOpenHelperFactory(keyProvider.getOrCreateKey())
         return Room.databaseBuilder(context, HotDatabase::class.java, HotDatabase.FILE_NAME)
             .openHelperFactory(factory)
+            .addMigrations(*Migrations.ALL)
             .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -46,4 +49,7 @@ object DatabaseModule {
 
     @Provides
     fun provideConsentDao(db: HotDatabase): ConsentDao = db.consentDao()
+
+    @Provides
+    fun provideMetricDao(db: HotDatabase): MetricDao = db.metricDao()
 }

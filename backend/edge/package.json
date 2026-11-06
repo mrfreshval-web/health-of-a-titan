@@ -1,6 +1,6 @@
 {
   "name": "hot-edge",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "MATUTA thin edge: stateless Cloudflare Worker, no health data stored (A14 §5)",
   "type": "module",

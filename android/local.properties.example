@@ -2,7 +2,7 @@
 # sdk.dir=/path/to/Android/sdk
 
 # Non-secret build config (A14 §9 step 9). Env vars with the same names win over this file.
-# WHOOP_CLIENT_ID=
+# Worker address (not a secret). The WHOOP client id comes from the Worker since slice 1.
 # EDGE_BASE_URL=https://hot-edge.<account>.workers.dev
 
 # Release signing (normally only in GitHub Secrets; see android/README.md).

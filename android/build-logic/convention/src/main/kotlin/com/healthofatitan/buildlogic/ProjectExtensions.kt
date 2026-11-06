@@ -18,6 +18,9 @@ object HotSdk {
     const val MIN = 34
     const val COMPILE = 37
     const val TARGET = 36
+
+    /** Custom scheme of the WHOOP OAuth redirect (= applicationId, registered at WHOOP). */
+    const val OAUTH_REDIRECT_SCHEME = "com.healthofatitan.app"
 }
 
 internal val Project.libs: VersionCatalog

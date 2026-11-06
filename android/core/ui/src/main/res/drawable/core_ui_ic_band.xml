@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wrist band, the source chip «WHOOP» (A36 §5: an icon + the word, never a third-party logo). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9,3L15,3L15,7M9,3L9,7M9,17L9,21L15,21L15,17"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9,7L15,7A2,2 0,0 1,17 9L17,15A2,2 0,0 1,15 17L9,17A2,2 0,0 1,7 15L7,9A2,2 0,0 1,9 7Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

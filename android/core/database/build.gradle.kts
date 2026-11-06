@@ -12,4 +12,8 @@ dependencies {
     implementation(project(":core:security"))
     implementation(libs.sqlcipher.android)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

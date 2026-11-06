@@ -3,6 +3,7 @@ package com.healthofatitan.app.navigation
 import android.app.Application
 import android.content.Intent
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -11,12 +12,18 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.SOS_BUTTON_TAG
+import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
+import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
+import com.healthofatitan.app.feature.me.ME_WHOOP_ROW_TAG
+import com.healthofatitan.app.feature.me.whoop.WHOOP_CONNECT_TAG
+import com.healthofatitan.app.feature.me.whoop.WHOOP_SCREEN_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_SCREEN_TAG
 import com.healthofatitan.app.feature.sos.SOS_CALL_911_TAG
 import com.healthofatitan.app.feature.sos.SOS_CALL_988_TAG
 import com.healthofatitan.app.feature.sos.SOS_SCREEN_TAG
+import com.healthofatitan.app.feature.today.TODAY_CONNECT_TAG
 import com.healthofatitan.app.feature.today.TODAY_SCREEN_TAG
 import com.healthofatitan.app.feature.week.WEEK_SCREEN_TAG
 import org.junit.Rule
@@ -45,7 +52,8 @@ class HotAppNavigationTest {
     )
 
     private fun launch(pendingRoute: String? = null) {
-        compose.setContent { HotTheme { HotApp(pendingRoute = pendingRoute) } }
+        // stateful = false: screens render their default state, no Hilt ViewModels in this test.
+        compose.setContent { HotTheme { HotApp(pendingRoute = pendingRoute, stateful = false) } }
     }
 
     @Test
@@ -92,5 +100,26 @@ class HotAppNavigationTest {
         val emergency = app.nextStartedActivity
         assertEquals(Intent.ACTION_DIAL, emergency.action)
         assertEquals("tel:911", emergency.dataString)
+    }
+
+    @Test
+    fun `me opens whoop connections and back returns to me`() {
+        launch()
+        compose.onNodeWithTag(HotTab.ME.testTag).performClick()
+        compose.onNodeWithTag(ME_WHOOP_ROW_TAG).performClick()
+        compose.onNodeWithTag(WHOOP_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(WHOOP_CONNECT_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals("WHOOP")
+        compose.onNodeWithTag(HotTab.ME.testTag).assertIsSelected()
+        compose.onNodeWithTag(SOS_BUTTON_TAG).assertExists() // SOS stays one tap away
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `today without whoop offers to connect it`() {
+        launch()
+        compose.onNodeWithTag(TODAY_CONNECT_TAG).performClick()
+        compose.onNodeWithTag(WHOOP_SCREEN_TAG).assertExists()
     }
 }

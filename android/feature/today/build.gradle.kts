@@ -5,3 +5,7 @@ plugins {
 android {
     namespace = "com.healthofatitan.app.feature.today"
 }
+
+dependencies {
+    implementation(project(":integration:whoop"))
+}

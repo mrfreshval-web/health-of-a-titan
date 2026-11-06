@@ -25,8 +25,8 @@ android {
         applicationId = "com.healthofatitan.app"
         versionCode = ciRunNumber
         versionName = "0.0.$ciRunNumber"
-        // Not secrets: the WHOOP client id is public, the secret stays in the Worker (ADR-03).
-        buildConfigField("String", "WHOOP_CLIENT_ID", "\"${config("WHOOP_CLIENT_ID").orEmpty()}\"")
+        // Not a secret: the Worker address (repository variable EDGE_BASE_URL). The WHOOP client id
+        // comes from the Worker (/whoop/authorize), the client secret never leaves it (ADR-03).
         buildConfigField("String", "EDGE_BASE_URL", "\"${config("EDGE_BASE_URL").orEmpty()}\"")
     }
 
@@ -65,6 +65,8 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:security"))
     implementation(project(":core:database"))
+    implementation(project(":core:network"))
+    implementation(project(":integration:whoop"))
     implementation(project(":feature:today"))
     implementation(project(":feature:mentor"))
     implementation(project(":feature:week"))

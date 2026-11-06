@@ -41,6 +41,10 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write # pre-release on main only
+    env:
+      # Not a secret: the Worker address (Settings → Secrets and variables → Actions → Variables).
+      # Empty → the app builds and says «сервер HoT не настроен» on the WHOOP screen.
+      EDGE_BASE_URL: ${{ vars.EDGE_BASE_URL }}
     defaults:
       run:
         working-directory: android
@@ -69,7 +73,7 @@ jobs:
         run: ./gradlew :app:contentCompile --stacktrace
 
       - name: Unit tests (JVM + Robolectric)
-        run: ./gradlew :core:model:test testDebugUnitTest --stacktrace
+        run: ./gradlew :core:model:test :domain:metrics:test testDebugUnitTest --stacktrace
 
       - name: Lint
         run: ./gradlew :app:lintDebug --stacktrace

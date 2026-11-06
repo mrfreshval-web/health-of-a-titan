@@ -30,6 +30,7 @@ import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotTopBar
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.feature.me.meScreen
+import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.todayScreen
@@ -53,17 +54,21 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
  * The SOS button sits in the top bar of every tab screen: 1 tap to 988/911 (A11 §1.3).
  *
  * @param pendingRoute route requested from outside (tile, shortcut, deep link), consumed once.
+ * @param stateful false draws every screen from its default state without ViewModels: the
+ *   navigation tests run without Hilt.
  */
 @Composable
 fun HotApp(
     pendingRoute: String? = null,
     onPendingRouteConsumed: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
+    stateful: Boolean = true,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val inSos = currentRoute == HotRoute.SOS
-    val currentTab = HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
+    val nested = NESTED[currentRoute]
+    val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
 
     LaunchedEffect(pendingRoute) {
         if (pendingRoute != null) {
@@ -80,9 +85,10 @@ fun HotApp(
             topBar = {
                 if (!inSos) {
                     HotTopBar(
-                        title = currentTab.label,
-                        overline = TabHeaders.overline(currentTab, LocalDate.now()),
+                        title = nested?.title ?: currentTab.label,
+                        overline = nested?.backLabel ?: TabHeaders.overline(currentTab, LocalDate.now()),
                         onSosClick = { navController.openSos() },
+                        onBack = if (nested != null) ({ if (!navController.popBackStack()) navController.openTab(nested.tab.route) }) else null,
                     )
                 }
             },
@@ -95,15 +101,23 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (inSos) Modifier else Modifier.padding(padding),
             ) {
-                todayScreen()
+                todayScreen(onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } }, stateful = stateful)
                 mentorScreen()
                 weekScreen()
-                meScreen()
+                meScreen(onOpenWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } }, stateful = stateful)
+                whoopScreen(stateful = stateful)
                 sosScreen(onClose = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
             }
         }
     }
 }
+
+/** A screen inside a tab (mockup 09 «← Я · Настройки»): its tab stays selected, the bar shows the way back. */
+private class NestedScreen(val tab: HotTab, val title: String, val backLabel: String)
+
+private val NESTED = mapOf(
+    HotRoute.WHOOP to NestedScreen(HotTab.ME, "WHOOP", "Я · Подключения"),
+)
 
 /**
  * Bottom tabs in «Колоннада» (A36 §5): line icons; the active tab is a gold icon on a «gold 14 %»

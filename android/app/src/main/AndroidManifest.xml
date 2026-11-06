@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Slice 0 needs no permissions. INTERNET arrives with WHOOP (slice 1);
+    <!-- INTERNET and ACCESS_NETWORK_STATE come from :integration:whoop (slice 1: Worker + WHOOP API).
          POST_NOTIFICATIONS is not requested before slice 3 (A14 §9 step 7). -->
 
     <application

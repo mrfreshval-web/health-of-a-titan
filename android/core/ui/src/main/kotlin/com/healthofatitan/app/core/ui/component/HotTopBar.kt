@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -34,6 +35,7 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 const val SOS_BUTTON_DESCRIPTION = "SOS, срочная поддержка"
 const val SOS_BUTTON_TAG = "sos_button"
 const val TOP_BAR_TITLE_TAG = "top_bar_title"
+const val TOP_BAR_BACK_TAG = "top_bar_back"
 
 /**
  * Header of every tab screen, «Колоннада» (A36 §10, screens 02/06/07): the short lockup
@@ -46,6 +48,7 @@ fun HotTopBar(
     onSosClick: () -> Unit,
     modifier: Modifier = Modifier,
     overline: String? = null,
+    onBack: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -59,7 +62,27 @@ fun HotTopBar(
             SosButton(onClick = onSosClick)
         }
         Spacer(Modifier.size(14.dp))
-        if (overline != null) {
+        if (onBack != null) {
+            // Nested screen (mockup 09 «← Я · Настройки»): the way back and where it leads.
+            Surface(
+                onClick = onBack,
+                shape = CircleShape,
+                color = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = "Назад" + (overline?.let { ": $it" } ?: "") }
+                    .testTag(TOP_BAR_BACK_TAG),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
+                    Icon(painterResource(R.drawable.core_ui_ic_back), contentDescription = null, modifier = Modifier.size(24.dp))
+                    if (overline != null) {
+                        Spacer(Modifier.width(12.dp))
+                        Text(overline, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics { })
+                    }
+                }
+            }
+        } else if (overline != null) {
             HotOverline(overline)
             Spacer(Modifier.size(2.dp))
         }

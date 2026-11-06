@@ -1,6 +1,6 @@
 # A14 Архитектура MATUTA (v1), модель данных, LLM-слой, ADR, план срезов
 
-> **ID:** A14 · **Версия:** 0.2 · **Статус:** готово к разработке → ревью 13, 9, 7, 10 · **Дата:** 2026-11-06 · **Владелец:** Агент 5
+> **ID:** A14 · **Версия:** 0.2.1 (срез 1: §5 маршруты WHOOP и сессия устройства, ADR-03/04, §10) · **Статус:** готово к разработке → ревью 13, 9, 7, 10 · **Дата:** 2026-11-06 · **Владелец:** Агент 5
 > **Входы:** A10 v0.2, A11 (экраны), A26, A01 §2а, A25 v0.2, A07 v0.1, A19 v0.1, A30 v0.1, A27 v0.2 §В7, A05, D-008…D-018. A09 (правила режима), A15 (WHOOP, Агент 9) и A32 (выбор модели для медицинского модуля, Агент 7) ещё не готовы. Там, где без них не обойтись, стоит пометка «Допущение».
 
 **Резюме.**
@@ -264,25 +264,30 @@ YAML-контент разбирается **на этапе сборки** в G
 - Данные о здоровье не хранятся.
 - Тела запросов не логируются (`console.log` только для кода и длительности).
 - KV хранит только `fcm:<whoopUserId> → token` и счётчики лимитов.
+- **Срез 1 (И1.1a):** refresh-токен WHOOP живёт только в Durable Object `WhoopVault` (один объект на WHOOP `user_id`, SQLite-хранилище), зашифрованный AES-256-GCM ключом из секрета `TOKEN_ENC_KEY` (HKDF). Телефон refresh-токена не видит.
 - Ответы без кэша (`Cache-Control: no-store`).
 
 | Эндпоинт | Аутентификация | Что делает |
 |---|---|---|
 | `GET /health` | — | 200 + версия |
-| `POST /whoop/token`, `POST /whoop/refresh` | rate limit по IP | добавляет `client_id`, `client_secret` и возвращает ответ WHOOP как есть (v0.1 §4) |
+| `POST /whoop/authorize {code_challenge}` | rate limit по IP | выдаёт `client_id`, `redirect_uri`, скоупы и подписанный `state` (HMAC, 10 мин), в который зашит PKCE `code_challenge` телефона |
+| `POST /whoop/token {code, state, code_verifier}` | rate limit по IP + проверка `state` и PKCE | меняет код на токены (с `client_secret`), узнаёт `user_id`. Нет в `ALLOWED_WHOOP_USER_IDS` → отзывает доступ, ничего не хранит, отвечает `403 {error:"not_allowed", whoop_user_id}`. Иначе кладёт токены в `WhoopVault` и отдаёт `{session, access_token, expires_at, whoop_user_id}` |
+| `POST /whoop/access` | сессия устройства | свежий access-токен (≥ 5 мин жизни). Обновление refresh-токена — single-flight внутри DO; `invalid_grant` стирает хранилище → `401 reauth_required` |
+| `POST /whoop/disconnect` | сессия устройства | отзывает доступ в WHOOP и стирает DO → `204` |
+| ~~`POST /whoop/refresh`~~ | — | **удалён в срезе 1** (404): refresh-токен телефону больше не выдаётся |
 | `POST /whoop/webhook` | HMAC-SHA256(`timestamp + body`, client_secret) → base64 = `X-WHOOP-Signature`; окно времени ±5 мин [Факт: developer.whoop.com/docs/developing/webhooks] | при `sleep.updated` / `recovery.updated` ищет FCM-токен по `user_id` и отправляет data-пуш `{t:"whoop", type, trace_id}` без данных о здоровье. Отвечает 200 меньше чем за секунду через `ctx.waitUntil` |
 | `POST /push/register {fcmToken}` | **AppAuth** (ниже) | записывает токен в KV |
 | `POST /llm/anthropic/v1/messages` (второй провайдер — `/llm/<provider>/…`, §4.2) | AppAuth | проверяющий прокси к `api.anthropic.com/v1/messages`. Пропускает только: `model` из списка (`LLM_MODELS`), `max_tokens` ≤ 4096, тело ≤ 10 МБ, разрешённые beta-заголовки. Подставляет `x-api-key`, отдаёт поток SSE. Считает токены в KV по `usage` и отказывает 429 при превышении `DAILY_TOKEN_CAP` |
 | `POST /stt` (audio/ogg-opus или m4a, ≤ 2 мин, ≤ 4 МБ) | AppAuth | `env.AI.run("@cf/openai/whisper-large-v3-turbo", {audio, language:"ru"})` → `{text}` (формат входа — проверить в срезе 5) |
 | `POST /tts {text ≤ 1500, voice, rate}` | AppAuth | Google TTS `text:synthesize`, голос `ru-RU-Chirp3-HD-<Name>`, OGG_OPUS → аудио |
 
-**AppAuth.** `Authorization: Bearer <WHOOP access token>`. При первой встрече токена Worker вызывает `GET /developer/v2/user/profile/basic` и сравнивает `user_id` с `ALLOWED_WHOOP_USER_IDS`. Результат кэшируется в KV под `sha256(token)` на 50 минут, поэтому лишних вызовов WHOOP нет. Секретов в APK по-прежнему нет.
+**AppAuth (обн. в срезе 1).** ~~`Authorization: Bearer <WHOOP access token>` с проверкой профиля и кэшем в KV~~ — не подходит, когда refresh-токеном владеет Worker. Теперь: `Authorization: Bearer <сессия устройства>`. Сессия `hs1.<whoopUserId>.<32 случайных байта>` выдаётся в `/whoop/token`; в DO хранится только её SHA-256 (сравнение за постоянное время). Каждый запрос заново проверяет allowlist, поэтому удаление `user_id` из `ALLOWED_WHOOP_USER_IDS` закрывает доступ сразу. Новый вход заменяет сессию (старая перестаёт работать). На телефоне сессия хранится в Tink AEAD (Keystore). Секретов в APK по-прежнему нет.
 
 **Риски Worker:**
 - Workers Paid ($5 в месяц) с первого дня (D-021): лимит CPU на бесплатном тарифе (10 мс) слишком мал для стриминга Claude, подписи RS256 для FCM и base64-аудио.
 - Вебхуки WHOOP иногда не доходят [Факт: форум сообщества WHOOP, «Sleep webhook not coming through»]. Поэтому есть запасной опрос (ADR-11).
 
-**Секреты Worker** (передаются из GitHub Secrets через `wrangler-action`): `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `ALLOWED_WHOOP_USER_IDS`, `ANTHROPIC_API_KEY`, `GOOGLE_TTS_API_KEY`, `FCM_SERVICE_ACCOUNT_JSON`. Несекретные значения в `vars`: `LLM_MODELS`, `DAILY_TOKEN_CAP`, `FCM_PROJECT_ID`.
+**Секреты Worker** (передаются из GitHub Secrets через `wrangler-action`): `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `ALLOWED_WHOOP_USER_IDS`, `TOKEN_ENC_KEY` (32 байта в base64: `openssl rand -base64 32`), `ANTHROPIC_API_KEY`, `GOOGLE_TTS_API_KEY`, `FCM_SERVICE_ACCOUNT_JSON`. Несекретные значения в `vars`: `LLM_MODELS`, `DAILY_TOKEN_CAP`, `FCM_PROJECT_ID`, `WHOOP_REDIRECT_URI`. Логи Worker: только метод, статус и длительность — ни токенов, ни тел, ни `user_id`.
 
 ## 6. Ключевые потоки
 
@@ -333,8 +338,8 @@ YAML-контент разбирается **на этапе сборки** в G
 |---|---|---|---|---|
 | 01 | Нативный Android, одна Activity, MVVM + UDF, Hilt | KMP, Flutter | D-004; домены — чистый Kotlin | перед iOS: `domain` и `core:model` → KMP |
 | 02 (обн.) | Local-first. **Хранятся только производные показатели HoT**, сырые данные WHOOP — в памяти (D-009) | Room с сырыми данными | условия WHOOP (R-11), минимизация | после ответа WHOOP (A25 §7) |
-| 03 | WHOOP v2: custom scheme redirect, обмен токенов в Worker, токены на телефоне | секрет в APK | публичный репозиторий | App Links перед внешними пользователями |
-| 04 (обн.) | Worker без данных о здоровье; KV только для FCM-токенов и лимитов; доступ по allowlist WHOOP `user_id` | Supabase, свой сервер | бесплатно, без секретов в APK | при 5–20 пользователях: собственный токен сессии |
+| 03 (обн. срез 1) | WHOOP v2: custom scheme redirect (AppAuth), обмен токенов в Worker. PKCE проверяет **Worker**: `code_challenge` зашит в подписанный `state`, `/whoop/token` требует `code_verifier` (в документации WHOOP PKCE не описан, поэтому перехваченный код без верификатора бесполезен). На телефоне — только access-токен в памяти и сессия устройства | секрет в APK; refresh-токен на телефоне | публичный репозиторий; кастомную схему может перехватить другое приложение | App Links перед внешними пользователями |
+| 04 (обн. срез 1) | Worker без данных о здоровье; KV только для FCM-токенов и лимитов; доступ по allowlist WHOOP `user_id`. **Refresh-токен WHOOP — в Durable Object `WhoopVault`, AES-GCM (`TOKEN_ENC_KEY`), single-flight обновление; телефон ходит с собственной сессией устройства** (пункт «пересмотреть» выполнен раньше: WHOOP ротирует refresh-токен, и два параллельных обновления с телефона и из фона ломали бы вход) | refresh на телефоне; Supabase, свой сервер | один владелец ротации, секрет не покидает Worker | ротация `TOKEN_ENC_KEY` — с версией ключа (`v1.` в шифротексте) |
 | 05 (обн.) | Контент и промпты в `content/` YAML → JSON при сборке; `ruleId@ver`, `promptVersion`; **имя и голос наставника — настройки** (D-018) | правила в коде | ревью экспертов без кода, аудит | удалённое обновление контента — после G3 |
 | 07 | Один release-ключ, APK в GitHub Releases | Play | обновление без потери данных | Google Play |
 | 08 | Модули по мере надобности, convention plugins, `checkModuleGraph` | монолит | независимые срезы | — |
@@ -377,7 +382,7 @@ YAML-контент разбирается **на этапе сборки** в G
 | 6 | NavHost по A11: 4 вкладки «Сегодня · Наставник · Неделя · Я» (заглушки) + маршрут `sos` вне вкладок; кнопка SOS в верхней панели каждого экрана открывает офлайн-экран 988/911; `SosTileService` и статический ярлык «SOS» | Compose UI-тест: 4 вкладки открываются, SOS — за 1 тап с любой вкладки; плитка открывает `sos` |
 | 7 | Манифест: `allowBackup=false`, `dataExtractionRules`, `usesCleartextTraffic=false`, `POST_NOTIFICATIONS` не запрашивать до среза 3; `SecureScreen` (`FLAG_SECURE`) в `:core:ui` | lint без ошибок |
 | 8 | `.github/workflows/android-ci.yml`: gitleaks → lint → unit → `assembleRelease` с подписью из Secrets → artifact → pre-release на `main`; `concurrency`, кеш Gradle; actions закреплены по SHA | PR зелёный; Release с `matuta-<N>.apk`; без секретов — понятная ошибка |
-| 9 | `BuildConfig`: `WHOOP_CLIENT_ID`, `EDGE_BASE_URL` из env или `local.properties`; `local.properties.example`; `.gitignore` (`*.jks`, `local.properties`, `google-services.json`) | gitleaks и grep не находят секретов |
+| 9 | `BuildConfig`: `EDGE_BASE_URL` из env или `local.properties` (`WHOOP_CLIENT_ID` с среза 1 отдаёт Worker); `local.properties.example`; `.gitignore` (`*.jks`, `local.properties`, `google-services.json`) | gitleaks и grep не находят секретов |
 | 10 | `backend/edge/`: TS-Worker, роутер, `/health`, заглушки 501 для остальных эндпоинтов §5, привязки KV и AI в `wrangler.toml`, Vitest; `backend-deploy.yml` (wrangler-action + secrets) | `npm test` зелёный; после деплоя `/health` = 200 |
 | 11 | `android/README.md`: сборка, имена секретов, установка за 4 шага, ручной чек-лист | основатель ставит APK, обновление поверх без потери данных |
 
@@ -391,7 +396,7 @@ YAML-контент разбирается **на этапе сборки** в G
 |---|---|---|---|
 | 1 | до среза 0 (шаг 8) | В Codespaces: `keytool -genkeypair -v -keystore hot.jks -keyalg RSA -keysize 4096 -validity 10000 -alias hot`, затем `base64 -w0 hot.jks \| gh secret set HOT_KEYSTORE_BASE64`. Копию `hot.jks` и паролей сохранить в менеджере паролей. **Потеря ключа = переустановка с потерей данных** | `HOT_KEYSTORE_BASE64`, `HOT_KEYSTORE_PASSWORD`, `HOT_KEY_ALIAS`, `HOT_KEY_PASSWORD` |
 | 2 | до среза 0 (шаг 10) | Cloudflare (бесплатно): API Token по шаблону «Edit Cloudflare Workers» + права Workers AI и KV; Account ID — на дашборде | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` |
-| 3 | до среза 1 | developer.whoop.com → приложение: redirect `com.healthofatitan.app://oauth/whoop`, скоупы `offline read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement`. После первого входа приложение покажет WHOOP `user_id` | `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `ALLOWED_WHOOP_USER_IDS` |
+| 3 | до среза 1 | developer.whoop.com → приложение: redirect `com.healthofatitan.app://oauth/whoop`, скоупы `offline read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement`. В Codespaces: `openssl rand -base64 32 \| gh secret set TOKEN_ENC_KEY`. Repository variable `EDGE_BASE_URL` = адрес Worker (`https://hot-edge.<account>.workers.dev`). После первого входа приложение покажет WHOOP `user_id` — вписать его в `ALLOWED_WHOOP_USER_IDS` (подробно — `backend/edge/README.md`) | `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `ALLOWED_WHOOP_USER_IDS`, `TOKEN_ENC_KEY`; переменная `EDGE_BASE_URL` (не секрет) |
 | 4 | до среза 3 | Там же в WHOOP Dashboard: Webhook URL `https://<edge>/whoop/webhook`, модель **v2**. Firebase (console.firebase.google.com): проект `matuta`, Android-приложение `com.healthofatitan.app`, скачать `google-services.json`. Service account с ролью «Firebase Cloud Messaging API Admin» → JSON-ключ | `GOOGLE_SERVICES_JSON_B64`, `FCM_SERVICE_ACCOUNT_JSON`; `FCM_PROJECT_ID` (не секрет) |
 | 5 | до среза 5a | console.anthropic.com: отдельный workspace `matuta`, API-ключ, месячный лимит **$30** | `ANTHROPIC_API_KEY` |
 | 6 | до среза 5b | В том же Google-проекте: включить Billing (бесплатный лимит TTS требует биллинг) и Cloud Text-to-Speech API, создать API key с ограничением «только Text-to-Speech API» | `GOOGLE_TTS_API_KEY` |

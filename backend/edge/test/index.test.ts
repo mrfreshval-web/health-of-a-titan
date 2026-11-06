@@ -153,7 +153,7 @@ describe("session routes", () => {
     expect(await ok.json()).toMatchObject({ access_token: "whoop-access-1" });
     expect((await handle(post("/whoop/access"), env)).status).toBe(401);
     expect((await handle(post("/whoop/access", undefined, "whoop-access-1"), env)).status).toBe(401);
-    expect((await handle(post("/whoop/access", undefined, session.slice(0, -1) + "A"), env)).status).toBe(401);
+    expect((await handle(post("/whoop/access", undefined, session.slice(0, -1) + (session.endsWith("A") ? "B" : "A")), env)).status).toBe(401);
   });
 
   it("/whoop/access is 403 when the user was removed from the allowlist", async () => {

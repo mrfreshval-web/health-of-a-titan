@@ -72,7 +72,7 @@ class WhoopAuthTest {
 
     @Test
     fun `PKCE matches RFC 7636 appendix B`() {
-        assertEquals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", Pkce.challengeOf("dBjftJeZ4CVP-mJ92K5RJ3dANg6FbtFNr5w4sGNGuIM"))
+        assertEquals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", Pkce.challengeOf("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"))
         val p = Pkce.create()
         assertEquals(43, p.verifier.length)
         assertTrue(p.verifier.matches(Regex("[A-Za-z0-9_-]{43}")))

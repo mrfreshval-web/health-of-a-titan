@@ -1,0 +1,70 @@
+package com.healthofatitan.app.integration.whoop
+
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+
+/**
+ * What «Сегодня» shows from WHOOP before the personal norm is ready (and next to it later):
+ * last night, its recovery inputs and the last workout. **Raw WHOOP values, memory only**
+ * (R-11, D-009): built from the window during a sync, kept in a StateFlow for the process
+ * lifetime, never written to the database, a file or a log. After a restart it is rebuilt by
+ * the next sync; until then «Сегодня» falls back to stored derived metrics.
+ */
+data class WhoopGlance(
+    val fetchedAt: Long,
+    val sleep: SleepGlance?,
+    val recovery: RecoveryGlance?,
+    val workout: WorkoutGlance?,
+)
+
+/** Last main sleep: [hours] asleep (light + deep + REM), [needHours] = WHOOP's sleep need. */
+data class SleepGlance(val wakeDay: LocalDate, val end: Instant, val hours: Double, val needHours: Double?)
+
+/** Recovery inputs of that night: HRV (rMSSD, ms) and resting heart rate. No Recovery % (A25 P7). */
+data class RecoveryGlance(val hrvMs: Double?, val restingHr: Double?)
+
+/** Latest scored workout: when, how long, which sport (WHOOP's name), and its load (TRIMP). */
+data class WorkoutGlance(val start: Instant, val minutes: Int, val sport: String?, val trimp: Double?)
+
+internal object WhoopGlanceMapper {
+
+    fun from(window: WhoopWindow, fallbackZone: ZoneId, fetchedAt: Long): WhoopGlance {
+        val sleep = window.sleeps
+            .filter { !it.nap && it.scoreState == SCORED && it.score?.stageSummary != null }
+            .mapNotNull { s -> parse(s.end)?.let { end -> s to end } }
+            .maxByOrNull { it.second }
+        val sleepGlance = sleep?.let { (s, end) ->
+            val st = s.score!!.stageSummary!!
+            val hours = (st.light + st.slowWave + st.rem) / 3_600_000.0
+            val need = s.score?.sleepNeeded?.totalMilli?.takeIf { it > 0 }?.let { it / 3_600_000.0 }
+            SleepGlance(end.atZone(zoneOf(s.timezoneOffset, fallbackZone)).toLocalDate(), end, hours, need)
+        }
+        val recovery = sleep?.let { (s, _) ->
+            window.recoveries.firstOrNull { it.sleepId == s.id && it.scoreState == SCORED }?.score?.let {
+                RecoveryGlance(it.hrvRmssdMilli?.takeIf { v -> v > 0 }, it.restingHeartRate?.takeIf { v -> v > 0 })
+            }
+        }
+        val workout = window.workouts
+            .filter { it.scoreState == SCORED }
+            .mapNotNull { w -> parse(w.start)?.let { start -> Triple(w, start, parse(w.end)) } }
+            .maxByOrNull { it.second }
+            ?.let { (w, start, end) ->
+                val minutes = end?.let { Duration.between(start, it).toMinutes().toInt() }?.coerceAtLeast(0) ?: 0
+                val z = w.score?.zones
+                val trimp = z?.let { (it.one * 1 + it.two * 2 + it.three * 3 + it.four * 4 + it.five * 5) / 60_000.0 }
+                WorkoutGlance(start, minutes, w.sportName?.takeIf { it.isNotBlank() }, trimp)
+            }
+        return WhoopGlance(fetchedAt, sleepGlance, recovery, workout)
+    }
+
+    private fun parse(text: String): Instant? =
+        runCatching { Instant.parse(text) }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(text).toInstant() }.getOrNull()
+
+    private fun zoneOf(offset: String?, fallback: ZoneId): ZoneId =
+        offset?.let { runCatching { ZoneOffset.of(it) }.getOrNull() } ?: fallback
+}

@@ -8,6 +8,9 @@ import com.healthofatitan.app.integration.whoop.AuthorizeConfig
 import com.healthofatitan.app.integration.whoop.DisconnectOutcome
 import com.healthofatitan.app.integration.whoop.LoginOutcome
 import com.healthofatitan.app.integration.whoop.LoginStart
+import com.healthofatitan.app.integration.whoop.SyncLogEntry
+import com.healthofatitan.app.integration.whoop.SyncProgress
+import com.healthofatitan.app.integration.whoop.SyncTrigger
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +37,10 @@ data class WhoopUiState(
     /** Logged in at WHOOP, but not on the Worker's allowlist: show this id to the founder. */
     val notAllowedUserId: String? = null,
     val note: WhoopNote? = null,
+    /** Live sync: drives the sync mark and the status line. */
+    val progress: SyncProgress = SyncProgress.Idle,
+    /** «Журнал синхронизации»: last 20 attempts, no health values. */
+    val log: List<SyncLogEntry> = emptyList(),
 )
 
 @HiltViewModel
@@ -46,8 +53,8 @@ class WhoopViewModel @Inject constructor(
 
     private val local = MutableStateFlow(Local(phase = if (saved.get<String>(KEY_VERIFIER) != null) WhoopPhase.CONNECTING else WhoopPhase.IDLE))
 
-    val state: StateFlow<WhoopUiState> = combine(connection.status, local) { status, l ->
-        WhoopUiState(status, l.phase, if (status.connected) null else l.notAllowedUserId, l.note)
+    val state: StateFlow<WhoopUiState> = combine(connection.status, local, connection.progress, connection.log) { status, l, progress, log ->
+        WhoopUiState(status, l.phase, if (status.connected) null else l.notAllowedUserId, l.note, progress, log)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WhoopUiState())
 
     private val launches = Channel<AuthorizeConfig>(Channel.BUFFERED)
@@ -96,7 +103,11 @@ class WhoopViewModel @Inject constructor(
     }
 
     fun sync() {
-        viewModelScope.launch { connection.syncNow() }
+        viewModelScope.launch { connection.syncNow(SyncTrigger.MANUAL) }
+    }
+
+    fun clearLog() {
+        viewModelScope.launch { connection.clearLog() }
     }
 
     fun disconnect() {

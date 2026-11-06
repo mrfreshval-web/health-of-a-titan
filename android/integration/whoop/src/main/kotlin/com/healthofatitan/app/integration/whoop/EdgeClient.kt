@@ -61,8 +61,8 @@ sealed interface AccessResult {
 
     data object NotAllowed : AccessResult
 
-    /** Worker or WHOOP is down; keep the session and retry later. */
-    data object Unavailable : AccessResult
+    /** Worker or WHOOP is down; keep the session and retry later. [code] goes to the sync log. */
+    data class Unavailable(val code: Int) : AccessResult
 }
 
 /** The Worker is not configured (secrets missing) — a founder action, not a user error. */
@@ -154,7 +154,7 @@ class EdgeClient(
                 }
                 res.code == 401 -> AccessResult.ReauthRequired
                 res.code == 403 -> AccessResult.NotAllowed
-                else -> AccessResult.Unavailable
+                else -> AccessResult.Unavailable(res.code)
             }
         }
     }

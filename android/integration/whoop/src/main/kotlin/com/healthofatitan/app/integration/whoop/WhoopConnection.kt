@@ -2,8 +2,11 @@ package com.healthofatitan.app.integration.whoop
 
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.time.Clock
 
@@ -61,7 +64,18 @@ class WhoopConnection(
     private val scheduler: WhoopSyncScheduler,
     private val dao: MetricDao,
     private val clock: Clock,
+    /** Application scope: a sync the user started outlives the screen it was started from. */
+    private val scope: CoroutineScope,
 ) {
+
+    /** Live sync state for the sync mark and the status line (started → step → done / failed). */
+    val progress: StateFlow<SyncProgress> get() = syncer.progress
+
+    /** Last night and last workout from WHOOP, in memory only (R-11); null until a sync succeeds. */
+    val glance: StateFlow<WhoopGlance?> get() = syncer.glance
+
+    /** The last 20 sync attempts for «Журнал синхронизации» (no health values, no tokens). */
+    val log: StateFlow<List<SyncLogEntry>> get() = syncer.logEntries
 
     val status: Flow<WhoopStatus> = combine(store.credentials, dao.observeSyncState(WhoopSyncer.SOURCE)) { creds, sync ->
         WhoopStatus(
@@ -103,8 +117,8 @@ class WhoopConnection(
             is TokenResult.Connected -> {
                 store.save(WhoopCredentials(result.session, result.whoopUserId))
                 tokens.prime(result.accessToken, result.expiresAt)
-                scheduler.syncNow()
                 scheduler.ensurePeriodic()
+                launchSync(SyncTrigger.LOGIN)
                 LoginOutcome.Connected
             }
             is TokenResult.NotAllowed -> LoginOutcome.NotAllowed(result.whoopUserId)
@@ -112,20 +126,40 @@ class WhoopConnection(
         }
     }
 
-    /** «Синхронизировать» and app start: queue a sync; without network say so right away. */
-    suspend fun syncNow() {
+    /**
+     * «Обновить», pull-to-refresh and app start: the sync runs right away in the app scope, so the
+     * user sees it start, progress and end. Without network it says so at once and leaves the
+     * retry to WorkManager («Обновлю, когда будет связь»); a retryable failure is queued too.
+     */
+    suspend fun syncNow(trigger: SyncTrigger = SyncTrigger.MANUAL) {
         if (store.credentials.value == null) return
-        if (!scheduler.isOnline()) syncer.markOffline()
-        scheduler.syncNow()
+        if (!scheduler.isOnline()) {
+            syncer.markOffline(trigger)
+            scheduler.syncNow()
+            return
+        }
+        launchSync(trigger)
     }
 
-    /** On every app start (A18 И1.2 ①): refresh the window unless it is fresh. */
+    private fun launchSync(trigger: SyncTrigger) {
+        scope.launch {
+            val outcome = runCatching { syncer.sync(trigger) }.getOrNull()
+            if (outcome is SyncOutcome.Retry) scheduler.syncNow()
+        }
+    }
+
+    /**
+     * On every app start (A18 И1.2 ①): refresh the window unless it is fresh. After a restart the
+     * in-memory glance is gone, so «Сегодня» would lose last night: then refresh as well.
+     */
     suspend fun onAppOpen() {
         if (store.credentials.value == null) return
         scheduler.ensurePeriodic()
         val last = dao.syncState(WhoopSyncer.SOURCE)?.lastSuccessAt ?: 0L
-        if (clock.millis() - last > FRESH_MS) syncNow()
+        if (clock.millis() - last > FRESH_MS || syncer.glance.value == null) syncNow(SyncTrigger.APP_OPEN)
     }
+
+    suspend fun clearLog() = syncer.clearLog()
 
     /** «Отключить и удалить токены»: wipes the vault on the Worker, then the phone's session. */
     suspend fun disconnect(): DisconnectOutcome {
@@ -141,6 +175,7 @@ class WhoopConnection(
             if (!wiped) return DisconnectOutcome.NeedsNetwork
         }
         scheduler.cancelAll()
+        syncer.reset()
         tokens.clear()
         store.clear()
         dao.clearSyncState(WhoopSyncer.SOURCE)

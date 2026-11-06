@@ -5,6 +5,7 @@ import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.entity.BaselineSnapshotEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
+import com.healthofatitan.app.domain.engine.Anchors
 import com.healthofatitan.app.domain.metrics.MetricEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,11 +86,13 @@ class WhoopSyncer(
         report(SyncStep.START)
         val previous = dao.syncState(SOURCE)
         var counts: Triple<Int, Int, WhoopGlance>? = null // nights, workouts, glance
+        var routine: WhoopRoutineMapper.Routine? = null
         val outcome = runCatching {
             val window = api.window(from = now.minus(WINDOW), to = now, onStep = ::report)
             report(SyncStep.COMPUTE)
             val today = now.atZone(clock.zone).toLocalDate()
             val days = WhoopWindowMapper.map(window, clock.zone).filter { it.dayKey <= today }
+            routine = WhoopRoutineMapper.map(window, clock.zone)
             counts = Triple(
                 window.sleeps.count { !it.nap && it.scoreState == SCORED },
                 window.workouts.count { it.scoreState == SCORED },
@@ -125,7 +128,12 @@ class WhoopSyncer(
 
         val at = now.toEpochMilli()
         val user = HotDatabase.LOCAL_USER
-        dao.saveSync(
+        val today = now.atZone(clock.zone).toLocalDate()
+        val fromDay = now.minus(WINDOW).atZone(clock.zone).toLocalDate()
+        val sessions = routine!!.sessions.filter { it.dayKey >= fromDay && it.dayKey <= today }
+        val anchors = Anchors.derive(routine!!.nights, sessions, today)
+        dao.saveSyncWithRoutine(
+            userId = user,
             daily = result.daily.map {
                 MetricDailyEntity(user, it.dayKey.toString(), it.metric.id, it.metric.version, it.value, it.z, it.level, it.coverage, it.ewma7, at)
             },
@@ -133,6 +141,9 @@ class WhoopSyncer(
                 BaselineSnapshotEntity(user, it.dayKey.toString(), it.input.id, it.median28, it.mad28, it.n, at)
             },
             state = SyncStateEntity(SOURCE, SyncStatus.OK.name, at, at, result.baselineNights),
+            sessionsFromDay = fromDay.toString(),
+            sessions = sessions.map { RoutineStore.toRow(user, it, at) },
+            anchors = RoutineStore.toRows(user, anchors, at),
         )
         val dayCount = result.daily.map { it.dayKey }.distinct().size
         val (nights, workouts, glance) = counts!!

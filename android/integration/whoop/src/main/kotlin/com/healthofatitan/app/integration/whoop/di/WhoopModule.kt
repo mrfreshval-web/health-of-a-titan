@@ -1,6 +1,8 @@
 package com.healthofatitan.app.integration.whoop.di
 
+import android.app.AlarmManager
 import android.content.Context
+import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
@@ -14,6 +16,11 @@ import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
 import com.healthofatitan.app.integration.whoop.WhoopSyncScheduler
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
+import com.healthofatitan.app.integration.whoop.day.DayNotifier
+import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
+import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
+import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,6 +33,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import okhttp3.OkHttpClient
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Singleton
 
 @Module
@@ -34,7 +42,7 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideClock(): Clock = Clock.systemDefaultZone()
+    fun provideClock(): Clock = SystemZoneClock
 
     @Provides
     @Singleton
@@ -83,4 +91,21 @@ object WhoopModule {
         config, edge, store, tokens, syncer, scheduler, dao, clock,
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     )
+
+    /** A09 §7a: tomorrow's alarm sets tonight's bedtime; reading it needs no permission. */
+    @Provides
+    @Singleton
+    fun provideNextAlarm(@ApplicationContext context: Context): NextAlarmSource = NextAlarmSource {
+        context.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let(Instant::ofEpochMilli)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource): DayPlanRepository =
+        DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock)
+
+    @Provides
+    @Singleton
+    fun provideMorning(syncer: WhoopSyncer, plans: DayPlanRepository, notifier: DayNotifier): MorningCoordinator =
+        MorningCoordinator(syncer, plans, notifier, SystemZoneClock)
 }

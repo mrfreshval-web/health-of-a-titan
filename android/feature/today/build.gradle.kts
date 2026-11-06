@@ -8,4 +8,6 @@ android {
 
 dependencies {
     implementation(project(":integration:whoop"))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
 }

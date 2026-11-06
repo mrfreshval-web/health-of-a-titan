@@ -3,6 +3,7 @@ package com.healthofatitan.app
 import android.app.Application
 import android.util.Log
 import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,9 @@ class HotApplication : Application() {
     @Inject
     lateinit var database: dagger.Lazy<HotDatabase>
 
+    @Inject
+    lateinit var morning: dagger.Lazy<MorningCoordinator>
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -26,6 +30,9 @@ class HotApplication : Application() {
             runCatching { database.get().openHelper.writableDatabase }
                 .onFailure { Log.e(TAG, "Encrypted database could not be opened: ${it.javaClass.simpleName}") }
         }
+        // Slice 2: every successful WHOOP sync (app, WorkManager, morning watch) rebuilds the day
+        // plan and, in the morning window, posts the push once (A09, A11 §2).
+        appScope.launch { runCatching { morning.get().start(appScope) } }
     }
 
     private companion object {

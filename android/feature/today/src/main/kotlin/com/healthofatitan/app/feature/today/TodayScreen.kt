@@ -340,7 +340,6 @@ private fun Tiles(state: TodayUiState) {
         HotStatTile(
             label = TodayTexts.STEPS,
             value = null,
-            pendingCaption = TodayTexts.STEPS_PENDING,
             modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }

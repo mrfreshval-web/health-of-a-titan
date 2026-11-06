@@ -29,7 +29,6 @@ object TodayTexts {
     const val RECOVERY = "Восстановление"
     const val WORKOUT = "Тренировка"
     const val STEPS = "Шаги"
-    const val STEPS_PENDING = "скоро"
     const val NO_DATA = "нет данных"
 
     fun nights(n: Int) = "$n/$NORM_NIGHTS"

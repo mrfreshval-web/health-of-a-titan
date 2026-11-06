@@ -177,6 +177,43 @@
 - Python: Pillow, numpy, scipy, scikit-image, vtracer, fontTools, uharfbuzz;
 - Node: Playwright.
 
+## 11. Подключение в Android (D-028)
+Знак подключён в `android/` 2026-11-06. Ресурсы не рисуются руками: они собираются из SVG этой папки скриптами `android/` (здесь, в `brand/mark-v2/android/`).
+
+| Ресурс | Откуда | Как |
+|---|---|---|
+| `app/.../mipmap-anydpi/ic_launcher.xml` | — | адаптивная иконка, одна на `icon` и `roundIcon` |
+| `mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher_foreground.webp` | `icon/ic_launcher_foreground.svg` | рендер Chromium (`render.js`) 108–432 px, WebP без потерь (`to_webp.py`) |
+| `drawable/ic_launcher_background.xml` | `icon/ic_launcher_background.svg` | вектор с радиальным градиентом |
+| `drawable/ic_launcher_monochrome.xml` | `icon/ic_launcher_monochrome.svg` | вектор: маска и штрихи переведены в заливку (skia-pathops) |
+| `drawable/ic_stat_hot.xml` | `icon/ic_stat_hot.svg` | белый вектор 24 dp |
+| `drawable/avd_hot_splash.xml` | `splash/splash-f4-1000ms.svg` | `AnimatedVectorDrawable`, 1000 мс |
+| `core/ui/.../core_ui_ic_hot_mark.xml` | `icon/ic_stat_hot.svg` + кольцо | силуэт знака для локапа «знак + HoT» в шапке |
+| `core/ui/.../core_ui_ic_*.xml` | A36 §5 | линейные иконки 1,5 dp (`line_icons.py`) |
+| `core/ui/.../res/font/*.ttf` | Google Fonts (OFL) | статичные начертания, подмножество Latin + Cyrillic (`fonts.py`) |
+
+**Почему передний план иконки — растр.** У VectorDrawable нет фильтров размытия, а янтарное свечение, тёмный кант и внутренний блик — часть утверждённого знака. Растр по плотностям воспроизводит мастер один в один и в 48 dp выглядит как `icon/ic_launcher-48-visible.png`. Фон и тематический слой — вектор: там нет фильтров. Вес переднего плана — около 140 КБ на все плотности.
+
+**Сплэш.** Анимация по § 7, сжата до 1000 мс:
+- 0–800 мс кольцо разгорается с 20 % до 100 %;
+- 120–900 мс пульс прочерчивается слева направо и открывает колонны (анимация `pathData` у `clip-path`);
+- 450–1000 мс проявляется титан (`fillAlpha`).
+
+Свечения и «дыхания» ореола в системном сплэше нет (фильтры недоступны, бесконечная анимация недопустима). Выбивки залиты цветом фона сплэша «Графит» `#11151E` (A36), а не `#14171C` из § 6: фон сплэша совпадает с токеном интерфейса. Сплэш держится до конца анимации только при холодном запуске с рабочего стола и не дольше 1000 мс от старта процесса. Для SOS (плитка, ярлык, ссылка) и при выключенных анимациях он не задерживается.
+
+**Ограничение aapt2.** Одна строка `pathData` не может быть длиннее 32 767 байт. Поэтому `build_icons.py` делит большие контуры на части (дырки остаются со своим внешним контуром).
+
+**Как пересобрать после чистки вектора.**
+```bash
+python3 -m venv .venv && .venv/bin/pip install skia-pathops fonttools pillow
+.venv/bin/python brand/mark-v2/android/build_icons.py brand/mark-v2 /tmp/hot-icons   # VectorDrawable + превью SVG
+for d in mdpi:108 hdpi:162 xhdpi:216 xxhdpi:324 xxxhdpi:432; do
+  node brand/mark-v2/android/render.js /tmp/hot-fg/${d%%:*}.png ${d##*:} brand/mark-v2/icon/ic_launcher_foreground.svg
+done
+.venv/bin/python brand/mark-v2/android/to_webp.py /tmp/hot-fg android/app/src/main/res
+```
+Затем скопировать `ic_*.xml` и `avd_hot_splash.xml` в `android/app/src/main/res/drawable/`, а `core_ui_ic_hot_mark.xml` — в `android/core/ui/src/main/res/drawable/`.
+
 ## Передача
 - **Сделано:**
   - мастер-знак по R1 (свечение, плоский, одноцветный, прозрачный) и вариант по R3;

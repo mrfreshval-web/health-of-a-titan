@@ -8,12 +8,16 @@
 
 | Часть | Где |
 |---|---|
-| Версии — только в каталоге | `gradle/libs.versions.toml` (Gradle 9.8.2, AGP 9.5.0, Kotlin 2.4.21, KSP 2.3.13, Compose BOM 2026.09.00, Hilt 2.60.1, Room 2.8.5, SQLCipher 4.20.0, Tink 1.24.0) |
+| Версии — только в каталоге | `gradle/libs.versions.toml` (Gradle 9.8.2, AGP 9.5.0, Kotlin 2.4.21, KSP 2.3.13, Compose BOM 2026.09.00, Hilt 2.60.1, Room 2.8.5, SQLCipher 4.20.0, Tink 1.24.0, core-splashscreen 1.2.0) |
 | Convention-плагины | `build-logic/convention`: `hot.android.application`, `hot.android.library`, `hot.android.feature`, `hot.jvm.library`, `hot.hilt`, `hot.room`, `hot.content` |
 | Правила модулей | `./gradlew checkModuleGraph`: feature ↛ feature, domain только чистый Kotlin, integration ↛ feature, core ↛ feature/domain/integration |
 | Навигация | `:app` — 4 вкладки «Сегодня · Наставник · Неделя · Я» + маршрут `sos` вне вкладок; кнопка SOS в верхней панели каждой вкладки; плитка быстрых настроек «HoT SOS»; ярлык SOS на иконке |
 | SOS | `:feature:sos` — офлайн-экран, кнопки «988 — поговорить» и «911» открывают набор номера (звонок подтверждает пользователь) |
-| Тема | `:core:ui` — тёмная по умолчанию, seed `#C9A23A`, токены граней и режимов A11 §12.1; красный — только `error` для флагов и экстренной помощи; `SecureScreen` (`FLAG_SECURE`) |
+| Тема «Колоннада» (A36, D-028) | `:core:ui/theme` — `HotTheme`: тёмная «Ночь» по умолчанию и светлая «Мрамор» (A36 §9), `Kolonnada` (палитра), `HotColors` (грани, режимы Разгон/Ровно/Бережно, линии `rule`/`hairline`, `textTertiary`), `HotTypography` + `HotType` (Cormorant Garamond для заголовков от 20 sp, Manrope для текста и цифр с `tnum`), `HotShapes` (4/8/12/18/28 dp). Красный — только `error` для флагов и экстренной помощи (`RedOnlyForFlagsTest`). Material You выключен по умолчанию |
+| Компоненты | `:core:ui/component` — `HotTopBar` (локап «знак + HoT», SOS-капсула, надстрочник, заголовок антиквой), `HotBackground` («ночное небо»), `HotCard` (тон + волосяная линия, золотой карниз), `HotPendingCard` (пунктир «ещё нет данных»), `HotOverline`, `HotLockup`/`HotMark`; `SecureScreen` (`FLAG_SECURE`) |
+| Знак и иконки | адаптивная иконка (`mipmap-anydpi/ic_launcher.xml`: фон и тематический слой — вектор, передний план — WebP по плотностям со свечением), `ic_stat_hot` для уведомлений, трезвый ярлык SOS, линейные иконки A36 §5. Всё собирается из `brand/mark-v2/` скриптами `brand/mark-v2/android/` (§ 11 README знака) |
+| Сплэш | `androidx.core:core-splashscreen`, тема `Theme.Hot.Starting`: фон «Графит» `#11151E`, `avd_hot_splash` — «пульс оживляет титана», 1000 мс; держится до конца анимации только при холодном запуске с рабочего стола, SOS не ждёт |
+| Шрифты | `core/ui/src/main/res/font/`: Cormorant Garamond Medium, SemiBold, Medium Italic; Manrope Light, Regular, SemiBold — статичные начертания, Latin + Cyrillic, ≈ 480 КБ. Лицензия SIL OFL 1.1: `core/ui/src/main/assets/licenses/OFL-*.txt` (попадают в APK) |
 | Шифрование | `:core:security` — `K_db` (32 байта, обёрнуты ключом Android Keystore), `K_field` (Tink AEAD); `:core:database` — Room + SQLCipher, таблица `consent_record`, `PRAGMA secure_delete = ON`, экспорт схемы в `core/database/schemas/` |
 | Контент | `content/` (корень репозитория) → задача `:app:contentCompile` → JSON в assets + `content/manifest.json`; битый YAML или нет `version`/`reviewedBy` — сборка падает с именем файла |
 | Тесты | `NoRawWhoopColumnsTest` (в схеме Room нет сырых полей WHOOP), roundtrip Tink AEAD, «красный только для флагов», навигация и SOS (Robolectric + Compose) |
@@ -78,3 +82,4 @@ gh secret set HOT_KEY_PASSWORD        # пароль ключа
    adb exec-out run-as com.healthofatitan.app cat databases/hot.db > hot.db
    sqlite3 hot.db ".tables"   # ожидаем: Error: file is not a database
    ```
+6. Знак и «Колоннада» (D-028): на рабочем столе иконка — золотой титан с колоннами в круге (со свечением); при «Тематических значках» — одноцветный силуэт. Холодный запуск: сплэш на графите, пульс прочерчивается слева направо, проявляется титан, около 1 с. Запуск из плитки или ярлыка SOS — без задержки. Шапка вкладок: «знак + HoT» золотом, капсула SOS, надстрочник с датой и заголовок антиквой. Экран SOS — без золота и антиквы.

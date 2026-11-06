@@ -288,8 +288,8 @@ fun HotSyncMark(
                     val err = errorMix.value
                     val f = finale.value
                     val base = lerp(style.accent, style.muted, err)
-                    val canvasW = size.width
-                    val canvasH = size.height
+                    val canvasW = this.size.width
+                    val canvasH = this.size.height
 
                     withTransform({
                         translate(canvasW / 2f - c.x * s, canvasH / 2f - c.y * s)

@@ -49,7 +49,6 @@ import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotNormRing
 import com.healthofatitan.app.core.ui.component.HotOverline
-import com.healthofatitan.app.core.ui.component.HotPendingCard
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotRatioBar
 import com.healthofatitan.app.core.ui.component.HotSourceChip
@@ -156,7 +155,6 @@ fun TodayScreen(state: TodayUiState, onConnectWhoop: () -> Unit, modifier: Modif
                 StateCard(whoop!!, state, onSync)
                 Tiles(state)
             }
-            HotPendingCard(title = TodayTexts.SOON, caption = TodayTexts.SOON_CAPTION, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -321,9 +319,10 @@ private fun Tiles(state: TodayUiState) {
         )
         HotStatTile(
             label = TodayTexts.RECOVERY,
-            value = recovery?.hrvMs?.let { "${TodayTexts.HRV_LABEL} ${TodayTexts.hrv(it)}" } ?: TodayTexts.levelShort(orsLevel),
+            value = recovery?.hrvMs?.let(TodayTexts::hrv) ?: TodayTexts.levelShort(orsLevel),
             caption = listOfNotNull(
                 TodayTexts.levelShort(orsLevel).takeIf { recovery?.hrvMs != null },
+                TodayTexts.HRV_LABEL.takeIf { recovery?.hrvMs != null },
                 recovery?.restingHr?.let(TodayTexts::restingHr),
             ).joinToString(" · ").ifEmpty { null },
             pendingCaption = TodayTexts.NO_DATA,

@@ -29,10 +29,8 @@ object TodayTexts {
     const val RECOVERY = "Восстановление"
     const val WORKOUT = "Тренировка"
     const val STEPS = "Шаги"
-    const val STEPS_PENDING = "Pixel Watch · скоро"
+    const val STEPS_PENDING = "скоро"
     const val NO_DATA = "нет данных"
-    const val SOON = "Скоро"
-    const val SOON_CAPTION = "План · Тарелка · Стек · Монограмма"
 
     fun nights(n: Int) = "$n/$NORM_NIGHTS"
 
@@ -69,7 +67,7 @@ object TodayTexts {
 
     /** «ВСР 62 мс» and «пульс 51» — the recovery inputs of last night (raw WHOOP, memory only). */
     fun hrv(ms: Double) = "${ms.roundToInt()} мс"
-    fun restingHr(bpm: Double) = "пульс покоя ${bpm.roundToInt()}"
+    fun restingHr(bpm: Double) = "пульс ${bpm.roundToInt()}"
     const val HRV_LABEL = "ВСР"
 
     /** Short level word for a tile (the long form is [chargeWord]). */

@@ -190,6 +190,7 @@
 | `drawable/avd_hot_splash.xml` | `splash/splash-f4-1000ms.svg` | `AnimatedVectorDrawable`, 1000 мс |
 | `core/ui/.../core_ui_ic_hot_mark.xml` | `icon/ic_stat_hot.svg` + кольцо | силуэт знака для локапа «знак + HoT» в шапке |
 | `core/ui/.../core_ui_ic_*.xml` | A36 §5 | линейные иконки 1,5 dp (`line_icons.py`) |
+| `core/ui/.../component/HotMarkGeometry.kt` | `icon/ic_stat_hot.svg` + `source/geom.json` | колонны, титан, кольцо и пульс по отдельности для анимации синхронизации `HotSyncMark` (`build_sync_mark.py`); раскадровка — `sync/sync-mark-storyboard.png` (`sync_storyboard.js`) |
 | `core/ui/.../res/font/*.ttf` | Google Fonts (OFL) | статичные начертания, подмножество Latin + Cyrillic (`fonts.py`) |
 
 **Почему передний план иконки — растр.** У VectorDrawable нет фильтров размытия, а янтарное свечение, тёмный кант и внутренний блик — часть утверждённого знака. Растр по плотностям воспроизводит мастер один в один и в 48 dp выглядит как `icon/ic_launcher-48-visible.png`. Фон и тематический слой — вектор: там нет фильтров. Вес переднего плана — около 140 КБ на все плотности.

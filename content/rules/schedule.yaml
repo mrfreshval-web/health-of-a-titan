@@ -1,0 +1,97 @@
+# A09 §1, §7 — how the engine turns the day map into a plan by hours (A10 C4) and rebuilds it.
+# Parameters only; the rules that add items live in day_rules.yaml, context.yaml, return.yaml.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+pipeline:                       # order of stages; a later stage never loosens an earlier one
+  - safety                      # SAF-* — emergency, crisis, illness, ED
+  - data                        # REG-05 — calibration, coverage, manual mode
+  - regime                      # REG-01..04, REG-06 — points → regime, caps, conflicts, hysteresis
+  - context                     # CTX-* — known causes, travel, important day
+  - map                         # Карта дня: regime map + RET, SLP-04/05, MNT-03, ACT-01, WRK-02
+  - schedule                    # slots by hours: SLP-01..03, NUT, ACT-02/03, WRK-01, GRW, STK
+  - weekly                      # SAF-05, WRK-03 — evaluated nightly, shown in the morning
+
+merge:
+  regime: most_restrictive      # min over set/cap results; user can go down, never up past a cap
+  training_level: most_restrictive
+  forbid: union
+  flags: union
+  items: dedupe_by_content_then_merge_with
+  anchor_shift: min_not_sum     # two rules shifting bedtime by -30 give -30, not -60
+  conflict_tiebreak: [safer, more_reversible, less_effort]   # A26 §4 order
+
+anchors:
+  wake: {source: [whoop_cycle_wake, manual], default: "07:00"}
+  bedtime: {source: [settings.bedtime_target], default_from_wake_h: -8.0, shift_bounds_min: [-60, 0]}
+  caffeine_cutoff: {from: bedtime, offset_h: -9}
+  training: {source: [constraint.training_window, user_pref, a19_default]}
+  event: {source: [cal.key_event, chip.important_day_time]}
+
+dayparts:                       # used when no calendar is connected (C4 is Could)
+  morning: {from_wake_h: 0, to_wake_h: 4}
+  midday: {from: "11:30", to: "14:30"}
+  early_afternoon: {from: "12:30", to: "15:00"}
+  afternoon: {from: "14:00", to: "18:00"}
+  evening: {from: "18:00", to_bedtime_h: -1}
+
+budget:                         # protection against a "banal checklist": few items, each with a reason
+  visible_items_max: 7          # training + plate + up to 3 work + up to 2 micro-steps
+  micro_steps_max: 2            # sleep / mental / social / growth extras
+  priority_order: [safety, regime, context, sleep, mental, work, nutrition, activity, growth, social, stack]
+  drop_first: optional
+
+rebuild:                        # chips and day events (A14 §6.2): < 100 ms, no network, no LLM
+  triggers:
+    - chip.time_min
+    - chip.place
+    - chip.recovery
+    - chip.eating_out
+    - chip.important_day
+    - chip.alcohol_tonight
+    - ctx.flight_today
+    - whoop.workout_recorded
+    - plan.item_done
+    - plan.item_skipped
+  rerun_from_stage: context     # safety/data/regime are fixed for the day unless SAF fires again
+  missed_items: slide_to_next_gap_or_drop   # never pile up into the evening; dropped ≠ failed
+  late_cutoff_for_new_items: {anchor: bedtime, offset_h: -2}
+
+evening:                        # learning loop (A25 §5, §7; A26 §6)
+  deck_slot: {anchor: bedtime, offset_min: -90, fallback: "21:00"}
+  updates:
+    - baseline_28d              # robust median/MAD per input, nightly
+    - insight_pairs_A25_5       # counts for the 12 pre-registered pairs
+    - relapse_shadow            # RelapseSignal, shadow during weeks 1-4
+    - rule_feedback             # userDisagreed + direction, per firing rule
+  personalization:
+    disagreement_window_days: 14
+    disagreement_min: 3         # same top signal, same direction
+    threshold_nudge_sd: 0.25    # proposed to the user, applied only after "Да"
+    bounds_sd: [-0.5, 0.5]
+    never_for: [SAF, REG-01]
+
+content_ids:                    # micro-step texts referenced by rules; texts live in content/rules/texts (next version)
+  WIND_DOWN: "Час на «приземление»: приглуши свет, экраны в сторону"
+  CAFFEINE_CUTOFF: "Последний кофе до {time}"
+  LIGHT_MORNING: "10–20 минут дневного света"
+  LIGHT_MORNING_LOCAL: "Свет утром по местному времени"
+  LIGHT_AFTERNOON_LOCAL: "Свет во второй половине дня по местному времени"
+  LIGHT_DAYTIME_LOCAL: "Дневной свет днём по местному времени"
+  NAP_20: "Короткий дневной сон 10–20 минут"
+  WALK_OUTSIDE_15: "15 минут пешком на улице"
+  PLEASANT_ACTIVITY_FROM_LIST: "Одно дело из твоего списка «что обычно помогает»"
+  CONTACT_ONE: "Написать или позвонить одному близкому человеку"
+  PARKED_TOPIC_15: "15 минут на открытую тему"
+  WORK_SESSION_5: "5 минут с Винсом: разложить главное"
+  WORK_SESSION_15_PRIORITIES: "15 минут с Винсом: что отдать, отложить, упростить"
+  FOCUS_BLOCK: "Блок фокуса"
+  MOVE_BREAK_3: "Встать и пройтись 3 минуты"
+  DINNER: "Ужин"
+  EVENING_OFF: "Вечер без работы"
+  GOAL_STEP: "Шаг к цели"
+  LEARNING_25: "25 минут на рост"
+  NEW_START_OFFER: "Новый старт с понедельника?"
+  STACK_NOTE: "Заметка о стеке"

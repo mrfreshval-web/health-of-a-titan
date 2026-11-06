@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://healthofatitan.app/content/_schema/rules.schema.json",
+  "title": "HoT day rules file (content/rules/*.yaml, A09 §7)",
+  "description": "Rules for :domain:engine (ADR-14). A file carries the common header (common.schema.json) plus optional `rules`. regime.yaml and schedule.yaml additionally carry engine parameters (facts, predicates, signals, map, anchors, slots, budget); they are free-form objects here and are validated by engine unit tests. Condition DSL: a node is {all:[…]}, {any:[…]}, {not:node}, {pred:name} or {fact, op, value}.",
+  "type": "object",
+  "required": ["version", "reviewedBy", "ruleSet"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "reviewedBy": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["draft", "reviewed"] },
+    "ruleSet": { "const": "day" },
+    "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } }
+  },
+  "$defs": {
+    "condition": {
+      "oneOf": [
+        { "type": "object", "required": ["all"], "additionalProperties": false,
+          "properties": { "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "required": ["any"], "additionalProperties": false,
+          "properties": { "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "required": ["not"], "additionalProperties": false,
+          "properties": { "not": { "$ref": "#/$defs/condition" } } },
+        { "type": "object", "required": ["pred"], "additionalProperties": false,
+          "properties": { "pred": { "type": "string" } } },
+        { "type": "object", "required": ["fact", "op"], "additionalProperties": false,
+          "properties": {
+            "fact": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[A-Za-z0-9_]+)+$" },
+            "op": { "enum": ["lt", "le", "gt", "ge", "eq", "ne", "in", "has", "present", "missing"] },
+            "value": {}
+          } }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": ["do"],
+      "properties": {
+        "do": { "enum": [
+          "route", "lock_training", "set_regime", "cap_regime", "score_regime", "resolve_conflict",
+          "step_limit", "set_flag", "forbid", "training_level", "add_item", "shift_anchor", "set_param",
+          "ask", "limit", "defer", "nudge", "explain", "suggest_experiment", "drop_optional"
+        ] }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "version", "title_ru", "domain", "stage", "priority", "when", "then", "why_ru", "evidence", "review"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^(SAF|REG|CTX|SLP|MNT|NUT|ACT|WRK|GRW|RET|STK)-[0-9]{2}$" },
+        "version": { "type": "integer", "minimum": 1 },
+        "title_ru": { "type": "string" },
+        "domain": { "enum": ["safety", "regime", "context", "sleep", "mental", "nutrition", "activity", "work", "growth", "return", "stack"] },
+        "stage": { "enum": ["safety", "data", "regime", "context", "map", "schedule", "weekly"] },
+        "priority": { "type": "integer" },
+        "when": { "$ref": "#/$defs/condition" },
+        "then": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } },
+        "variants": { "type": "array", "items": { "type": "object", "required": ["id", "when", "then"] } },
+        "why_ru": { "type": "string" },
+        "user_override": { "enum": ["any", "down_only", "none"] },
+        "evidence": {
+          "type": "object",
+          "required": ["level", "kind"],
+          "properties": {
+            "level": { "enum": ["A", "B", "C", "D", "A/B", "B/C", "C/D"] },
+            "kind": { "enum": ["fact", "estimate", "safety"] },
+            "sources": { "type": "array", "items": { "type": "string" } },
+            "note_ru": { "type": "string" }
+          }
+        },
+        "contraindications_ru": { "type": "array", "items": { "type": "string" } },
+        "red_flags_ru": { "type": "array", "items": { "type": "string" } },
+        "review": { "type": "array", "items": { "type": "string" } },
+        "status": { "enum": ["draft", "reviewed", "retired"] },
+        "replaces": { "type": "string" },
+        "changelog": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

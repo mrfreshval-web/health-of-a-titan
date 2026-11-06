@@ -1,0 +1,67 @@
+# A09 §3 — return after a slump (A10 C6, M14) and the "hard day" plan from relapse signals (A26 §6).
+# Psychological content: changes only with review by Agent 10 (veto). No shame, no "streak broken".
+# Weeks 1-4 are the "shadow": relapse signals are logged (RelapseSignal.shadow = true) but change nothing.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+rules:
+  - id: RET-01
+    version: 1
+    title_ru: "Режим возвращения"
+    domain: return
+    stage: map
+    priority: 750
+    when:
+      any:
+        - {fact: silence.days, op: ge, value: 2}
+        - all:
+            - {fact: count.low_days_7, op: ge, value: 3}
+            - {fact: ors.ewma7, op: le, value: -0.5}
+    then:
+      - {do: set_flag, value: RETURN, until: {done_days_in_row: 2, or_user_exit: true}}
+      - {do: training_level, value: MINIMAL, minutes: 10}
+      - {do: limit, key: work.main_tasks_max, value: 1}
+      - {do: set_param, key: goal_step_version, value: minimal}
+      - {do: defer, value: [negative_insights, weekly_deltas, missed_counts]}
+      - {do: add_item, domain: growth, content: NEW_START_OFFER, optional: true}
+    user_override: any
+    why_ru: "Рад тебя видеть. Без отчётов за паузу: сегодня минимальная версия — 10 минут движения и один шаг к цели. Новый старт — с понедельника, если хочешь."
+    evidence:
+      level: C/D
+      kind: estimate
+      sources: ["A10 H14, С6; A03a §0 (спад основателя)", "Профилактика срывов: «срыв — данные, а не провал» (модель Марлатта; требует проверки источника)"]
+      note_ru: "Гипотеза H14: возврат в петлю ≤ 3 дня. Тексты — A11 §2, §3.3 (Агент 10)."
+    contraindications_ru: ["SAF-02 активен — сначала кризисный протокол"]
+    red_flags_ru: ["Спад ≥ 2 недель с низким настроением → SAF-05 low_mood"]
+    review: [agent-10, agent-3]
+
+  - id: RET-02
+    version: 1
+    title_ru: "План на трудный день (после «тени»)"
+    domain: return
+    stage: map
+    priority: 740
+    when:
+      all:
+        - {fact: program.week, op: ge, value: 5}
+        - {fact: relapse.groups_48h, op: ge, value: 2}
+        - not: {fact: flag.active, op: has, value: RETURN}
+    then:
+      - {do: ask, card: HARD_DAY_OFFER, max_per_day: 1}
+      - {do: set_param, key: on_accept, value: [drop_optional_items, show_if_then_plans, goal_step_minimal]}
+    variants:
+      - id: three_groups
+        when: {fact: relapse.groups_48h, op: ge, value: 3}
+        then: [{do: set_param, key: offer_text, value: hard_day_plan}]
+    user_override: any
+    why_ru: "Похоже, последние два дня даются тяжелее обычного: {signal_groups}. Упростить сегодня? Оставлю главное и твои планы «если — то». Можно ответить «не сейчас»."
+    evidence:
+      level: C
+      kind: estimate
+      sources: ["Nahum-Shani 2018, JITAI (A26 §6; требует проверки выходных данных)", "Gollwitzer & Sheeran 2006 (планы «если — то»)"]
+      note_ru: "Сначала вопрос, потом изменение; не больше 2 проактивных сообщений в день; правило, которое «мимо» в > 50 % случаев, отключается после микрорандомизации (A26 §6)."
+    contraindications_ru: ["Недели 1-4 — только «тень», без показа"]
+    red_flags_ru: []
+    review: [agent-10]

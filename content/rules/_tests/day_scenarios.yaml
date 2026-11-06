@@ -1,0 +1,153 @@
+# A09 §8 — golden day scenarios for :domain:engine JVM tests (Agent 13).
+# The folder starts with "_" so contentCompile does not ship it in the APK; tests read it from the repo.
+# Every scenario: facts in → expected regime, flags, forbids, key plan items, fired rules.
+# Defaults for all scenarios unless overridden: wake 07:00, bedtime_target 23:00,
+# data.baseline_n 60, data.coverage 1.0, data.whoop_today true, data.manual_mode false,
+# data.atypical_physiology false, screening.status clear, safety.crisis_level 0, regime.yesterday STEADY.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: day
+
+defaults:
+  anchor.wake: "07:00"
+  anchor.bedtime_target: "23:00"
+  data.baseline_n: 60
+  data.coverage: 1.0
+  data.whoop_today: true
+  data.manual_mode: false
+  data.atypical_physiology: false
+  screening.status: clear
+  safety.crisis_level: 0
+  regime.yesterday: STEADY
+  goal.has_weekly: true
+
+scenarios:
+  - id: D01
+    title_ru: "Хорошее утро → Разгон"
+    facts: {ors.z_day: 0.8, ors.ewma7: 0.3, sleep.hours: 7.6, sleep.prev_hours: 7.2, sleep.debt7_h: 1.5, lrb.value: 0.2, card.U1: 4, card.U2: 8, card.U3: 4, wld.z: -0.3}
+    expect:
+      regime: BOOST
+      points: 0
+      training_level: L0
+      allowed_include: [intervals]
+      params: {caffeine_cutoff: "14:00"}
+      items_include: [WIND_DOWN, LIGHT_MORNING, FOCUS_BLOCK, GOAL_STEP, LEARNING_25]
+      fired_include: [REG-02, REG-04, SLP-01, SLP-02, SLP-03, WRK-01, GRW-01, GRW-02]
+
+  - id: D02
+    title_ru: "Ночь 4 ч 40 мин, бодрость высокая → всё равно Бережно"
+    facts: {ors.z_day: 0.2, ors.ewma7: 0.1, sleep.hours: 4.7, sleep.prev_hours: 7.1, card.U1: 3, card.U2: 7}
+    expect:
+      regime: GENTLE
+      user_can_raise: false
+      params: {bedtime: "22:30", caffeine_cutoff: "13:30"}
+      limits: {work.main_tasks_max: 1}
+      items_include: [NAP_20, N05, T15]
+      fired_include: [REG-01, SLP-05, SLP-01, WRK-02, ACT-01]
+      fired_exclude: [REG-03]
+
+  - id: D03
+    title_ru: "3 порции алкоголя, последняя < 1 ч до сна"
+    facts: {eve.B4: 3, eve.B4_last: lt1h, ors.z_day: -1.6, ors.ewma7: -0.2, hrv.z_day: -1.8, sleep.hours: 6.5, sleep.prev_hours: 7.4, card.U2: 4, card.U2_z: -1.2}
+    expect:
+      regime: GENTLE
+      points: 2
+      forbid_include: [intervals]
+      explain_include: [known_cause_alcohol]
+      items_include: [N04, N18, T15]
+      fired_include: [REG-02, CTX-01]
+      why_must_not_contain: ["вред", "нельзя", "срыв", "плохо", "зависим"]
+
+  - id: D04
+    title_ru: "Данные «красные», самочувствие отличное → Ровно без интервалов"
+    facts: {ors.z_day: -2.2, ors.ewma7: -0.6, rhr.z_day: 1.2, rr.z_day: 0.5, sleep.hours: 7.1, sleep.prev_hours: 7.3, card.U1: 4, card.U2: 8}
+    expect:
+      regime: STEADY
+      points: 3
+      forbid_include: [intervals]
+      fired_include: [REG-02, REG-03]
+      fired_exclude: [SAF-04]
+
+  - id: D05
+    title_ru: "Данные «зелёные», энергия 3 → Ровно"
+    facts: {ors.z_day: 0.7, ors.ewma7: 0.4, sleep.hours: 7.5, sleep.prev_hours: 7.4, card.U1: 3, card.U2: 3}
+    expect:
+      regime: STEADY
+      points: 1
+      allowed_exclude: [intervals]
+      fired_include: [REG-02]
+
+  - id: D06
+    title_ru: "Простуда и пульс покоя +2,3 SD"
+    facts: {card.U5: [cold], rhr.z_day: 2.3, rr.z_day: 1.8, rhr.z_streak_ge2: 1, ors.z_day: -1.9, sleep.hours: 7.0, card.U2: 4}
+    expect:
+      regime: GENTLE
+      user_can_raise: false
+      flags_include: [SICK]
+      training_lock: rest_or_walk
+      params: {bedtime: "22:30"}
+      fired_include: [SAF-03, REG-01]
+      fired_exclude: [SAF-04, ACT-01]
+      nudge_exclude: [doctor]
+
+  - id: D07
+    title_ru: "5 ночей истории WHOOP, восстановление 72 %"
+    facts: {data.baseline_n: 5, whoop.recovery_pct: 72, sleep.hours: 7.2, sleep.prev_hours: 7.0, card.U1: 4, card.U2: 7, regime.yesterday: null}
+    expect:
+      regime: BOOST
+      flags_include: [CALIBRATION, DATA_LIMITED]
+      fired_include: [REG-05]
+      text_include: ["изучаю твою норму"]
+
+  - id: D08
+    title_ru: "WHOOP молчит к 09:30 → ручной режим"
+    facts: {data.whoop_today: false, data.manual_mode: true, sleep.hours: 7.0, card.U1: 4, card.U2: 6}
+    expect:
+      regime: STEADY
+      flags_include: [MANUAL, DATA_LIMITED]
+      fired_include: [REG-05]
+      fired_exclude: [SAF-04, CTX-03]
+
+  - id: D09
+    title_ru: "Вчера Бережно, сегодня всё отлично → только Ровно"
+    facts: {regime.yesterday: GENTLE, ors.z_day: 0.6, ors.ewma7: 0.0, sleep.hours: 7.8, sleep.prev_hours: 6.8, card.U1: 5, card.U2: 8}
+    expect:
+      regime: STEADY
+      regime_computed: BOOST
+      fired_include: [REG-04]
+
+  - id: D10
+    title_ru: "Мёртвая зона сигнала: ORS −0,7 после вчерашнего срабатывания"
+    facts: {signals.yesterday: [SG-ORS-DAY], ors.z_day: -0.7, ors.ewma7: -0.6, sleep.hours: 5.5, sleep.prev_hours: 6.9, card.U2: 5}
+    expect:
+      regime: GENTLE
+      points: 3
+      note_ru: "Без гистерезиса было бы 2 балла и Ровно: ORS −0,7 > −1,0, но вчера сигнал горел, выход — только выше −0,5."
+      fired_include: [REG-02, REG-04, SLP-05]
+
+  - id: D11
+    title_ru: "День после перелёта на восток (+3 ч)"
+    facts: {ctx.tz_shift_h: 3, ctx.days_since_tz_shift: 1, ors.z_day: -0.8, ors.ewma7: 0.0, sleep.hours: 6.2, sleep.prev_hours: 7.5, sleep.debt7_h: 2.0, card.U2: 6, reg.wake_sd7_min: 75}
+    expect:
+      regime: STEADY
+      flags_include: [TRAVEL]
+      forbid_include: [intervals]
+      items_include: [LIGHT_MORNING_LOCAL, N13]
+      items_exclude: [LIGHT_MORNING]
+      params: {caffeine_cutoff: "14:00", anchors_timezone: local}
+      fired_include: [CTX-04]
+      fired_exclude: [SLP-04, SLP-03]
+
+  - id: D12
+    title_ru: "Три дня тишины → возвращение"
+    facts: {silence.days: 3, ors.z_day: 0.1, ors.ewma7: -0.2, sleep.hours: 7.0, sleep.prev_hours: 6.5}
+    expect:
+      regime: STEADY
+      flags_include: [RETURN]
+      training_level: MINIMAL
+      limits: {work.main_tasks_max: 1}
+      deferred_include: [negative_insights]
+      push_variant: RETURN
+      fired_include: [RET-01, GRW-01]
+      why_must_not_contain: ["пропустил", "серия", "прервал"]

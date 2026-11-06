@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HoT — знак v2</title>
+<style>
+@font-face{font-family:"Cormorant Garamond";src:url(source/fonts/CormorantGaramond-VF.ttf);font-weight:300 700}
+@font-face{font-family:"Cormorant SC";src:url(source/fonts/CormorantSC-SemiBold.ttf);font-weight:600}
+:root{
+  --night:#101317; --night-2:#171A1F; --night-3:#1E2228; --line:#2A2E35;
+  --gold:#D6A964; --gold-hi:#F4D48A; --gold-deep:#8A6426; --ivory:#F4EFE4; --text:#E9E2D3; --muted:#8C8A84;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--night);color:var(--text);font:400 15px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.page{width:1600px;margin:0 auto;padding:0 72px 80px}
+h1,h2,h3{font-family:"Cormorant Garamond",serif;font-weight:600;margin:0;color:var(--gold-hi);letter-spacing:.01em}
+h2{font-size:44px;line-height:1.05}
+h3{font-size:24px;color:var(--text)}
+.eyebrow{font:600 12px/1 Inter,sans-serif;letter-spacing:.32em;text-transform:uppercase;color:var(--gold)}
+.cap{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.45}
+.cap b{color:var(--text);font-weight:600}
+section{padding:72px 0 8px;border-top:1px solid var(--line)}
+.sec-head{display:grid;grid-template-columns:120px 1fr 520px;gap:24px;align-items:end;margin-bottom:36px}
+.num{font-family:"Cormorant Garamond",serif;font-size:64px;line-height:.8;color:var(--gold);font-weight:500}
+.lead{color:#B9B3A6;font-size:15px}
+/* cover */
+.cover{display:grid;grid-template-columns:820px 1fr;gap:64px;align-items:center;padding:64px 0 72px}
+.cover .art{width:820px;height:820px;border-radius:6px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.55),0 0 0 1px #24272d}
+.cover .art img{width:100%;height:100%;display:block}
+.cover .wm{width:100%;max-width:600px;display:block;margin:26px 0 34px}
+.cover p{color:#BDB6A8;font-size:16px;max-width:560px}
+.facts{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 28px;margin-top:34px;max-width:600px}
+.facts div{border-top:1px solid var(--line);padding-top:12px;font-size:13px;color:var(--muted)}
+.facts b{display:block;font:600 22px/1.1 "Cormorant Garamond",serif;color:var(--text);margin-bottom:4px}
+/* comparison */
+.cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.cmp img{width:100%;display:block;border-radius:4px;box-shadow:0 0 0 1px #24272d}
+.details{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
+.details img{width:100%;display:block;border-radius:4px;box-shadow:0 0 0 1px #24272d;background:#0d0f12;height:420px;object-fit:contain}
+/* icons */
+.wall{border-radius:10px;padding:34px 40px;display:flex;align-items:center;gap:34px;margin-bottom:22px}
+.wall.dark{background:radial-gradient(120% 140% at 0% 0%,#2d3a52 0%,#1b2131 45%,#30263d 100%)}
+.wall.light{background:radial-gradient(120% 140% at 0% 0%,#f3eee4 0%,#dfe6ee 55%,#efe2d6 100%)}
+.wall .lbl{font:600 11px Inter;letter-spacing:.24em;text-transform:uppercase;width:120px;color:#9aa3b5}
+.wall.light .lbl{color:#7d7568}
+.ic{position:relative;overflow:hidden;flex:none;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.ic img{position:absolute}
+.ic.circle{border-radius:50%}
+.ic.squircle{border-radius:31%}
+.sizes{display:flex;align-items:center;gap:26px}
+.sizes figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}
+.sizes figcaption{font-size:11px;color:#9aa3b5}
+.wall.light figcaption{color:#7d7568}
+.sep{width:1px;align-self:stretch;background:rgba(255,255,255,.12)}
+.wall.light .sep{background:rgba(0,0,0,.1)}
+.iconrow2{display:grid;grid-template-columns:380px 380px 1fr;gap:24px;align-items:stretch;margin-top:4px}
+.play{background:var(--night-2);border-radius:10px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 0 1px #24272d}
+.play img{width:256px;height:256px;border-radius:20%;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.play img.px{width:240px;height:240px;border-radius:50%;image-rendering:pixelated}
+/* themed */
+.themed{display:grid;grid-template-columns:1.25fr 1fr;gap:28px}
+.panel{background:var(--night-2);border-radius:10px;padding:30px;box-shadow:0 0 0 1px #24272d}
+.tints{display:flex;gap:26px;flex-wrap:wrap}
+.tint{width:120px;height:120px;border-radius:50%;position:relative;overflow:hidden}
+.tint svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tsm{width:48px;height:48px}
+.tsm i{inset:-12px}
+.status{background:#0b0d10;border-radius:22px;padding:14px 22px;display:flex;align-items:center;gap:12px;color:#e8e8e8;font:500 15px Inter}
+.glyph{display:inline-flex;line-height:0}
+.notif{margin-top:16px;background:#22262e;border-radius:22px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start}
+.notif .badge{width:36px;height:36px;border-radius:50%;background:#3a3122;display:flex;align-items:center;justify-content:center;flex:none}
+.notif .t{font:600 13px Inter;color:#cfc8b8;letter-spacing:.02em}
+.notif .m{font:400 14px Inter;color:#e7e3da;margin-top:2px}
+/* phone */
+.phone-wrap{display:grid;grid-template-columns:440px 1fr;gap:56px;align-items:center}
+.phone{width:440px;height:900px;border-radius:56px;background:#050608;padding:14px;box-shadow:0 50px 120px rgba(0,0,0,.6),0 0 0 2px #2a2d33}
+.screen{width:100%;height:100%;border-radius:44px;overflow:hidden;position:relative;
+  background:radial-gradient(90% 60% at 20% 10%,#3b4a6b 0%,transparent 60%),radial-gradient(80% 60% at 90% 80%,#5b3f4f 0%,transparent 60%),linear-gradient(180deg,#1d2433,#241d2b)}
+.sb{display:flex;justify-content:space-between;padding:22px 30px 0;font:600 14px Inter;color:#eef}
+.clock{position:absolute;top:120px;left:34px;font:300 64px/1 Inter;color:#f2f2f7;letter-spacing:-.02em}
+.date{position:absolute;top:196px;left:36px;font:500 15px Inter;color:#dfe3ee}
+.home{position:absolute;left:22px;right:22px;bottom:150px;display:grid;grid-template-columns:repeat(4,1fr);gap:26px 0;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:8px;font:500 12px Inter;color:#f1f1f5;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.gen{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.gen span{width:26px;height:26px;border-radius:7px;border:3px solid currentColor;opacity:.9}
+.dock{position:absolute;left:22px;right:22px;bottom:52px;height:84px;border-radius:42px;background:rgba(255,255,255,.12);display:flex;justify-content:space-around;align-items:center}
+.search{position:absolute;left:30px;right:30px;bottom:-62px;height:0}
+/* lockups */
+.lock-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.lock-grid .full{grid-column:1/3}
+.tile{border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px #24272d;display:flex;align-items:center;justify-content:center}
+.tile.dark{background:#14171C}.tile.ivory{background:#F4EFE4}
+.tile img{display:block}
+/* splash */
+.frames{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.frames figure{margin:0}
+.frames img{width:100%;display:block;border-radius:6px;box-shadow:0 0 0 1px #24272d}
+.frames figcaption{margin-top:10px;font-size:12px;color:var(--muted)}
+.frames figcaption b{display:block;font:600 18px "Cormorant Garamond",serif;color:var(--text)}
+/* tokens */
+.tokens{display:grid;grid-template-columns:repeat(8,1fr);gap:16px}
+.sw{border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px #2a2e35}
+.sw .c{height:110px}
+.sw .k{padding:10px 12px;background:var(--night-2);font-size:12px;color:var(--muted)}
+.sw .k b{display:block;color:var(--text);font-weight:600;font-size:13px}
+.type{display:grid;grid-template-columns:1.3fr 1fr;gap:28px;margin-top:28px}
+.spec{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--gold-hi);letter-spacing:.2em;font-size:40px;line-height:1.25}
+.spec small{display:block;font-size:24px;letter-spacing:.12em;color:#cbb58a;font-weight:500}
+.foot{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body><div class="page">
+
+<div class="cover">
+  <div class="art"><img src="master/hot-master.svg" alt="Мастер-знак"></div>
+  <div>
+    <div class="eyebrow">Brand mark · v2 · 2026-11-06</div>
+    <img class="wm" src="lockup/hot-wordmark-dark.svg" alt="Health of a Titan">
+    <h2 style="font-size:40px;color:var(--text);font-weight:500">Титан держит колонны.<br>Пульс проходит сквозь.</h2>
+    <p style="margin-top:22px">Векторный мастер, перерисованный по референсу основателя R1: коринфские колонны и руки складываются в букву H, тонкое золото на ночном синем, мягкое свечение. Из него выведены иконка, тематическая иконка, значок уведомления, логотип с надписью и заставка — тем же рисунком, а не новыми фигурами.</p>
+    <div class="facts">
+      <div><b>R1 → SVG</b>трассировка по маске линий, ручная геометрия колонн, круга и пульса</div>
+      <div><b>Оптический размер</b>иконка утолщена и упрощена, читается в 48 px</div>
+      <div><b>Cormorant Garamond</b>OFL, кириллица, буквы переведены в кривые</div>
+      <div><b>Один источник</b>все файлы собираются скриптами из одного мастера</div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="sec-head"><div class="num">01</div><div><div class="eyebrow">Fidelity</div><h2>Мастер против референса</h2></div>
+  <div class="lead">Слева R1 от основателя, в центре наш SVG, справа наложение 50/50: при обычном размере расхождение видно только в силе свечения.</div></div>
+  <div class="cmp">
+    <figure style="margin:0"><img src="../references/R1-atlas-drapery-circle.jpg"><div class="cap"><b>R1</b> — референс (Gemini), растр 2048 px</div></figure>
+    <figure style="margin:0"><img src="master/hot-master.svg"><div class="cap"><b>Мастер SVG</b> — 4 слоя: круг, пульс, колонны, титан; золото — градиент, свечение — фильтр</div></figure>
+    <figure style="margin:0"><img src="compare/r1-vs-master-overlay-50.png"><div class="cap"><b>Наложение 50 %</b> — двоения линий нет, контуры совпадают до 1–2 px из 2048</div></figure>
+  </div>
+  <div class="details">
+    <figure style="margin:0"><img src="compare/detail-z1.png"><div class="cap">Капитель и рука: R1 | SVG</div></figure>
+    <figure style="margin:0"><img src="compare/detail-z2.png"><div class="cap">Голова и торс: R1 | SVG</div></figure>
+    <figure style="margin:0"><img src="compare/detail-z3.png"><div class="cap">Драпировка, ноги, база: R1 | SVG</div></figure>
+    <figure style="margin:0"><img src="compare/detail-zh.png"><div class="cap">Кисть на колонне: R1 | SVG</div></figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">02</div><div><div class="eyebrow">App icon · adaptive</div><h2>Иконка приложения</h2></div>
+  <div class="lead">Тот же рисунок в «оптическом размере»: линии толще в 2–3 раза, в колонне две каннелюры вместо шести, мелкие мышцы убраны. Кольцо вписано в безопасную зону 66 dp, капители выходят за кольцо, как в R1.</div></div>
+  <div class="wall dark" id="wdark"><div class="lbl">Тёмные обои</div></div>
+  <div class="wall light" id="wlight"><div class="lbl">Светлые обои</div></div>
+  <div class="iconrow2">
+    <div class="play"><img src="icon/hot-playstore-512.png"><div class="cap" style="text-align:center"><b>Google Play · 512 × 512</b><br>скругление накладывает магазин</div></div>
+    <div class="play"><img class="px" src="icon/ic_launcher-48-visible.png"><div class="cap" style="text-align:center"><b>48 px под лупой ×5</b><br>H из колонн, фигура и кольцо различимы</div></div>
+    <div class="panel" style="display:flex;flex-direction:column;justify-content:center">
+      <h3>Как устроена иконка</h3>
+      <div class="cap" style="font-size:14px">Адаптивная иконка Android: фон <b>ic_launcher_background</b> (ночной радиальный градиент) и передний план <b>ic_launcher_foreground</b> на холсте 108 dp. Кольцо — радиус 31,2 dp, всё изображение, включая углы капителей, внутри безопасного круга 66 dp. Толщины: кольцо 26, стволы 22, каннелюры 19, фигура +10, пульс 15 единиц мастера (в мастере 11 / 9,5 / 5,6 / 0 / 5,6).</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">03</div><div><div class="eyebrow">Monochrome</div><h2>Тематическая иконка и уведомления</h2></div>
+  <div class="lead">Для тем Android 13+ и строки состояния нужен один цвет. Силуэт колонн построен по размерам R1, силуэт титана вырезан из мастера; каннелюры и пульс — тонкие вырезы и линии.</div></div>
+  <div class="themed">
+    <div class="panel">
+      <h3>Тематическая иконка (Material You)</h3>
+      <div class="tints" style="margin-top:22px">
+        <div class="tint" style="background:#D8E2FF"><i style="background:#1A2C55"></i></div>
+        <div class="tint" style="background:#FFDDB3"><i style="background:#4A2E00"></i></div>
+        <div class="tint" style="background:#CDEBD3"><i style="background:#11391F"></i></div>
+        <div class="tint" style="background:#2C3447"><i style="background:#D8E2FF"></i></div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <div class="tint tsm" style="background:#D8E2FF"><i style="background:#1A2C55"></i></div>
+          <div class="cap" style="margin:0">48 px</div>
+        </div>
+      </div>
+      <div class="cap">Слой <b>ic_launcher_monochrome.svg</b>: система сама красит его в цвета обоев.</div>
+    </div>
+    <div class="panel">
+      <h3>Значок уведомления · 24 dp</h3>
+      <div class="status" style="margin-top:22px"><span>9:41</span><span class="glyph" style="width:20px;height:20px"></span><span style="margin-left:auto;opacity:.8">▾ ◔ ▮</span></div>
+      <div class="notif"><div class="badge"><span class="glyph" style="width:22px;height:22px;background:#E8C27E"></span></div>
+        <div><div class="t">HoT · сейчас</div><div class="m">Утренний обзор готов</div></div></div>
+      <div style="display:flex;gap:26px;align-items:end;margin-top:22px">
+        <span class="glyph" style="width:96px;height:96px"></span>
+        <span class="glyph" style="width:48px;height:48px"></span>
+        <span class="glyph" style="width:24px;height:24px"></span>
+      </div>
+      <div class="cap"><b>ic_stat_hot.svg</b>: белый силуэт на прозрачном, 96 / 48 / 24 px.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">04</div><div><div class="eyebrow">Pixel 9 Pro XL</div><h2>На домашнем экране</h2></div>
+  <div class="lead">Иконка в ряду обычных круглых иконок Pixel. Соседние иконки — нейтральные заглушки.</div></div>
+  <div class="phone-wrap">
+    <div class="phone"><div class="screen">
+      <div class="sb"><span>9:41</span><span>◔ ▮</span></div>
+      <div class="clock">9:41</div><div class="date">Пятница, 6 ноября</div>
+      <div class="home" id="home"></div>
+      <div class="dock" id="dock"></div>
+    </div></div>
+    <div>
+      <h3 style="font-size:32px;color:var(--gold-hi)">Отличим среди соседей</h3>
+      <p class="lead" style="max-width:640px;margin-top:14px">Тёмный медальон с золотой линией выделяется на любых обоях, а не сливается с ними: у большинства иконок светлый фон. Силуэт «H» из колонн и фигура в центре читаются с расстояния вытянутой руки.</p>
+      <div style="display:flex;gap:40px;margin-top:36px;align-items:center">
+        <div class="ic circle" style="width:216px;height:216px"><img src="icon/ic_launcher_full.svg" style="width:324px;height:324px;left:-54px;top:-54px"></div>
+        <div class="cap" style="max-width:280px"><b>216 px</b> — так иконка выглядит на экране Pixel 9 Pro XL (≈ 54 dp × 4 физических пикселя на dp).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">05</div><div><div class="eyebrow">Lockups</div><h2>Знак и надпись</h2></div>
+  <div class="lead">Cormorant Garamond SemiBold, разрядка 0,2 em, текст переведён в кривые. Под надписью — волосяная линия с одним ударом пульса. Золото на ночном и тёмное золото на слоновой кости.</div></div>
+  <div class="lock-grid">
+    <div class="tile dark full" style="height:300px"><img src="lockup/hot-lockup-horizontal-dark.svg" style="height:230px"></div>
+    <div class="tile ivory full" style="height:300px"><img src="lockup/hot-lockup-horizontal-ivory.svg" style="height:230px"></div>
+    <div class="tile dark" style="height:560px"><img src="lockup/hot-lockup-stacked-dark.svg" style="height:500px"></div>
+    <div class="tile ivory" style="height:560px"><img src="lockup/hot-lockup-stacked-ivory.svg" style="height:500px"></div>
+    <div class="tile dark" style="height:260px"><img src="lockup/hot-lockup-short-dark.svg" style="height:200px"></div>
+    <div class="tile ivory" style="height:260px"><img src="lockup/hot-lockup-short-ivory.svg" style="height:200px"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">06</div><div><div class="eyebrow">Splash · motion</div><h2>Заставка: пульс зажигает знак</h2></div>
+  <div class="lead">Линия пульса прорисовывается слева направо и «зажигает» то, через что проходит; титан проявляется, когда пульс доходит до него. Затем тёплый ореол спокойно «дышит» — около 50 ударов в минуту. Всё укладывается в 1 с.</div></div>
+  <div class="frames">
+    <figure><img src="splash/splash-f1-000ms.png"><figcaption><b>0 мс</b>тьма, едва видно кольцо</figcaption></figure>
+    <figure><img src="splash/splash-f2-350ms.png"><figcaption><b>350 мс</b>пульс проходит левую колонну</figcaption></figure>
+    <figure><img src="splash/splash-f3-700ms.png"><figcaption><b>700 мс</b>титан проявляется</figcaption></figure>
+    <figure><img src="splash/splash-f4-1000ms.png"><figcaption><b>1000 мс</b>знак целиком</figcaption></figure>
+    <figure><img src="splash/splash-f5-breath.png"><figcaption><b>Дыхание</b>ореол 0 → 0,9 → 0,25, цикл 1,2 с</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">07</div><div><div class="eyebrow">Tokens</div><h2>Цвет и шрифт</h2></div>
+  <div class="lead">Цвета сняты с R1: фон — радиальный ночной синий, золото — вертикальный градиент с бликом сверху и снизу.</div></div>
+  <div class="tokens">
+    <div class="sw"><div class="c" style="background:#13161B"></div><div class="k"><b>Night</b>#13161B</div></div>
+    <div class="sw"><div class="c" style="background:#2A2D32"></div><div class="k"><b>Night glow</b>#2A2D32</div></div>
+    <div class="sw"><div class="c" style="background:#F4D48A"></div><div class="k"><b>Gold light</b>#F4D48A</div></div>
+    <div class="sw"><div class="c" style="background:#D6A964"></div><div class="k"><b>Gold</b>#D6A964</div></div>
+    <div class="sw"><div class="c" style="background:#BC9358"></div><div class="k"><b>Pulse</b>#BC9358</div></div>
+    <div class="sw"><div class="c" style="background:#E2A847"></div><div class="k"><b>Glow</b>#E2A847</div></div>
+    <div class="sw"><div class="c" style="background:#8A6426"></div><div class="k"><b>Gold deep</b>#8A6426</div></div>
+    <div class="sw"><div class="c" style="background:#F4EFE4"></div><div class="k"><b>Ivory</b>#F4EFE4</div></div>
+  </div>
+  <div class="type">
+    <div class="panel"><div class="spec">HEALTH OF A TITAN<small>ЗДОРОВЬЕ ТИТАНА · HoT · 0123456789</small></div>
+      <div class="cap"><b>Cormorant Garamond SemiBold</b> (Christian Thalmann, SIL Open Font License 1.1) — латиница и кириллица; для «HoT» — Cormorant SC (строчная o как капитель).</div></div>
+    <div class="panel"><h3>Правила</h3><div class="cap" style="font-size:14px">Свободное поле вокруг знака — не меньше высоты капители. Минимальный размер полного знака — 96 px; меньше — только иконка оптического размера. Знак не перекрашиваем вне палитры, не поворачиваем, не обводим, не кладём на пёстрые фото без подложки.</div></div>
+  </div>
+  <div class="foot"><span>Health of a Titan · brand/mark-v2</span><span>Агенты 15 и 4 · до публичного запуска — проверка сходства знака Агентом 7</span></div>
+</section>
+
+</div>
+<script>
+function icon(size, mask){
+  const d=document.createElement('div');d.className='ic '+mask;d.style.width=d.style.height=size+'px';
+  const im=document.createElement('img');im.src='icon/ic_launcher_full.svg';const f=size*108/72;
+  im.style.width=im.style.height=f+'px';im.style.left=im.style.top=(-size*18/72)+'px';d.appendChild(im);return d;
+}
+for(const id of ['wdark','wlight']){
+  const w=document.getElementById(id);
+  ['circle','squircle'].forEach((m,i)=>{
+    if(i) {const s=document.createElement('div');s.className='sep';w.appendChild(s);}
+    const g=document.createElement('div');g.className='sizes';
+    for(const s of [192,108,48]){const f=document.createElement('figure');f.appendChild(icon(s,m));
+      const c=document.createElement('figcaption');c.textContent=(m==='circle'?'круг':'сквиркл')+' · '+s+' px';f.appendChild(c);g.appendChild(f);}
+    w.appendChild(g);
+  });
+}
+const gens=[['Телефон','#3b6fd8','#dce6ff'],['Сообщения','#2f7d5b','#d5f2e3'],['Камера','#5a5f6b','#eceef2'],['Календарь','#c2584a','#ffe2dc'],
+            ['Почта','#2c5aa0','#e1eaff'],['Карты','#4d8f45','#e0f3dc'],['Часы','#6a5b8e','#ece6ff']];
+const home=document.getElementById('home');
+function gen(n,fg,bg){const a=document.createElement('div');a.className='app';const g=document.createElement('div');g.className='gen';
+  g.style.background=bg;g.style.color=fg;g.innerHTML='<span></span>';a.appendChild(g);a.append(n);return a;}
+const ours=document.createElement('div');ours.className='app';ours.appendChild(icon(64,'circle'));ours.append('HoT');
+const order=[gen(...gens[3]),gen(...gens[4]),ours,gen(...gens[5]),gen(...gens[6]),gen('Фото','#b07a1f','#fff0d6'),gen('Музыка','#a83c64','#ffdfe9'),gen('Погода','#2f86a8','#dcf3fb')];
+order.forEach(e=>home.appendChild(e));
+const dock=document.getElementById('dock');
+[0,1,2].forEach(i=>{const g=gen(...gens[i]);g.lastChild.remove();g.firstChild.style.width=g.firstChild.style.height='58px';dock.appendChild(g)});
+</script>
+</body></html>

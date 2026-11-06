@@ -19,7 +19,6 @@ const val ME_SCREEN_TAG = "screen_me"
 @Composable
 fun MeScreen(modifier: Modifier = Modifier) {
     StubScreen(
-        headline = "Я",
         lead = "HoT — wellness-приложение, не медицинское изделие: не ставит диагнозов и не назначает лечение.",
         blocks = listOf("Цели и условия жизни", "Стек и покупки", "Практики", "Скрининг", "Настройки"),
         testTag = ME_SCREEN_TAG,

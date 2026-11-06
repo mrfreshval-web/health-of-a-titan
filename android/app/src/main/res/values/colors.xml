@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Window-level colours of «Колоннада» (A36 §2.1). UI colours come from Compose HotTheme. -->
 <resources>
-    <color name="hot_background">#FF16130B</color>
-    <color name="hot_gold">#FFC9A23A</color>
+    <!-- «Ночь»: app background, status and navigation bars sit on it (edge-to-edge). -->
+    <color name="hot_night">#FF0B0E15</color>
+    <!-- «Графит»: splash screen background. -->
+    <color name="hot_graphite">#FF11151E</color>
+    <!-- «Слоновая кость»: main text, the sober SOS shortcut. -->
+    <color name="hot_ivory">#FFEDE5D3</color>
 </resources>

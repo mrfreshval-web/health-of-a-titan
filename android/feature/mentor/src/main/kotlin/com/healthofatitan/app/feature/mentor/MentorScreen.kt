@@ -19,7 +19,6 @@ const val MENTOR_SCREEN_TAG = "screen_mentor"
 @Composable
 fun MentorScreen(modifier: Modifier = Modifier) {
     StubScreen(
-        headline = "Наставник Винс",
         lead = "Я ИИ-наставник, не врач и не терапевт. Разговор текстом и голосом появится в срезе 5.",
         blocks = listOf("Разговор", "Работа", "Что я записал"),
         testTag = MENTOR_SCREEN_TAG,

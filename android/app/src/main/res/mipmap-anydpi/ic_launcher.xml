@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- HoT mark v2 (brand/mark-v2, D-028). One adaptive icon serves both android:icon and
+     android:roundIcon: the launcher applies its own mask (circle, squircle).
+     - background: radial «ночь» of the mark, vector;
+     - foreground: density bitmaps rendered from icon/ic_launcher_foreground.svg with the amber glow
+       (VectorDrawable has no blur filters, and the glow is part of the approved mark);
+     - monochrome: filled silhouettes for themed icons (Android 13+), vector. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/hot_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

@@ -1,11 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SOS: lifebuoy in a sober line (A36 §5, §11 rule 7). Also the quick settings tile icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FF000000"
-        android:fillType="evenOdd"
-        android:pathData="M12,2A10,10 0,1 1,12,22A10,10 0,1 1,12,2ZM12,7A5,5 0,1 0,12,17A5,5 0,1 0,12,7ZM10.5,2.5h3v4.3h-3zM10.5,17.2h3v4.3h-3zM2.5,10.5h4.3v3h-4.3zM17.2,10.5h4.3v3h-4.3z" />
+        android:pathData="M12,3A9,9 0,1 1,12,21A9,9 0,1 1,12,3Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,8A4,4 0,1 1,12,16A4,4 0,1 1,12,8Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5.64,5.64L9.17,9.17"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M18.36,5.64L14.83,9.17"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5.64,18.36L9.17,14.83"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M18.36,18.36L14.83,14.83"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>

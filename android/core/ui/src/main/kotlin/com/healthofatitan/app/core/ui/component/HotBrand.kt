@@ -1,0 +1,54 @@
+package com.healthofatitan.app.core.ui.component
+
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.ui.R
+import com.healthofatitan.app.core.ui.theme.HotType
+
+/** Spoken name of the brand for TalkBack (the wordmark is decorative text). */
+const val HOT_BRAND_NAME = "Health of a Titan"
+
+/**
+ * The HoT mark at UI sizes: ring, two columns and the titan as silhouettes (brand/mark-v2 §4,
+ * the same reduction as the notification icon). Line art of the master does not survive < 64 dp.
+ */
+@Composable
+fun HotMark(modifier: Modifier = Modifier, size: Dp = 28.dp, tint: Color = MaterialTheme.colorScheme.primary) {
+    Icon(
+        painter = painterResource(R.drawable.core_ui_ic_hot_mark),
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier.size(size),
+    )
+}
+
+/**
+ * Short lockup «знак + HoT» (brand/mark-v2 `hot-lockup-short`): the mark and the wordmark in
+ * Cormorant SemiBold with 0.12 em tracking, in gold. Mixed case on purpose: «HoT» is never set
+ * in capitals (A36 §3 rule 3).
+ */
+@Composable
+fun HotLockup(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = HOT_BRAND_NAME },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HotMark(tint = color)
+        Spacer(Modifier.width(10.dp))
+        Text("HoT", style = HotType.wordmark, color = color)
+    }
+}

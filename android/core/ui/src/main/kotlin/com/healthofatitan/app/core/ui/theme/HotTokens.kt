@@ -4,111 +4,130 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** Brand seed (brand/README.md, A36 §2.1 «Золото бренда»): the mark, not UI accents. */
-val BrandGold = Color(0xFFC9A23A)
+/** Gold of the mark (A37 §9.1 «Золото знака»): the mark and the splash only, never UI accents. */
+val BrandGold = Color(0xFFD6A964)
 
 /**
- * A36 «Колоннада» palette: gold line on night marble. Names follow A36 §2.1–2.2.
- * Red is NOT here on purpose: it lives only in the M3 `error` roles (SOS and red flags).
+ * A37 «Титаниум» palette (§9.1–9.2): titanium, glass and one warm light. Names follow A37.
+ * Red is NOT here on purpose: it lives only in the M3 `error` roles (crisis card and red flags).
  */
-object Kolonnada {
-    // Dark «Ночь»
-    val Night = Color(0xFF0B0E15)
-    val Obsidian = Color(0xFF07090E)
-    val Graphite = Color(0xFF11151E)
-    val Basalt = Color(0xFF151A24)
-    val Slate = Color(0xFF1B212D)
-    val SlatePlus = Color(0xFF222937)
-    val NightSky = Color(0xFF1B2232) // radial light at the top of the screen (A36 §4 «мрамор»)
-    val Ivory = Color(0xFFEDE5D3)
-    val Travertine = Color(0xFFA9A292)
-    val Limestone = Color(0xFF938C7C)
-    val Gold = Color(0xFFD9B562)
-    val GoldBrand = BrandGold
-    val GoldHi = Color(0xFFF3E2B0)
-    val GoldButtonTop = Color(0xFFE6C77E) // primary capsule gradient (A36 §6)
-    val GoldButtonBottom = Color(0xFFCFA845)
-    val Bronze = Color(0xFF3A2E12)
-    val OnGold = Color(0xFF1C1505)
+object Titanium {
+    // Dark «Титан» (main)
+    val Depth = Color(0xFF060708) // «Глубина»: background, surface
+    val Titan1 = Color(0xFF0E1013)
+    val Titan2 = Color(0xFF15181C)
+    val Titan3 = Color(0xFF1C2025)
+    val Titan4 = Color(0xFF23282E)
+    val Bone = Color(0xFFF3F1EC) // «Кость»: onSurface 17.9 : 1
+    val Steel = Color(0xFFA3A7AE) // «Сталь»: onSurfaceVariant 8.3 : 1
+    val Graphite = Color(0xFF80858D) // «Графит»: time, captions 5.4 : 1
+    val Dawn = Color(0xFFFFC77A) // «Рассвет»: primary
+    val DawnHi = Color(0xFFFFE1AE)
+    val DawnLow = Color(0xFFFFB05E)
+    val OnDawn = Color(0xFF1A1206)
+    val DawnContainer = Color(0xFF3A2A12)
 
-    // Light «Мрамор»
-    val Marble = Color(0xFFF5F0E6)
-    val Ink = Color(0xFF161A22)
-    val Sepia = Color(0xFF575144)
-    val LimestoneLight = Color(0xFF6E6656)
-    val GoldDeep = Color(0xFF7A5A12)
+    // Light «Фарфор» (day)
+    val Porcelain = Color(0xFFF3F2EF)
+    val Ink = Color(0xFF0D0F12) // 17.1 : 1
+    val InkSecondary = Color(0xFF565B63) // 6.1 : 1
+    val InkTertiary = Color(0xFF646972) // 4.9 : 1
+    val DawnText = Color(0xFF9A5B12) // accent text on light, 4.8 : 1
+    val DawnPillHi = Color(0xFFFFD597)
+    val DawnPillLow = Color(0xFFFFB866)
+
+    /** «Линия света» of the Titan (A37 §3): white → warm, top to bottom. */
+    val LightWarm = listOf(Color(0xFFFFFFFF), Color(0xFFFFF1D6), Color(0xFFFFD08A))
+
+    /** Ice light: workout seal and «Ровно» (A37 §3). */
+    val LightIce = listOf(Color(0xFFFFFFFF), Color(0xFFDDF8F2), Color(0xFF9FEADC))
+
+    /** Iris light: «Бережно», calm silver-lilac, never a «bad» dim (A37 §3). */
+    val LightIris = listOf(Color(0xFFFFFFFF), Color(0xFFE6E4FF), Color(0xFFBDB8FF))
+
+    /** Columns are colder and dimmer than the figure: the Titan is always brighter than architecture. */
+    val ColumnLight = listOf(Color(0xFFE9EEF3), Color(0xFFB9C2CC), Color(0xFF8D97A3))
+
+    /** Glass knockout behind the lines (A37 §3: rgba(7,8,10,.94)). */
+    val Knockout = Color(0xF007080A)
 }
 
 /**
- * Facet, day-mode and line tokens (A36 §2.3, §2.5, §6). Mode colours are «materials» —
- * Янтарь, Патина, Сумерки — and always come with a glyph and a word, never colour alone.
+ * Mode, light and glass tokens of the current theme (A37 §9). Mode colours are light — Солнце,
+ * Лёд, Ирис — and always come with a glyph and a word, never colour alone.
  */
 @Immutable
 data class HotColors(
-    val facetCharge: Color,
-    val facetBalance: Color,
-    val facetRhythm: Color,
-    val facetClarity: Color,
-    val facetWeatherLight: Color,
-    val facetWeatherHeavy: Color,
-    val facetConnections: Color,
-    val facetFuel: Color,
-    val facetBackpack: Color,
+    /** Разгон — Солнце. */
     val modeRazgon: Color,
+    /** Ровно — Лёд. */
     val modeRovno: Color,
+    /** Бережно — Ирис. */
     val modeBerezhno: Color,
-    /** Gold rule 26 %: «колонны», frames, the hero card cornice. Decorative. */
+    /** Hairline 14 %: decorative outlines, active pill rims (A37 `outline`). */
     val rule: Color,
-    /** Gold rule 14 %: active tab pill, soft frames. Decorative. */
+    /** Soft fill 7 %: ring tracks, inactive pills. Decorative. */
     val ruleSoft: Color,
-    /** Ivory 7.5 % hairline: card edges and dividers (depth by tone and line, not shadow). */
+    /** Hairline 8 %: card edges and dividers (depth by light and line, not shadow). */
     val hairline: Color,
-    /** Tertiary text: time, captions (A36 §2.1 «Известняк»). */
+    /** Tertiary text: time, captions, sources («Графит»). */
     val textTertiary: Color,
-    /** Top of the screen background gradient (equals the background in the light theme). */
+    /** Top of the screen background: the one light from above (equals the background in light). */
     val skyTop: Color,
+    /** Glass card fill, top and bottom of its vertical gradient (A37 §9.1 «Стекло»). */
+    val glassTop: Color,
+    val glassBottom: Color,
+    /** 1 dp light rim on the top edge of glass. */
+    val glassEdge: Color,
+    /** Main button fill, top → bottom (A37 §9.1 «Рассвет»). */
+    val dawnFill: List<Color>,
+    /** Line of light on the Titan when no mode tints it. */
+    val titanLight: List<Color>,
+    val columnLight: List<Color>,
+    /** Fill behind the line art (glass knockout of the silhouette). */
+    val knockout: Color,
+    /** Glow is for the one hero on a screen; none in the light theme (A37 §9.5). */
+    val glow: Boolean,
     val isDark: Boolean,
 )
 
 val DarkHotColors = HotColors(
-    facetCharge = Color(0xFFE2AE63),
-    facetBalance = Color(0xFF86BFAE),
-    facetRhythm = Color(0xFFA3AEDB),
-    facetClarity = Color(0xFF8EC6E0),
-    facetWeatherLight = Color(0xFFE8CF8A),
-    facetWeatherHeavy = Color(0xFF9AA8B4),
-    facetConnections = Color(0xFFCFA3CC),
-    facetFuel = Color(0xFFA9C79A),
-    facetBackpack = Color(0xFFB3BAC4),
-    modeRazgon = Color(0xFFE6A867),
-    modeRovno = Color(0xFF8FC2B2),
-    modeBerezhno = Color(0xFFACA9DE),
-    rule = Kolonnada.Gold.copy(alpha = 0.26f),
-    ruleSoft = Kolonnada.Gold.copy(alpha = 0.14f),
-    hairline = Kolonnada.Ivory.copy(alpha = 0.075f),
-    textTertiary = Kolonnada.Limestone,
-    skyTop = Kolonnada.NightSky,
+    modeRazgon = Color(0xFFFFB067),
+    modeRovno = Color(0xFF7DE3D1),
+    modeBerezhno = Color(0xFFA8A3FF),
+    rule = Color.White.copy(alpha = 0.14f),
+    ruleSoft = Color.White.copy(alpha = 0.07f),
+    hairline = Color.White.copy(alpha = 0.08f),
+    textTertiary = Titanium.Graphite,
+    skyTop = Color(0xFF14181D),
+    glassTop = Color.White.copy(alpha = 0.075f),
+    glassBottom = Color.White.copy(alpha = 0.03f),
+    glassEdge = Color.White.copy(alpha = 0.12f),
+    dawnFill = listOf(Titanium.DawnHi, Titanium.Dawn, Titanium.DawnLow),
+    titanLight = Titanium.LightWarm,
+    columnLight = Titanium.ColumnLight,
+    knockout = Titanium.Knockout,
+    glow = true,
     isDark = true,
 )
 
 val LightHotColors = HotColors(
-    facetCharge = Color(0xFF8A5A12),
-    facetBalance = Color(0xFF2E6A5B),
-    facetRhythm = Color(0xFF3F4C8F),
-    facetClarity = Color(0xFF23668A),
-    facetWeatherLight = Color(0xFF7A6315),
-    facetWeatherHeavy = Color(0xFF4F5D69),
-    facetConnections = Color(0xFF7A3F78),
-    facetFuel = Color(0xFF42662F),
-    facetBackpack = Color(0xFF4A5361),
-    modeRazgon = Color(0xFF8E5617),
-    modeRovno = Color(0xFF2F6B5C),
-    modeBerezhno = Color(0xFF544D92),
-    rule = Kolonnada.GoldDeep.copy(alpha = 0.26f),
-    ruleSoft = Kolonnada.GoldDeep.copy(alpha = 0.10f),
-    hairline = Kolonnada.Ink.copy(alpha = 0.10f),
-    textTertiary = Kolonnada.LimestoneLight,
-    skyTop = Kolonnada.Marble,
+    modeRazgon = Color(0xFFA25A12),
+    modeRovno = Color(0xFF0E7A6A),
+    modeBerezhno = Color(0xFF5149C9),
+    rule = Titanium.Ink.copy(alpha = 0.14f),
+    ruleSoft = Titanium.Ink.copy(alpha = 0.06f),
+    hairline = Titanium.Ink.copy(alpha = 0.08f),
+    textTertiary = Titanium.InkTertiary,
+    skyTop = Titanium.Porcelain,
+    glassTop = Color.White,
+    glassBottom = Color.White,
+    glassEdge = Color.White,
+    dawnFill = listOf(Titanium.DawnPillHi, Titanium.DawnPillHi, Titanium.DawnPillLow),
+    titanLight = listOf(Color(0xFF2A2E34), Color(0xFF2A2E34), Color(0xFF3A3F46)),
+    columnLight = listOf(Color(0xFF6E747C), Color(0xFF80858D), Color(0xFF8D939B)),
+    knockout = Titanium.Porcelain,
+    glow = false,
     isDark = false,
 )
 

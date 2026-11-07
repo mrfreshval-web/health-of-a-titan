@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
  * slice 2 are adapted or left out, see the comment at each one:
  *  - GRW (goals) — no goals yet, so GOAL_STEP / LEARNING_25 are not expected;
  *  - D08 without the 3 questions (no cards in slice 2, D-027): a default STEADY day with MANUAL;
- *  - D12 (return after silence) — next slices;
+ *  - D12 (return after silence, RET-01) — in ReturnAndEveningTest (GRW-01 waits for goals);
  *  - D13–D15 and the checks below them come from the A39 expert review (day@2).
  */
 class DayScenariosTest {

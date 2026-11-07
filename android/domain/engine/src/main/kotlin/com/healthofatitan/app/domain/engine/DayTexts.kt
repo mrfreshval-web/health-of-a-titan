@@ -151,6 +151,16 @@ object DayTexts {
     const val ITEM_DINNER = "Ужин"
     const val ITEM_BEDTIME = "Отбой"
 
+    // --- Return after a pause (RET-01, A11 §2/§3.3; Agent 10 review) ----------------------------
+
+    /** return.yaml RET-01 `why_ru`, verbatim. */
+    const val RETURN_WHY = "Рад тебя видеть. Без отчётов за паузу: сегодня минимальная версия — 10 минут движения и один шаг к цели. Новый старт — с понедельника, если хочешь."
+
+    /** A11 §2 push «Возвращение (С6)»: title ≤ 40, text ≤ 110 characters. */
+    const val RETURN_HEADLINE = "Рад тебя видеть"
+    const val RETURN_SUMMARY = "Без отчётов за паузу. Сегодня минимальная версия: 10 минут движения и один шаг к цели."
+    const val RETURN_TRAINING_DETAIL = "минимальная версия"
+
     fun focusDetail(blocks: Int, blockMin: Int) = if (blocks > 1) "$blocks блока по $blockMin мин" else "$blockMin мин, одна задача"
 
     fun trainingTitle(c: TrainingChoice): String = when (c.type) {

@@ -45,6 +45,7 @@ import com.healthofatitan.app.feature.path.toPath
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
 import com.healthofatitan.app.feature.today.TodayUiState
+import com.healthofatitan.app.feature.today.TodaySlots
 import com.healthofatitan.app.feature.today.mode
 import com.healthofatitan.app.integration.whoop.FacetValue
 import com.healthofatitan.app.integration.whoop.TodayMetrics
@@ -176,7 +177,7 @@ class TitaniumScreenshotsPath {
                     TodayUiState(whoop = whoop, metrics = metrics),
                     onConnectWhoop = {},
                     day = DayUiState(plan = plan(regime), now = LocalDateTime.now().withHour(20).withMinute(5), loaded = true),
-                    pathStep = { PathTodayStepContent(pathView(regime.toPath()).copy(bedtimeMin = 22 * 60 + 30), onToggle = {}, onOpenPath = {}) },
+                    slots = TodaySlots(afterPlan = { PathTodayStepContent(pathView(regime.toPath()).copy(bedtimeMin = 22 * 60 + 30), onToggle = {}, onOpenPath = {}) }),
                 )
             }
         }

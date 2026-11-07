@@ -20,7 +20,12 @@ enum class Regime(val order: Int, val ru: String) {
 }
 
 /** A09 §2 `DayState.flags` (the subset this engine can raise from WHOOP data and the evening deck). */
-enum class DayFlag { SICK, TRAVEL, LIGHT_WEEK, CALIBRATION, PRELIMINARY_NORM, DATA_LIMITED, MANUAL }
+enum class DayFlag {
+    SICK, TRAVEL, LIGHT_WEEK, CALIBRATION, PRELIMINARY_NORM, DATA_LIMITED, MANUAL,
+
+    /** RET-01: the first day after silence ≥ 2 days — the minimal version, warm words (A18 И4.4). */
+    RETURN,
+}
 
 /** Signals of A09 §2.1 (points of strain). Ids are stored with the day for REG-04 exit thresholds. */
 object Signals {
@@ -194,6 +199,8 @@ data class DayInput(
     val schedule: ScheduleFacts = ScheduleFacts(),
     /** WHOOP sessions of the last 28 days before today (A19 weekly queue). */
     val history: List<Session> = emptyList(),
+    /** RET-01: whole days before today without opening HoT ([ReturnPolicy.silenceDays]). */
+    val silenceDays: Int = 0,
 )
 
 /** Kinds of plan items; the budget and the order of «Сегодня» use them. */

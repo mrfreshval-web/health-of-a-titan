@@ -72,6 +72,10 @@ jobs:
       - name: Content pipeline (YAML → JSON assets)
         run: ./gradlew :app:contentCompile --stacktrace
 
+      # A07 §6: T1–T15 offline, 100 % lines and branches of CrisisGuard — a red here blocks the merge.
+      - name: Crisis protocol (A07 T1–T15, CrisisGuard 100 %)
+        run: ./gradlew :domain:engine:test --tests '*CrisisGuardTest*' :domain:engine:crisisGuardCoverage --stacktrace
+
       - name: Unit tests (JVM + Robolectric)
         run: ./gradlew :core:model:test :domain:metrics:test :domain:engine:test :domain:path:test testDebugUnitTest --stacktrace
 

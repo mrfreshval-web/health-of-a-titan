@@ -162,6 +162,8 @@ fun HotApp(
             ) {
                 todayScreen(
                     onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    // CrisisGuard level ≥ 2 in the evening note opens the crisis card (A07 §4.1, D-029)
+                    onOpenHelp = { navController.openSos() },
                     stateful = stateful,
                     // stream Г: «шаг дня» of the path, owned by :feature:path (A42 §3.1)
                     pathStep = { if (stateful) PathTodayStep(onOpenPath = { navController.openTab(HotRoute.PATH) }) },

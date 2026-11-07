@@ -5,9 +5,9 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.dao.PathDao
-import com.healthofatitan.app.core.database.entity.PathGoalEntity
-import com.healthofatitan.app.core.database.entity.PathStepEntity
+import com.healthofatitan.app.core.database.entity.EveningCheckEntity
+import com.healthofatitan.app.core.database.entity.ReturnLogEntity
+import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -17,10 +17,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * «Титаниум» → stream Г «Путь» on the founder's phone: a version-4 database (schema frozen as raw
- * SQL, with a dawn, two nights and two workouts) opens with schema 5 through MIGRATION_4_5 only.
- * Room validates `path_goal` and `path_step` against the entities; old data survives; a changed
- * goal keeps the old one and its steps as history.
+ * «Титаниум» → stream A on the founder's phone: a version-4 database (schema frozen as raw SQL,
+ * with an evening answered in slice 2) opens with schema 5 through MIGRATION_4_5 only. Room
+ * validates the new `evening_check` columns, `return_log` and `safety_event`; the old evening stays.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -63,37 +62,22 @@ class Migration4To5Test {
                     "PRIMARY KEY(`user_id`, `anchor_id`))",
                 "CREATE TABLE IF NOT EXISTS `evening_check` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
                     "`alcohol` INTEGER, `body` TEXT, `answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "CREATE TABLE IF NOT EXISTS `dawn_log` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `haiku_id` TEXT, " +
                     "`text_key` TEXT, `image` TEXT, `mode` TEXT NOT NULL, `shown_at` INTEGER NOT NULL, " +
                     "PRIMARY KEY(`user_id`, `day_key`))",
                 "CREATE INDEX IF NOT EXISTS `index_dawn_log_user_id_haiku_id` ON `dawn_log` (`user_id`, `haiku_id`)",
-                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'titanium')",
-                "INSERT INTO dawn_log VALUES ('local', '2026-11-10', 'hk-ravno-001', 'весло', 'oar', 'STEADY', 1)",
-                "INSERT INTO metric_daily VALUES ('local', '2026-11-10', 'SLP', 1, 7.2, 0.3, 0, 1.0, 7.0, 1)",
-                "INSERT INTO metric_daily VALUES ('local', '2026-11-11', 'SLP', 1, 6.1, -0.8, -1, 1.0, 6.9, 1)",
-                "INSERT INTO training_session VALUES ('local', 'w-1', '2026-11-10', 1080, 45, 'CARDIO', 'ZONE2', 1)",
-                "INSERT INTO training_session VALUES ('local', 'w-2', '2026-11-10', 1200, 20, 'STRENGTH', 'MIXED', 1)",
+                "INSERT INTO evening_check VALUES ('local', '2026-11-10', 1, 'SORE', 20)",
+                "INSERT INTO day_plan VALUES ('local', '2026-11-10', 'STEADY', 'STEADY', 1, 'SG-SLEEP', '', '', 'day@1', " +
+                    "'Ровно · день по плану', 'Сон 6 ч 40 мин.', 1410, 840, 1350, 10, NULL)",
             ).forEach(db::execSQL)
             db.version = 4
         }
     }
 
-    private fun goal(sphere: String, start: String) = PathGoalEntity(
-        userId = "local",
-        sphere = sphere,
-        startDay = start,
-        baseline = 3,
-        stage1 = 4,
-        stage2 = 5,
-        stage3 = 5,
-        status = PathDao.STATUS_ACTIVE,
-        createdAt = 1L,
-        endedDay = null,
-    )
-
     @Test
-    fun `version 4 upgrades to 5, keeps the dawn and stores goals and steps`() = runTest {
+    fun `version 4 upgrades to 5, keeps the evening and accepts the daily loop`() = runTest {
         val name = "migration-4-5.db"
         createVersion4(name)
         val db = Room.databaseBuilder(context, HotDatabase::class.java, name)
@@ -102,27 +86,32 @@ class Migration4To5Test {
             .build()
         try {
             db.openHelper.writableDatabase // runs and validates MIGRATION_4_5
-            assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
+            val day = db.dayDao()
+            val old = day.evening("local", "2026-11-10")
+            assertEquals("SORE", old?.body)
+            assertNull(old?.training)
+            assertNull(old?.planHelped)
+            day.upsertEvening(EveningCheckEntity("local", "2026-11-11", 0, "FINE", 30L, "DONE", "PLATE", true))
+            assertEquals(true, day.evening("local", "2026-11-11")?.planHelped)
+            assertEquals("PLATE", day.observeLatestEvening("local").first()?.food)
 
-            val path = db.pathDao()
-            assertNull(path.active("local"))
-            val first = path.replaceActive(goal("sleep", "2026-11-10"), endedDay = "2026-11-10")
-            path.upsertStep(PathStepEntity("local", first, "2026-11-11", "MINIMAL", 2L))
-            val second = path.replaceActive(goal("body", "2026-11-12"), endedDay = "2026-11-11")
+            val loop = db.dailyLoopDao()
+            loop.log(ReturnLogEntity("local", "2026-11-08", ReturnLogEntity.KIND_OPEN, 1L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 2L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 3L)) // ignored
+            assertEquals("2026-11-08", loop.lastBefore("local", ReturnLogEntity.KIND_OPEN, "2026-11-11"))
+            assertEquals("2026-11-11", loop.last("local", ReturnLogEntity.KIND_OPEN))
+            assertNull(loop.last("local", ReturnLogEntity.KIND_NUDGE))
+            assertEquals(1, loop.observeCount("local", ReturnLogEntity.KIND_OPEN, "2026-11-11").first())
 
-            val goals = path.observeGoals("local").first()
-            assertEquals(listOf(second, first), goals.map { it.id })
-            assertEquals(listOf("ACTIVE", "REPLACED"), goals.map { it.status })
-            assertEquals("2026-11-11", goals.last().endedDay)
-            assertEquals("body", path.active("local")?.sphere)
-            // the old goal's step is kept as history
-            assertEquals("MINIMAL", path.step("local", first, "2026-11-11")?.version)
-            path.deleteStep("local", first, "2026-11-11")
-            assertEquals(0, path.observeSteps("local").first().size)
-
-            val sleep = path.observeMetric("local", "SLP", 1, "2026-11-01").first().sortedBy { it.dayKey }
-            assertEquals(listOf(7.2, 6.1), sleep.map { it.value })
-            assertEquals(listOf("2026-11-10"), path.observeTrainingDays("local", "2026-11-01").first())
+            assertEquals(0, loop.maxLevelSince("local", 0L))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 100L, level = 2, reason = "DIRECT", source = "EVENING"))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 200L, level = 1, reason = null, source = "MENTOR"))
+            assertEquals(2, loop.maxLevelSince("local", 50L))
+            assertEquals(1, loop.maxLevelSince("local", 150L))
+            assertEquals(100L, loop.lastAt("local", 2))
+            assertNull(loop.lastAt("local", 3))
+            assertEquals(listOf(200L, 100L), loop.safetyEvents("local").map { it.at })
         } finally {
             db.close()
         }

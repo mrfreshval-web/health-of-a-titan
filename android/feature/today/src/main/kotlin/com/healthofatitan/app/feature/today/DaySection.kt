@@ -81,6 +81,8 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.Titanium
 import com.healthofatitan.app.domain.engine.Body
+import com.healthofatitan.app.domain.engine.CrisisAssessment
+import com.healthofatitan.app.domain.engine.DayClose
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.DayTexts
 import com.healthofatitan.app.domain.engine.FiredRule
@@ -103,10 +105,18 @@ const val DAY_SAFETY_TAG = "today_day_safety"
 const val DAY_SUMMARY_TAG = "today_day_summary"
 const val DAY_WHY_TAG = "today_day_why"
 
-/** What the day block does on a tap (slice 2 logic, unchanged). */
+/** What the day block does on a tap (slice 2 logic) and in the evening (stream A). */
 class DayActions(
     val onToggle: (LocalDate, String) -> Unit = { _, _ -> },
     val onEvening: (LocalDate, Int?, Body?) -> Unit = { _, _, _ -> },
+    /** «Закрыть день»: the answers of the evening (A18 И4.1). */
+    val onCloseDay: (LocalDate, DayClose) -> Unit = { _, _ -> },
+    /** CrisisGuard level ≥ 1 in the evening note: logged without text; ≥ 2 opens the crisis card. */
+    val onCrisis: (CrisisAssessment) -> Unit = {},
+    /** The crisis card (SOS), one tap away at level 1. */
+    val onOpenHelp: () -> Unit = {},
+    /** Health Connect answered the permission request, or the steps should be re-read. */
+    val onSteps: () -> Unit = {},
 )
 
 /**

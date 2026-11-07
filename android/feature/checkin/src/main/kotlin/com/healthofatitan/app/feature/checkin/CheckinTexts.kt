@@ -494,9 +494,12 @@ object CheckinTexts {
         else -> DISCOVERY_SENSEI.of(address)
     }
 
-    /** A61 §4.2 example of [G] (D-055); the neutral form is the A61 draft, review of Agents 16 and 10. */
+    /**
+     * A61 §4.2 example of [G] (D-055). Neutral form by Agents 10 and 16 (review 2026-11-07): the app
+     * found the pattern, not the person, so «закономерность», not «наблюдение».
+     */
     private val DISCOVERY_SENSEI = G(
-        n = "Это твоё наблюдение. Связь, не причина.",
+        n = "Это твоя закономерность. Связь, не причина.",
         m = "Ты заметил своё. Связь, не причина.",
         f = "Ты заметила своё. Связь, не причина.",
     )

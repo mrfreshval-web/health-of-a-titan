@@ -18,4 +18,11 @@ interface PersonProfileDao {
 
     @Upsert
     suspend fun upsert(row: PersonProfileEntity)
+
+    /**
+     * Drops the legacy copies of the age (`age_years`) or the sex (`sex`) the fitness age kept in
+     * `body_input` before the profile (Agent 7, 2026-11-07): «не указано» means «не хранится».
+     */
+    @Query("DELETE FROM body_input WHERE user_id = :userId AND kind = :kind")
+    suspend fun deleteLegacyBodyInput(userId: String, kind: String)
 }

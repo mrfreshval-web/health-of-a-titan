@@ -173,9 +173,8 @@ object FitnessAge {
     /** The fitness age with one decimal; null when an input is missing. */
     fun estimate(i: FitnessInput): Double? {
         val age = i.ageYears ?: return null
-        // TODO(A61 §2.2, D-055 п. 3, ⚑ Agent 3): without the sex for calculations the fitness age
-        //  is to be shown as a range over both HUNT formulas, marked «оценка» — only after Agent 3
-        //  checks it. Until then no sex means no estimate (FIT_NEED_INPUT).
+        // Agent 3 veto (2026-11-07): no range without sex — both HUNT branches differ by 4–8 years;
+        //  UNSPECIFIED → no estimate, show FIT_NEED_SEX (A61 §2.2, D-055 п. 3).
         val sex = i.sex ?: return null
         val waist = i.waistCm?.takeIf { it in 40.0..200.0 } ?: return null
         val rhr = i.restingHr?.takeIf { it in 25.0..140.0 } ?: return null
@@ -209,8 +208,14 @@ object FitnessAge {
         lever: String? = null,
     ): FitnessView? {
         if (!gate.open) return null
-        val now = atMilestone ?: estimate(input)
-        val missing = if (input.ageYears == null || input.sex == null || input.waistCm == null) WeekCopy.FIT_NEED_INPUT else null
+        // a stored milestone does not outlive «не указывать»: without the sex there is no number (Agent 3 veto)
+        val now = if (input.sex == null) null else atMilestone ?: estimate(input)
+        val missing = when {
+            input.ageYears == null || input.waistCm == null -> WeekCopy.FIT_NEED_INPUT
+            // only the sex is missing: no estimate and no range (Agent 3 veto), an explanation instead
+            input.sex == null -> WeekCopy.FIT_NEED_SEX
+            else -> null
+        }
         val pace = if (now != null && fourWeeksAgo != null) now - fourWeeksAgo else null
         return FitnessView(
             age = now?.roundToInt(),

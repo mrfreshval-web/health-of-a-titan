@@ -811,18 +811,22 @@ class WeekRepository(
     }
 
     /**
-     * The age and the sex typed under the fitness age go to the profile «Я» (one place for them,
-     * A61 §2.1); the legacy rows are still written for builds without the profile.
+     * The age and the sex typed under the fitness age go to the profile «Я» only (one place for
+     * them, A61 §2.1): with a profile nothing about them is written to `body_input` (Agent 7,
+     * 2026-11-07). The legacy rows are written only without a profile (tests), adults only.
      */
     suspend fun saveBodyInputs(ageYears: Int?, sex: Sex?, waistCm: Double?) {
         val day = now().toLocalDate().toString()
         val at = clock.millis()
-        ageYears?.takeIf { it in 14..100 }?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_AGE, day, it.toDouble(), null, at)) }
-        sex?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_SEX, day, null, it.name.lowercase(), at)) }
-        profile?.let { p ->
+        val p = profile
+        if (p != null) {
             val birthYear = ageYears?.let { now().year - it }
             if (ProfileSettings.validBirthYear(birthYear, now().year)) p.setBirthYear(birthYear)
             sex?.let { p.setSexForCalc(if (it == Sex.MALE) SexForCalc.MALE else SexForCalc.FEMALE) }
+        } else {
+            ageYears?.takeIf { it in ProfileSettings.MIN_AGE..ProfileSettings.MAX_AGE }
+                ?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_AGE, day, it.toDouble(), null, at)) }
+            sex?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_SEX, day, null, it.name.lowercase(), at)) }
         }
         waistCm?.takeIf { it in 40.0..200.0 }?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_WAIST, day, it, null, at)) }
         bump()

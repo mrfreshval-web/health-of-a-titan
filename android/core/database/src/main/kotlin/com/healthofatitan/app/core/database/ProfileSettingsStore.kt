@@ -1,6 +1,7 @@
 package com.healthofatitan.app.core.database
 
 import com.healthofatitan.app.core.database.dao.PersonProfileDao
+import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.database.entity.PersonProfileEntity
 import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.core.model.profile.ProfileSettings
@@ -29,10 +30,20 @@ class ProfileSettingsStore(
 
     suspend fun setAddressForm(form: AddressForm) = update { it.copy(addressForm = form) }
 
-    /** null clears the year; a year outside [ProfileSettings.validBirthYear] is the caller's to refuse. */
-    suspend fun setBirthYear(year: Int?) = update { it.copy(birthYear = year) }
+    /**
+     * null clears the year, and with it any old age row of `body_input` (Agent 7); a year outside
+     * [ProfileSettings.validBirthYear] is the caller's to refuse.
+     */
+    suspend fun setBirthYear(year: Int?) {
+        update { it.copy(birthYear = year) }
+        if (year == null) dao.deleteLegacyBodyInput(user, BodyInputEntity.KIND_AGE)
+    }
 
-    suspend fun setSexForCalc(sex: SexForCalc) = update { it.copy(sexForCalc = sex) }
+    /** «не указывать» also drops any old sex row of `body_input` (Agent 7). */
+    suspend fun setSexForCalc(sex: SexForCalc) {
+        update { it.copy(sexForCalc = sex) }
+        if (sex == SexForCalc.UNSPECIFIED) dao.deleteLegacyBodyInput(user, BodyInputEntity.KIND_SEX)
+    }
 
     private suspend fun update(change: (ProfileSettings) -> ProfileSettings) {
         val next = change(decode(dao.get(user)))

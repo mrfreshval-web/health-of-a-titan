@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.ProfileSettingsStore
+import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.core.model.profile.ProfileSettings
 import com.healthofatitan.app.core.model.profile.SexForCalc
@@ -270,6 +271,9 @@ class WeekRepositoryTest {
         assertEquals(38, inputs.ageYears)
         assertEquals(Sex.MALE, inputs.sex)
         assertEquals(88.0, inputs.waistCm)
+        // Agent 7 (2026-11-07): with a profile, no copy of the age and the sex in body_input
+        assertNull(db.weekDao().latestInput("local", BodyInputEntity.KIND_AGE))
+        assertNull(db.weekDao().latestInput("local", BodyInputEntity.KIND_SEX))
 
         // «не указывать» in the profile: the old row does not bring the sex back
         profile.setSexForCalc(SexForCalc.UNSPECIFIED)
@@ -279,6 +283,17 @@ class WeekRepositoryTest {
         // the address form is a separate field and changes nothing here
         profile.setAddressForm(AddressForm.MASCULINE)
         assertEquals(Sex.FEMALE, withProfile.bodyInputs().sex)
+    }
+
+    @Test
+    fun `without a profile the legacy rows take adults only`() = runTest {
+        val plans = DayPlanRepository(db.metricDao(), db.dayDao(), { null }, clock)
+        val legacy = WeekRepository(db.weekDao(), db.todayDao(), db.dayDao(), db.metricDao(), db.checkinDao(), plans, glance, WeekSignals.None, clock)
+        legacy.saveBodyInputs(17, Sex.FEMALE, 70.0)
+        assertNull(legacy.bodyInputs().ageYears, "under 18 is not stored (Agent 7)")
+        legacy.saveBodyInputs(18, null, null)
+        assertEquals(18, legacy.bodyInputs().ageYears)
+        assertEquals(Sex.FEMALE, legacy.bodyInputs().sex)
     }
 }
 

@@ -90,7 +90,7 @@ def write(doc, name):
 
 def main(argv):
     from .exercises import EXERCISES
-    from . import heroes
+    from . import heroes, paths
     lib = load_poses()
     only = set(argv)
     manifest_path = OUT / "manifest.json"
@@ -113,6 +113,14 @@ def main(argv):
         manifest["files"][hid] = {"file": f"lottie/{hid}.json", "kind": "hero", "frames": doc["op"],
                                   "markers": {m["cm"]: m["tm"] for m in doc["markers"]}, "bytes": size}
         print(f"{hid:28s} {doc['op']:4d} fr  {size / 1024:6.1f} KB  layers {len(doc['layers'])}")
+    for pid, fn in paths.PATHS.items():
+        if only and pid not in only:
+            continue
+        doc = fn()
+        path, size = write(doc, pid)
+        manifest["files"][pid] = {"file": f"lottie/{pid}.json", "kind": "path", "frames": doc["op"],
+                                  "markers": {m["cm"]: m["tm"] for m in doc["markers"]}, "bytes": size}
+        print(f"{pid:28s} {doc['op']:4d} fr  {size / 1024:6.1f} KB  layers {len(doc['layers'])}")
     manifest["files"] = dict(sorted(manifest["files"].items()))
     manifest_path.write_text(json.dumps(manifest, indent=1, ensure_ascii=False) + "\n")
 

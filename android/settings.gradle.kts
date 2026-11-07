@@ -46,3 +46,5 @@ include(":domain:metrics")
 include(":integration:whoop")
 // Slice 2 (day rules A09, plan, morning push):
 include(":domain:engine")
+// Stream C «Еда» (A41): nutrition engine and screens.
+include(":domain:nutrition")

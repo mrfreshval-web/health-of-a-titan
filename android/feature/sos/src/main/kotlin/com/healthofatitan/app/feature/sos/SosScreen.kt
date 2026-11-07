@@ -1,9 +1,5 @@
 package com.healthofatitan.app.feature.sos
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,22 +41,35 @@ import androidx.compose.ui.unit.em
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.safety.HelpLines
 import com.healthofatitan.app.core.ui.R
+import com.healthofatitan.app.core.ui.component.dialHelp
+import com.healthofatitan.app.core.ui.component.openHelpDirectory
+import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.core.ui.theme.HotType
 
 const val SOS_SCREEN_TAG = "screen_sos"
-const val SOS_CALL_988_TAG = "sos_call_988"
-const val SOS_CALL_911_TAG = "sos_call_911"
+
+/** The «поговорить» button: the country's crisis line, or the directory when we have none. */
+const val SOS_CALL_CRISIS_TAG = "sos_call_crisis"
+
+/** The emergency number of the country (911, 112). */
+const val SOS_CALL_EMERGENCY_TAG = "sos_call_emergency"
 
 /**
- * Emergency numbers for the founder in the US (A11 §8.1, A07 §4.5). Hardcoded on purpose:
- * this screen must open instantly and offline. Country selection comes from
- * content/safety/resources.yaml in slice 4.
+ * Words of the emergency block (A07 §4.4–4.5, Y6). The numbers come from [HelpLines] of the phone's
+ * country; the built-in table opens instantly and offline (core/model HelpDirectory, a copy of
+ * content/safety/resources.yaml). Crisis content: Agents 10 and 7.
  */
-internal object SosNumbers {
-    const val CRISIS_LINE = "988"
-    const val EMERGENCY = "911"
+internal object SosTexts {
+    const val DANGER = "Если опасность прямо сейчас"
+    const val FIND_LINE = "Найти линию помощи"
+
+    fun talk(lines: HelpLines): String = lines.crisisShown?.let { "$it — поговорить" } ?: FIND_LINE
+
+    fun humans(lines: HelpLines): String =
+        "Я ИИ, не человек. Живые люди — " + (lines.crisisShown ?: "линии помощи твоей страны на findahelpline.com") + "."
 }
 
 /** SOS outside the tabs (A11 §1.1): from the top bar, the quick settings tile and the shortcut. */
@@ -80,6 +89,7 @@ fun NavGraphBuilder.sosScreen(onClose: () -> Unit) {
 @Composable
 fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val lines = rememberHelpLines()
     HotTheme(darkTheme = true, dynamicColor = false) {
         Surface(
             color = MaterialTheme.colorScheme.background,
@@ -109,8 +119,9 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 }
                 EmergencyBlock(
-                    onCrisisLine = { context.dial(SosNumbers.CRISIS_LINE) },
-                    onEmergency = { context.dial(SosNumbers.EMERGENCY) },
+                    lines = lines,
+                    onCrisisLine = { lines.crisisLine?.let { context.dialHelp(it) } ?: context.openHelpDirectory() },
+                    onEmergency = { context.dialHelp(lines.emergency) },
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -125,7 +136,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    "Я ИИ, не человек. Живые люди — 988.",
+                    SosTexts.humans(lines),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -137,9 +148,42 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmergencyBlock(onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
+private fun EmergencyBlock(lines: HelpLines, onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
     val onBlock = MaterialTheme.colorScheme.onErrorContainer
     val block = MaterialTheme.colorScheme.errorContainer
+    val crisis: @Composable (Modifier) -> Unit = { m ->
+        Button(
+            onClick = onCrisisLine,
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(containerColor = onBlock, contentColor = block),
+            contentPadding = PaddingValues(horizontal = 18.dp),
+            modifier = m
+                .heightIn(min = 56.dp)
+                .testTag(SOS_CALL_CRISIS_TAG),
+        ) {
+            if (lines.crisisLine != null) {
+                Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(SosTexts.talk(lines), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        }
+    }
+    val emergency: @Composable (Modifier) -> Unit = { m ->
+        OutlinedButton(
+            onClick = onEmergency,
+            shape = CircleShape,
+            border = BorderStroke(1.dp, onBlock),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = onBlock),
+            contentPadding = PaddingValues(horizontal = 22.dp),
+            modifier = m
+                .heightIn(min = 56.dp)
+                .testTag(SOS_CALL_EMERGENCY_TAG),
+        ) {
+            Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(lines.emergency, style = MaterialTheme.typography.titleMedium)
+        }
+    }
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = block, contentColor = onBlock),
@@ -147,50 +191,22 @@ private fun EmergencyBlock(onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
-                "Если опасность прямо сейчас",
+                SosTexts.DANGER,
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = onCrisisLine,
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = onBlock, contentColor = block),
-                    contentPadding = PaddingValues(horizontal = 18.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 56.dp)
-                        .testTag(SOS_CALL_988_TAG),
-                ) {
-                    Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("988 — поговорить", style = MaterialTheme.typography.titleMedium)
+            // 988 / 911 fit in one row; a long number (8-800-2000-122) or the directory stacks.
+            if ((lines.crisisShown?.length ?: Int.MAX_VALUE) <= SHORT_NUMBER) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    crisis(Modifier.weight(1f))
+                    emergency(Modifier)
                 }
-                OutlinedButton(
-                    onClick = onEmergency,
-                    shape = CircleShape,
-                    border = BorderStroke(1.dp, onBlock),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = onBlock),
-                    contentPadding = PaddingValues(horizontal = 22.dp),
-                    modifier = Modifier
-                        .heightIn(min = 56.dp)
-                        .testTag(SOS_CALL_911_TAG),
-                ) {
-                    Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("911", style = MaterialTheme.typography.titleMedium)
-                }
+            } else {
+                emergency(Modifier.fillMaxWidth())
+                crisis(Modifier.fillMaxWidth())
             }
         }
     }
 }
 
-/** Opens the dialer with the number pre-filled; the user confirms the call (no CALL_PHONE). */
-internal fun Context.dial(number: String) {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    try {
-        startActivity(intent)
-    } catch (@Suppress("UNUSED_PARAMETER") e: ActivityNotFoundException) {
-        // No dialer (e.g. tablet without telephony): the number stays visible on screen.
-    }
-}
+private const val SHORT_NUMBER = 4

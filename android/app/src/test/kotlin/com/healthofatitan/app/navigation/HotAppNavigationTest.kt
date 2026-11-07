@@ -2,6 +2,7 @@ package com.healthofatitan.app.navigation
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,6 +24,7 @@ import com.healthofatitan.app.feature.today.WHY_SCREEN_TAG
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.ui.component.LocalHelpCountry
 import com.healthofatitan.app.core.ui.component.TOP_BAR_CENTER_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
@@ -47,8 +49,8 @@ import com.healthofatitan.app.feature.path.PATH_TITAN_TAG
 import com.healthofatitan.app.feature.path.PERSONA_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PERSONA_STRONG_WORDS_TAG
 import com.healthofatitan.app.feature.path.personaTag
-import com.healthofatitan.app.feature.sos.SOS_CALL_911_TAG
-import com.healthofatitan.app.feature.sos.SOS_CALL_988_TAG
+import com.healthofatitan.app.feature.sos.SOS_CALL_CRISIS_TAG
+import com.healthofatitan.app.feature.sos.SOS_CALL_EMERGENCY_TAG
 import com.healthofatitan.app.feature.sos.SOS_SCREEN_TAG
 import com.healthofatitan.app.feature.today.TODAY_CONNECT_TAG
 import com.healthofatitan.app.feature.today.TODAY_SCREEN_TAG
@@ -65,7 +67,9 @@ import kotlin.test.assertTrue
  * A14 §9 step 6 acceptance with D-029, D-033 and D-038: 4 modules open (Сегодня, Неделя, Путь, За
  * плечами); the header is Винс, the date and the profile, no SOS button and no rings (A46 §2.1);
  * help is at most 2 taps from every module and from «Передышка» (T-06); nothing opens by itself
- * except «Рассвет» (T-05); the tile and the shortcut open help at once; 988 / 911 open the dialer.
+ * except «Рассвет» (T-05); the tile and the shortcut open help at once; the crisis line and the
+ * emergency number of the phone's country open the dialer (the user confirms): 988 / 911 in the
+ * US, 8-800-2000-122 / 112 in Russia (Y6).
  */
 @RunWith(AndroidJUnit4::class)
 // Pixel 9 Pro XL in dp: the floating tab bar and the hero leave the default 320 × 470 dp screen
@@ -184,7 +188,8 @@ class HotAppNavigationTest {
             compose.onNodeWithTag(AVATAR_TAG).performClick() // tap 1
             compose.onNodeWithTag(AVATAR_HELP_TAG).performClick() // tap 2
             compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
-            compose.onNodeWithTag(SOS_CALL_988_TAG).assertExists()
+            compose.onNodeWithTag(SOS_CALL_CRISIS_TAG).assertExists()
+            compose.onNodeWithTag(SOS_CALL_EMERGENCY_TAG).assertExists()
             compose.onNodeWithContentDescription("Закрыть").performClick()
             compose.onNodeWithTag(screenTag).assertExists()
         }
@@ -207,20 +212,34 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
     }
 
-    @Test
-    fun `988 and 911 buttons open the dialer`() {
-        launch(pendingRoute = HotRoute.SOS)
+    /** SOS with the help numbers of [country]; how the phone finds its country is HelpDirectoryTest's. */
+    private fun assertSosDials(country: String, crisisTel: String, emergencyTel: String) {
+        compose.setContent {
+            CompositionLocalProvider(LocalHelpCountry provides country) {
+                HotTheme { HotApp(pendingRoute = HotRoute.SOS, stateful = false) }
+            }
+        }
         val app = shadowOf(ApplicationProvider.getApplicationContext<Application>())
 
-        compose.onNodeWithTag(SOS_CALL_988_TAG).performClick()
+        compose.onNodeWithTag(SOS_CALL_CRISIS_TAG).performClick()
         val crisis = app.nextStartedActivity
         assertEquals(Intent.ACTION_DIAL, crisis.action)
-        assertEquals("tel:988", crisis.dataString)
+        assertEquals(crisisTel, crisis.dataString)
 
-        compose.onNodeWithTag(SOS_CALL_911_TAG).performClick()
+        compose.onNodeWithTag(SOS_CALL_EMERGENCY_TAG).performClick()
         val emergency = app.nextStartedActivity
         assertEquals(Intent.ACTION_DIAL, emergency.action)
-        assertEquals("tel:911", emergency.dataString)
+        assertEquals(emergencyTel, emergency.dataString)
+    }
+
+    @Test
+    fun `in the us 988 and 911 open the dialer`() {
+        assertSosDials("US", "tel:988", "tel:911")
+    }
+
+    @Test
+    fun `in russia the trust line and 112 open the dialer`() {
+        assertSosDials("RU", "tel:88002000122", "tel:112")
     }
 
     @Test

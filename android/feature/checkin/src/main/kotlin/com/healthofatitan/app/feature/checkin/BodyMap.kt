@@ -1,8 +1,5 @@
 package com.healthofatitan.app.feature.checkin
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -34,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanGeometry
+import com.healthofatitan.app.core.ui.component.dialHelp
+import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.domain.checkin.BodyArea
 import com.healthofatitan.app.domain.checkin.Pain
@@ -45,9 +44,6 @@ import kotlin.math.min
 const val BODY_MAP_TAG = "checkin_body_map"
 const val PAIN_TAG = "checkin_pain"
 const val PAIN_CHEST_TAG = "checkin_pain_chest"
-
-/** The emergency number shown with SAF-01 (A07 §4.5: built-in US numbers, as on the SOS screen). */
-const val EMERGENCY_NUMBER = "911"
 
 /**
  * «Где?» (И2.15, sc5): the Titan as a silhouette — tap a zone and it lights amber (never red);
@@ -114,6 +110,8 @@ fun BodyMap(
 @Composable
 fun PainAnswer(pain: Pain) {
     val context = LocalContext.current
+    // Y6: the emergency number of the phone's country (911, 112), as on the SOS screen.
+    val emergency = rememberHelpLines().emergency
     when (PainRules.route(pain)) {
         PainRoute.EMERGENCY -> Surface(
             shape = RoundedCornerShape(18.dp),
@@ -122,16 +120,11 @@ fun PainAnswer(pain: Pain) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(14.dp)) {
-                Text(CheckinTexts.painChest(EMERGENCY_NUMBER), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(CheckinTexts.painChest(emergency), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(6.dp))
-                HotTextButton("${CheckinTexts.CALL} $EMERGENCY_NUMBER", onClick = { context.dial(EMERGENCY_NUMBER) })
+                HotTextButton("${CheckinTexts.CALL} $emergency", onClick = { context.dialHelp(emergency) })
             }
         }
         PainRoute.SPARE_ZONE -> Text(CheckinTexts.PAIN_JOINT_LINE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-internal fun Context.dial(number: String) {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { startActivity(intent) }
 }

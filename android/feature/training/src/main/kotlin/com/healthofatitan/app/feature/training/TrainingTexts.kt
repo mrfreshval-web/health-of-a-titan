@@ -58,8 +58,27 @@ object TrainingTexts {
     const val STRETCH_DONE = "сделана"
     const val STRETCH_SKIPPED = "пропущена"
 
-    // review: shown after «Мне плохо» was pressed; no advice, a fact only
-    const val SUMMARY_FELT_BAD = "Отмечено «Мне плохо». Тренировка остановлена."
+    // Review 2026-11-07 (Agents 3, 10): after «Мне плохо» the summary names the next step too.
+    const val SUMMARY_FELT_BAD = "Отмечено «Мне плохо». Тренировка остановлена. " +
+        "Если это повторится или не проходит — покажись врачу до следующей тренировки."
+
+    // ── «Мне плохо» (A40 §2.5 → A19 §6.2 stop signals F1–F7). Review 2026-11-07, Agents 3 and 10:
+    // the button used to show only «Пауза»; the stop signals and the emergency number of the
+    // phone's country (Y6) are now on that screen. No diagnosis, no «дотерпи».
+    const val FEEL_BAD_TITLE = "Стоп. Сядь и отдышись"
+
+    /** F1, F2, F5: call now. */
+    fun feelBadUrgent(number: String) =
+        "Боль или давление в груди, обморок, онемение, спутанность, сбой речи или зрения — звони $number."
+
+    /** F3: breathlessness that does not pass. */
+    fun feelBadBreath(number: String) = "Одышка не проходит за 2–3 минуты отдыха — тоже $number."
+
+    /** F4, F6, F7: stop and rest, no call. */
+    const val FEEL_BAD_REST = "Резкая боль в суставе или мышце — пропусти это упражнение. " +
+        "Холодный пот, тошнота, «что-то не так» — заверши тренировку и отдохни."
+
+    fun callEmergency(number: String) = "Позвонить $number"
     const val CLOSE = "Закрыть"
     const val SEAL_SPOKEN = "Тренировка завершена"
 

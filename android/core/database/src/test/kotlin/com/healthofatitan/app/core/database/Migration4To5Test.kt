@@ -5,20 +5,21 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.entity.TrainingSetEntity
-import com.healthofatitan.app.core.database.entity.TrainingWorkoutEntity
+import com.healthofatitan.app.core.database.entity.EveningCheckEntity
+import com.healthofatitan.app.core.database.entity.ReturnLogEntity
+import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 /**
- * «Титаниум» → stream B «Тренировка»: a version-4 database (schema frozen as raw SQL, with a plan
- * of the day) opens with schema 5 through MIGRATION_4_5 only. Room validates `training_workout`
- * and `training_set`; the plan survives; a workout and its sets are saved and read back.
+ * «Титаниум» → stream A on the founder's phone: a version-4 database (schema frozen as raw SQL,
+ * with an evening answered in slice 2) opens with schema 5 through MIGRATION_4_5 only. Room
+ * validates the new `evening_check` columns, `return_log` and `safety_event`; the old evening stays.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -61,12 +62,13 @@ class Migration4To5Test {
                     "PRIMARY KEY(`user_id`, `anchor_id`))",
                 "CREATE TABLE IF NOT EXISTS `evening_check` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
                     "`alcohol` INTEGER, `body` TEXT, `answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "CREATE TABLE IF NOT EXISTS `dawn_log` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `haiku_id` TEXT, " +
                     "`text_key` TEXT, `image` TEXT, `mode` TEXT NOT NULL, `shown_at` INTEGER NOT NULL, " +
                     "PRIMARY KEY(`user_id`, `day_key`))",
                 "CREATE INDEX IF NOT EXISTS `index_dawn_log_user_id_haiku_id` ON `dawn_log` (`user_id`, `haiku_id`)",
-                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-                "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'slice-3')",
+                "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'titanium')",
+                "INSERT INTO evening_check VALUES ('local', '2026-11-10', 1, 'SORE', 20)",
                 "INSERT INTO day_plan VALUES ('local', '2026-11-10', 'STEADY', 'STEADY', 1, 'SG-SLEEP', '', '', 'day@1', " +
                     "'Ровно · день по плану', 'Сон 6 ч 40 мин.', 1410, 840, 1350, 10, NULL)",
             ).forEach(db::execSQL)
@@ -75,7 +77,7 @@ class Migration4To5Test {
     }
 
     @Test
-    fun `version 4 upgrades to 5, keeps the plan and accepts the training log`() = runTest {
+    fun `version 4 upgrades to 5, keeps the evening and accepts the daily loop`() = runTest {
         val name = "migration-4-5.db"
         createVersion4(name)
         val db = Room.databaseBuilder(context, HotDatabase::class.java, name)
@@ -84,28 +86,32 @@ class Migration4To5Test {
             .build()
         try {
             db.openHelper.writableDatabase // runs and validates MIGRATION_4_5
-            assertEquals("STEADY", db.dayDao().plan("local", "2026-11-10")?.regime)
+            val day = db.dayDao()
+            val old = day.evening("local", "2026-11-10")
+            assertEquals("SORE", old?.body)
+            assertNull(old?.training)
+            assertNull(old?.planHelped)
+            day.upsertEvening(EveningCheckEntity("local", "2026-11-11", 0, "FINE", 30L, "DONE", "PLATE", true))
+            assertEquals(true, day.evening("local", "2026-11-11")?.planHelped)
+            assertEquals("PLATE", day.observeLatestEvening("local").first()?.food)
 
-            val log = db.trainingLogDao()
-            assertTrue(log.observeDay("local", "2026-11-10").first().isEmpty())
-            val workout = TrainingWorkoutEntity(
-                userId = "local", workoutId = "w1", dayKey = "2026-11-10", templateRef = "tpl-functional-home@1",
-                mode = "STEADY", lighter = false, startedAt = 1_000L, finishedAt = 2_000_000L, activeS = 1_800L,
-                setsDone = 2, setsSkipped = 1, setsPlanned = 3, rpeMedian = 7, feltBad = false, stretchDone = true,
-            )
-            val sets = listOf(
-                TrainingSetEntity("local", "w1", 0, "ex-squat-bw", "warmup", 1, null, "10", 40, false, null),
-                TrainingSetEntity("local", "w1", 2, "ex-pushup", "main", 1, null, "8", 35, false, 7),
-                TrainingSetEntity("local", "w1", 1, "ex-reverse-lunge", "main", 1, "left", null, 0, true, null),
-            )
-            log.save(workout, sets)
-            assertEquals(listOf("w1"), log.observeDay("local", "2026-11-10").first().map { it.workoutId })
-            assertEquals(listOf(0, 1, 2), log.sets("local", "w1").map { it.stepIndex })
-            assertEquals(7, log.recent("local", 5).single().rpeMedian)
-            // saving again replaces, never duplicates
-            log.save(workout.copy(feltBad = true), sets)
-            assertTrue(log.recent("local", 5).single().feltBad)
-            assertEquals(3, log.sets("local", "w1").size)
+            val loop = db.dailyLoopDao()
+            loop.log(ReturnLogEntity("local", "2026-11-08", ReturnLogEntity.KIND_OPEN, 1L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 2L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 3L)) // ignored
+            assertEquals("2026-11-08", loop.lastBefore("local", ReturnLogEntity.KIND_OPEN, "2026-11-11"))
+            assertEquals("2026-11-11", loop.last("local", ReturnLogEntity.KIND_OPEN))
+            assertNull(loop.last("local", ReturnLogEntity.KIND_NUDGE))
+            assertEquals(1, loop.observeCount("local", ReturnLogEntity.KIND_OPEN, "2026-11-11").first())
+
+            assertEquals(0, loop.maxLevelSince("local", 0L))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 100L, level = 2, reason = "DIRECT", source = "EVENING"))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 200L, level = 1, reason = null, source = "MENTOR"))
+            assertEquals(2, loop.maxLevelSince("local", 50L))
+            assertEquals(1, loop.maxLevelSince("local", 150L))
+            assertEquals(100L, loop.lastAt("local", 2))
+            assertNull(loop.lastAt("local", 3))
+            assertEquals(listOf(200L, 100L), loop.safetyEvents("local").map { it.at })
         } finally {
             db.close()
         }

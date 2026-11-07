@@ -47,7 +47,8 @@ class TitanLottieTest {
             val c = assertNotNull(result.value, "${e.id}: ${result.exception}")
             assertEquals(60f, c.frameRate, e.id)
             assertEquals(1024, c.bounds.width(), e.id)
-            assertEquals(e.frames.toFloat(), c.endFrame - c.startFrame, e.id)
+            // lottie-android keeps endFrame as op − 0.01
+            assertEquals(e.frames.toFloat(), c.endFrame - c.startFrame, 0.05f, e.id)
             assertTrue(c.layers.size <= 40, "${e.id}: ${c.layers.size} layers")
             val markers = c.markers.map { it.name }.toSet()
             assertTrue("poster" in markers, "${e.id}: no poster marker")

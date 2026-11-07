@@ -1,0 +1,448 @@
+<title>История Титана</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400&display=swap">
+<style>
+/* Layout: a single night column that walks the reader across one world, «Край мира»; each chapter opens on a drawn frame of that world, camera moving from close-up (day) to wide (path) to reverse (behind). Deliberately single-theme: the world is a night sky. */
+:root{
+  --night:#0D111E; --night2:#141A2B; --night3:#1B2236;
+  --ink:#E8ECF4; --dim:#9BA4BA; --faint:#5D6680; --rule:#262E45;
+  --sky:#C9D3E6; --earth:#D8C3A0; --water:#7FB2F0; --ember:#F2B66B; --dawn:#E9A27A;
+  --f-ui:"Geist",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-verse:"Cormorant Garamond","Cormorant",Georgia,"Times New Roman",serif;
+  --f-mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:dark;
+}
+html{background:var(--night)}
+body{background:var(--night);color:var(--ink);font-family:var(--f-ui);font-size:17px;line-height:1.6;font-weight:300;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+section{padding-block:56px 24px;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+h1,h2,h3{font-weight:400;letter-spacing:-.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(40px,8vw,68px);line-height:1.02;font-weight:300}
+h2{font-size:clamp(28px,5vw,38px);line-height:1.12;margin-bottom:18px}
+h3{font-size:19px;font-weight:500;margin:28px 0 8px}
+p{margin:0 0 14px;max-width:64ch}
+strong{font-weight:500;color:var(--ink)}
+.lede{font-size:20px;color:var(--ink);max-width:56ch}
+.muted{color:var(--dim)}
+.verse{font-family:var(--f-verse);font-style:italic;font-size:24px;line-height:1.35;color:var(--sky);margin:22px 0;padding-left:20px;border-left:1px solid var(--faint)}
+.verse.ember{color:var(--ember)}
+.motto{font-size:clamp(22px,4vw,30px);font-weight:400;line-height:1.25;margin:22px 0;max-width:30ch}
+.motto em{font-style:normal;color:var(--ember)}
+.why{font-family:var(--f-verse);font-style:italic;color:var(--ember);font-size:1.15em}
+
+figure{margin:26px 0 22px}
+.frame{position:relative;border-radius:18px;overflow:hidden;background:var(--night2);aspect-ratio:400/250;max-width:100%}
+.frame svg{display:block;width:100%;height:100%}
+figcaption{display:flex;gap:12px;align-items:baseline;margin-top:10px;font-size:14px;color:var(--dim);flex-wrap:wrap}
+figcaption b{font-family:var(--f-mono);font-weight:400;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+
+.hero{padding-block:40px 30px}
+.hero .frame{aspect-ratio:400/280}
+.hero h1{margin-top:28px}
+.hero .sub{margin-top:16px;font-size:19px;color:var(--dim);max-width:46ch}
+
+.time{display:grid;grid-template-columns:72px 1fr;gap:4px 18px;margin:20px 0}
+.time dt{font-family:var(--f-mono);font-size:13px;color:var(--ember);padding-top:4px}
+.time dd{margin:0 0 14px;min-width:0}
+.time dd b{display:block;font-weight:500;margin-bottom:2px}
+
+.strata{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:22px 0}
+.stratum{padding:16px 16px 14px;border-radius:14px;background:var(--night2);min-width:0}
+.stratum h4{margin:0 0 6px;font-size:15px;font-weight:500}
+.stratum p{font-size:15px;margin:0;color:var(--dim)}
+.stratum .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:1px}
+
+.mat{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border-radius:14px;overflow:hidden;margin:22px 0}
+.mat div{background:var(--night);padding:14px 14px 12px}
+.mat dt{font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.mat dd{margin:4px 0 0;font-size:15px}
+
+.steps{counter-reset:s;list-style:none;padding:0;margin:18px 0}
+.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}
+.steps li::before{content:counter(s);font-family:var(--f-mono);font-size:13px;color:var(--ember);padding-top:3px}
+.steps li>span{min-width:0}
+
+.tablewrap{overflow-x:auto;margin:20px 0;border-radius:14px;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--rule)}
+th{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:400;background:var(--night2)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:500;white-space:nowrap}
+td:last-child{color:var(--earth)}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:16px 0}
+.two>div{min-width:0}
+.two ul{margin:0;padding-left:18px}
+.two li{margin:0 0 8px}
+
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--water);border:1px solid var(--faint);border-radius:999px;padding:1px 8px;white-space:nowrap}
+
+.pitch{background:var(--night2);border-radius:18px;padding:24px 22px;margin:20px 0}
+.pitch p{margin-bottom:12px}
+.pitch .one{font-size:24px;font-weight:400;line-height:1.3;color:var(--ink)}
+
+.finale{text-align:left;padding-block:64px 80px}
+.finale .verse{font-size:30px;border:0;padding:0;color:var(--ink)}
+.todo{font-size:15px;color:var(--dim)}
+.todo li{margin-bottom:6px}
+
+a{color:var(--water)}
+:focus-visible{outline:2px solid var(--water);outline-offset:3px}
+
+/* svg classes */
+.s-sky{fill:none;stroke:var(--sky);stroke-width:3;stroke-linecap:round}
+.s-ti{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.s-lbl{font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;fill:var(--dim)}
+.s-word{font-family:var(--f-ui);font-size:15px;font-weight:500;fill:var(--ink)}
+.s-verse{font-family:var(--f-verse);font-style:italic;font-size:13px;fill:var(--sky)}
+.tw{animation:tw 4s ease-in-out infinite}
+.fl{animation:fl 6s ease-in-out infinite}
+@keyframes tw{50%{opacity:.35}}
+@keyframes fl{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.tw,.fl{animation:none}}
+@media (max-width:480px){body{font-size:16px}.verse{font-size:21px}.time{grid-template-columns:58px 1fr;gap:2px 12px}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <figure>
+    <div class="frame" data-frame="1" role="img" aria-label="Кадр 1. Край мира: ночь, колонны поднимаются и принимают свод, Титан поднимает ладони."></div>
+    <figcaption><b>Кадр 1 · Край мира</b>Колонны поднимаются и принимают свод. Титан поднимает ладони.</figcaption>
+  </figure>
+  <p class="eyebrow">Health of a Titan · история продукта</p>
+  <h1>История Титана</h1>
+  <p class="sub">Один мир, один Титан и четыре точки зрения на него: Сегодня, Неделя, Путь и За плечами.</p>
+  <p class="motto">Мы держим рутину. <em>Ты держишь небо.</em></p>
+</header>
+
+<section id="myth">
+  <p class="eyebrow">I · Миф</p>
+  <h2>У Атланта небо было наказанием. У тебя это выбор.</h2>
+  <p>На западном краю мира стоит Атлант и держит небо, чтобы свод не лёг на землю. Это наказание за проигранную войну: ни срока, ни смены, ни права опустить руки, и ни одного ответа на вопрос «зачем». По одной из версий, он так устал, что окаменел и стал горами.</p>
+  <p>У каждого взрослого есть своё небо: работа, дети, люди, которые на тебя рассчитывают, дело, ради которого стоит вставать. Под ним лежит груз, которого никто не видит. Нужно вовремя лечь, нормально поесть, подвигаться, восстановиться, не забыть про анализы. От этой рутины зависит, хватит ли сил на всё остальное, а держат её обычно на остатке сил.</p>
+  <p>Мы меняем в мифе одно. Небо остаётся твоим, а вес под ним можно разделить. Вокруг Титана поднимаются колонны и принимают часть свода. <strong>Health of a Titan — это колонны.</strong></p>
+  <p>И ещё одно, чего у Атланта не было. Когда тяжело, свод можно поставить на колонны и сесть рядом. Небо не упадёт: за этим следим мы.</p>
+</section>
+
+<section id="world">
+  <p class="eyebrow">II · Мир Титана</p>
+  <h2>Край мира</h2>
+  <p>У всех экранов HoT общая география. Каждый модуль показывает один и тот же мир, меняется только место камеры.</p>
+  <figure>
+    <div class="frame" data-frame="map" style="aspect-ratio:400/300" role="img" aria-label="Карта мира в разрезе: звезда Зачем в зените, свод Неба, Титан и колонны, Земля, Вода, основание Дано; на востоке Титан горизонта, на западе За плечами."></div>
+    <figcaption><b>Срез мира</b>Вверху свод, ниже земля и вода, в основании Дано. Восток — будущее, запад — прошлое.</figcaption>
+  </figure>
+  <div class="strata">
+    <div class="stratum"><h4><span class="sw" style="background:var(--sky)"></span>Небо — ум</h4><p>Четыре дуги свода: Внимание, Мастерство, Ясность, Взгляд.</p></div>
+    <div class="stratum"><h4><span class="sw" style="background:var(--earth)"></span>Земля — тело</h4><p>Пять плит: Выносливость, Сила, Подвижность, Форма, Топливо.</p></div>
+    <div class="stratum"><h4><span class="sw" style="background:var(--water)"></span>Вода — состояние</h4><p>Пять течений: Сон, Отдых, Чувства, Люди рядом, На плаву.</p></div>
+    <div class="stratum"><h4><span class="sw" style="background:var(--faint)"></span>Дано — основание</h4><p>Колено, смены, дети, анализы, план врача. Его не оценивают, его учитывают в каждом совете.</p></div>
+  </div>
+  <p>В зените стоит звезда <span class="why">Зачем</span>: «чтобы хватало сил на детей». Её не оценивают, по ней сверяют курс. Пять колонн держат день: Усердие, Движение, Питание, Питьё, Сон. Колонна никогда не бывает красной, она просто наполняется светом. У Титана нет лица и рельефа мышц, потому что Титан — это ты.</p>
+  <h3>У каждого материала своё время</h3>
+  <dl class="mat">
+    <div><dt>Свет</dt><dd>день</dd></div>
+    <div><dt>Камень</dt><dd>неделя</dd></div>
+    <div><dt>Огонь</dt><dd>взятый рубеж</dd></div>
+    <div><dt>Кольцо</dt><dd>пройденная глава</dd></div>
+    <div><dt>Звезда</dt><dd>«Зачем»</dd></div>
+    <div><dt>Основание</dt><dd>Дано</dd></div>
+  </dl>
+  <p>Так четыре модуля складываются в одно целое. <strong>Сегодня</strong> — крупный план, Титан в свете дня. <strong>Неделя</strong> — мастерская у его ног, где из камня проступает Скульптура. <strong>Путь</strong> — общий план с тропой на восток. <strong>За плечами</strong> — вид со спины, на закат. Главное правило мира: небо не падает никогда.</p>
+  <p class="muted">В первый вечер HoT спрашивает: «Помнишь?» Когда тело было в лучшей форме, после каких перерывов ты возвращался. Поэтому «За плечами» не пустует с первого дня.</p>
+</section>
+
+<section id="day">
+  <p class="eyebrow">III · Один день · крупный план</p>
+  <h2>Андрей, 41 год, третья неделя с HoT</h2>
+  <p>Основатель небольшой компании, двое детей. Его цель называется «Силы на детей».</p>
+  <figure>
+    <div class="frame" data-frame="2" role="img" aria-label="Кадр 2. Рассвет: солнце поднимается по дуге, Титан наливается светом, проступает слово Ровно."></div>
+    <figcaption><b>Кадр 2 · Рассвет</b>Солнце поднимается до высоты восстановления. Слово дня — «Ровно».</figcaption>
+  </figure>
+  <dl class="time">
+    <dt>6:52</dt><dd><b>Рассвет</b>Вместо ленты на экране блокировки тихо написано «Утро готово». Сначала пара карточек вслепую: как спалось по ощущениям, сколько сил. Потом раскрытие того, что видел браслет. Андрей поставил себе 2 из 5, а браслет говорит, что ночь была нормальная. Такие «ножницы» — не ошибка, а сигнал: ощущение тоже данные.</dd>
+  </dl>
+  <p class="verse">Серый рассвет. Тишь.<br>Сила сегодня — в ровном<br>шаге, не в рывке.</p>
+  <dl class="time">
+    <dt>9:00</dt><dd><b>Договор дня</b>Главный экран — не табло, а договор: что HoT держит за тебя и что нужно от тебя. Еда подобрана, окна тела посчитаны: кофе до 14:00, экраны с 22:00, отбой в 23:05. Дел два, а не двадцать, и оба взяты из целей недели. «Не сегодня» возвращает дело в неделю, а не вешает долг на завтра.</dd>
+  </dl>
+  <figure>
+    <div class="frame" data-frame="3" role="img" aria-label="Кадр 3. Опоры: полдень, колонны наполняются светом, вокруг Титана замыкается Печать."></div>
+    <figcaption><b>Кадр 3 · Опоры</b>Колонны наполняются светом сами. Тренировка закончилась, Печать замкнулась.</figcaption>
+  </figure>
+  <dl class="time">
+    <dt>12:40</dt><dd><b>Опоры</b>Кардио в обед. Когда часы подтвердили тренировку, вокруг Титана замкнулась Печать. Обед отмечен одним тапом. Запоминать ничего не нужно.</dd>
+  </dl>
+  <figure>
+    <div class="frame" data-frame="4" role="img" aria-label="Кадр 4. Передышка: свод стоит на колоннах, Титан сидит рядом."></div>
+    <figcaption><b>Кадр 4 · Передышка</b>Титан ставит свод на колонны и садится рядом. Небо не падает.</figcaption>
+  </figure>
+  <dl class="time">
+    <dt>15:10</dt><dd><b>Передышка</b>Созвон с инвестором прошёл плохо. Плитка в шторке, «Пауза. Ты здесь.» Три двери: передохнуть, «что-то сбило», спрятаться. Андрей выбирает вторую и берёт одно действие: не весь отчёт, а первый абзац. Девяносто секунд. Никто не считает, сколько раз он сюда прятался.</dd>
+    <dt>18:55</dt><dd><b>Переход</b>Что получилось, что забираю на завтра. Утром это вернётся в Рассвет. Титан снимает небо с плеч и отдаёт колоннам. Потом полчаса с детьми на полу. В приложении такого дела нет. Это и есть его небо.</dd>
+    <dt>22:40</dt><dd><b>Приземление</b>Длинный выдох, первое дело на завтра, Титан ложится, экран гаснет. «Положи телефон.» За весь день набралось несколько минут.</dd>
+  </dl>
+</section>
+
+<section id="week">
+  <p class="eyebrow">IV · Одна неделя · мастерская</p>
+  <h2>Из камня недели проступает Скульптура</h2>
+  <figure>
+    <div class="frame" data-frame="5" role="img" aria-label="Кадр 5. Мастерская: глыба уходит туманом, проступает Скульптура недели."></div>
+    <figcaption><b>Кадр 5 · Мастерская</b>Воскресенье. Последний удар резца, и глыба уходит туманом.</figcaption>
+  </figure>
+  <p>В понедельник лежит свежая глыба. Каждое утро от неё откалывается слой. <strong>Сколько высечено, зависит только от дня недели:</strong> в четверг это всегда около четырёх седьмых. От данных зависит поза фигуры и фактура камня. Тяжёлая неделя даёт не недоделанную, а другую скульптуру: Титан отдыхает у колонны.</p>
+  <p>Под глыбой идёт тихий счёт «Дни в опоре». Метка стоит на четырёх днях из семи. Серий нет, плохой день остаётся одним днём из семи.</p>
+  <p>У недели есть свой вопрос — <strong>Эксперимент</strong>. «Экран убран в 22:30 — сон длиннее?» Ответ честный: «Похоже, да» или «Данных мало, повторим?». Любой исход называется «узнали». Это связь, а не причина, и HoT так и говорит.</p>
+  <h3>Воскресенье: «Итог и сборка», пять минут</h3>
+  <ol class="steps">
+    <li><span>Скульптура раскрывается. Её деталь — то, чем ты гордишься.</span></li>
+    <li><span>Итог эксперимента.</span></li>
+    <li><span>Один перекос и три кнопки: «Беру», «Как есть», «Полегче».</span></li>
+    <li><span>Цели на следующую неделю. HoT предлагает, человек одобряет.</span></li>
+    <li><span>Хокку недели. И одно уведомление за неделю: «Твоя неделя высечена».</span></li>
+  </ol>
+</section>
+
+<section id="path">
+  <p class="eyebrow">V · Двенадцать недель · общий план</p>
+  <h2>Будущий ты стоит на востоке</h2>
+  <p>На второй неделе Андрей назвал цель. Ритуал занимает около полутора минут.</p>
+  <ol class="steps">
+    <li><span><strong>Желание:</strong> «Силы на детей».</span></li>
+    <li><span><strong>Зачем:</strong> <span class="why">чтобы вечером я был с ними, а не рядом с ними</span>. Пока он пишет, в зените загорается звезда.</span></li>
+    <li><span><strong>Кем ты будешь:</strong> <span class="why">тот, у кого есть силы на вечер</span>. Это имя его Титана горизонта.</span></li>
+    <li><span><strong>Раскладка.</strong> Название цели рассыпается огоньками по стихиям. Вести будут Отдых и Выносливость, Сон бережёт, рычаг — Отдых.</span></li>
+    <li><span><strong>Если — то:</strong> «Если 19:00, ноутбук в ящик».</span></li>
+    <li><span><strong>Реализм.</strong> По личному темпу с запасом: что будет к сроку, а что целиком, но позже.</span></li>
+    <li><span><strong>«Беру путь».</strong></span></li>
+  </ol>
+  <figure>
+    <div class="frame" data-frame="6" role="img" aria-label="Кадр 6. Горизонт: огни летят из Скульптуры к детали, Титан горизонта делает шаг, его огонь перелетает к человеку."></div>
+    <figcaption><b>Кадр 6 · Горизонт</b>Титан горизонта делает шаг, и его огонь перелетает к тебе.</figcaption>
+  </figure>
+  <p>Титан горизонта собран из света. У него нет лица, возраста и «тела мечты», и говорит он только словами самого человека. Каждое воскресенье он делает шаг навстречу. <strong>Насколько близко он подошёл, решает только календарь.</strong> От данных зависит другое: какие огни уже перешли к тебе. Взят рубеж — огонь перелетает к тебе, и обратно огни не возвращаются.</p>
+  <p class="motto" style="font-size:22px">Титан — кто я. Титан горизонта — кем я становлюсь. Винс — кто идёт рядом и говорит со мной.</p>
+  <p>Винс — управляющий с памятью летописца. Каждый день он тихо держит рутину и пишет одну строку. В ритуалах и на Перекрёстке он секундант, раз в неделю и на вехах — летописец и исследователь. От лица Титана горизонта он не говорит никогда, он только проводник. Ни одной выдуманной цифры, и ничего не меняется без твоего тапа.</p>
+  <p class="verse">Я держу рутину. Ты идёшь к нему.</p>
+  <p>На четвёртой и восьмой неделях — Встреча на вехе. Позади тень тебя месяц назад, впереди Титан горизонта. Делается замер, по желанию — фитнес-возраст как оценка кардиофитнеса, рядом экран «что это и чего не значит».</p>
+  <figure>
+    <div class="frame" data-frame="7" role="img" aria-label="Кадр 7. Глава: фигуры сливаются, рельефы недель ложатся кольцом у ног, за спиной на закате прежние кольца."></div>
+    <figcaption><b>Кадр 7 · Глава</b>Двенадцать рельефов ложатся кольцом. Камера оборачивается на закат.</figcaption>
+  </figure>
+  <p>На двенадцатой неделе фигуры сходятся в любом случае: состояния «провал» здесь нет. Андрей называет главу.</p>
+  <p class="verse ember">Глава 1. Вечера вернулись домой.</p>
+  <p>Огни, которые ещё не взяты, переходят к новому Титану горизонта на следующей тропе. Открытку главы можно отправить другу, цифр здоровья в ней нет.</p>
+</section>
+
+<section id="behind">
+  <p class="eyebrow">VI · Год · обратный план</p>
+  <h2>За плечами</h2>
+  <p>Камера поворачивается на запад. За Титаном лежат кольца роста, по одному на главу, за год их около четырёх.</p>
+  <div class="two">
+    <div><h3>Взято</h3><p>Главы, рубежи, «первый раз», «До нас» из Знакомства. То, что сделано, не откатывается ни при какой паузе.</p></div>
+    <div><h3>Несу</h3><p>То, что можно взять в Путь, когда захочешь. Здесь лежат и отпущенные цели. Отпустить цель — нормальный исход.</p></div>
+  </div>
+  <p>Чем дольше ты с HoT, тем больше здесь лежит. Новое приложение этого не повторит, потому что не было с тобой.</p>
+  <h3>Момент, когда HoT нужен меньше</h3>
+  <p>Если опора держится восемь недель из десяти, она получает статус <strong>«Держу сам»</strong>: HoT перестаёт спрашивать и тихо следит по данным. Колонна, которую ты держишь сам, — главный результат. <span class="tag">в разработке</span></p>
+</section>
+
+<section id="hard">
+  <p class="eyebrow">VII · Когда тяжело</p>
+  <h2>Атлант не мог опустить руки. Ты можешь.</h2>
+  <p><strong>Болезнь.</strong> Через месяц заболела младшая дочь. Рассвет не спорит, а спрашивает: «Похоже, телу нужен отдых. Поставить путь на паузу?» Пока длится пауза, Титан горизонта садится на камень и ждёт. Этап не сгорает, вехи сдвигаются.</p>
+  <p><strong>Тяжёлая неделя.</strong> Режим Бережно: не больше двух дел, мини-версии по умолчанию. После паузы появляется Перекрёсток: сдвинуть срок, сделать меньше к сроку или пересобрать от сегодня. Догонять пропущенное не нужно никогда.</p>
+  <p><strong>Горе.</strong> Шкала «На плаву» замораживается, Путь не спрашивает «Вернуться?», Винс говорит тише. <span class="tag">сквозной режим в разработке</span></p>
+  <p><strong>Кризис.</strong> Рассвет не запускается, Титан и хокку уходят, вместо них трезвая карточка помощи. Кнопка «Помощь» не дальше чем за два касания с любого экрана. HoT не терапевт и не врач, но знает дорогу к живым людям.</p>
+  <p class="motto" style="font-size:22px">Человек бросает приложение не в тот день, когда ему плохо, а в тот, когда приложение заставило его стыдиться.</p>
+</section>
+
+<section id="why-us">
+  <p class="eyebrow">VIII · Почему мы</p>
+  <h2>Приложения показывают цифры здоровья и восстановления. HoT ведёт тебя к здоровью Титана.</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Что делают хорошо</th><th>Чего нет</th><th>Что даёт HoT</th></tr></thead>
+      <tbody>
+        <tr><td>WHOOP</td><td>точная физиология, коуч с памятью</td><td>решение каждый день на тебе</td><td>берёт день на себя на данных любого источника</td></tr>
+        <tr><td>Oura</td><td>спокойствие, пауза без наказания</td><td>нет целей жизни</td><td>одна цель, разобранная на тело, ум и состояние</td></tr>
+        <tr><td>Google Health</td><td>коуч Gemini, недельные планы</td><td>главный экран — табло, цели по одной метрике</td><td>договор дня «держу за тебя / нужно от тебя»</td></tr>
+        <tr><td>ИИ-чаты</td><td>гибкость, любой вопрос</td><td>скриншоты, контекст теряется</td><td>видит твой день с согласия и помнит путь</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">Таблица — для питча и команды. Публично — без столбца «Чего нет» и без имён конкурентов, пока у каждой строки нет датированного источника (ревью Агента 7, 2026-11-07). WHOOP, Oura, Google — товарные знаки их владельцев.</p>
+  <p>Где они сильнее, мы не спорим. Скопировать трудно другое: экран, который говорит «это я уже взял на себя», цель жизни с рычагом, Титана горизонта и Встречу в конце этапа, «За плечами», которое растёт годами, русский голос и миф.</p>
+</section>
+
+<section id="promise">
+  <p class="eyebrow">IX · Обещания</p>
+  <h2>Что HoT делает и чего не делает</h2>
+  <div class="two">
+    <div><h3>Делает</h3><ul>
+      <li>каждое утро собирает день под то, как ты спал, и оставляет одно-три дела;</li>
+      <li>держит опоры: еду, движение и окна сна, а о питье напоминает по жаре и нагрузке;</li>
+      <li>разбирает цель жизни на шаги недели;</li>
+      <li>помнит, что взято, что ты несёшь и что тебе дано.</li></ul></div>
+    <div><h3>Не делает</h3><ul>
+      <li>не ставит диагнозов и не назначает лечения;</li>
+      <li>не стыдит: красного нет, кроме кнопки «Помощь»;</li>
+      <li>не ведёт серий и не сравнивает с другими;</li>
+      <li>не обещает лишних лет жизни. Мы помогаем беречь силы на свою.</li></ul></div>
+  </div>
+  <p class="muted">Данные хранятся на телефоне; наставнику в облако уходит только нужное для ответа и только с твоего согласия. Цифры считают правила и таблицы, а не ИИ. Самое личное не уходит ни в ИИ, ни в уведомления. Каждый текст о теле и психике проходит проверку на безопасность, а до выхода к людям — проверку живого врача и психолога.</p>
+</section>
+
+<section id="pitch">
+  <p class="eyebrow">X · Для питча</p>
+  <div class="pitch">
+    <p class="one">Приложения показывают цифры здоровья и восстановления. HoT ведёт тебя к здоровью Титана.</p>
+    <p class="muted">Короткая форма: Приложения считают. HoT ведёт — к здоровью Титана.</p>
+    <p>Браслеты научились считать всё: сон, пульс, нагрузку. Но цифра ничего не делает за тебя. HoT каждое утро собирает твой день под прошедшую ночь и оставляет одно-три дела. Твою цель он разбирает на шаги недели. Будущий ты стоит на горизонте и каждое воскресенье подходит ближе, а в конце этапа вы встречаетесь, и ты называешь главу своей жизни. Без стыда, без серий, без диагнозов.</p>
+  </div>
+</section>
+
+<section class="finale">
+  <p>Атлант держал небо, потому что должен был. Ты держишь его, потому что это твоё небо: твои вечера, твои люди, твоё «зачем». Остальное подержим мы.</p>
+  <p class="verse">Край мира. Рассвет.<br>Колонны держат весь день.<br>А небо — твоё.</p>
+  <h3 style="margin-top:48px">Проверить до публикации</h3>
+  <ul class="todo">
+    <li>Имя «За плечами» и образ Титана горизонта — тесты на 10 людях.</li>
+    <li>Загрузка истории WHOOP — на паузе до ответа WHOOP; публично не говорим «поверх WHOOP» и не показываем данные WHOOP в рекламе (D-057).</li>
+    <li>Публичные обещания — ревью Агента 7 пройдено 2026-11-07 с правками; остались датированные источники для таблицы и проверка практикующим юристом.</li>
+  </ul>
+  <p class="todo">Источник: A59 «История Титана» и A58 «Единый Титан», PR #37.</p>
+</section>
+
+</div>
+
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';
+let uid=0;
+function titan(x,by,pose,col,glow,s){
+  s=s||1; const k=v=>v*s;
+  const w=k(9), id='g'+(uid++);
+  let d='';
+  if(pose==='hold'||pose==='rise'){
+    const up=pose==='hold'?190:165;
+    d=`M${x} ${by-k(122)} L${x} ${by-k(66)} M${x} ${by-k(66)} L${x-k(14)} ${by} M${x} ${by-k(66)} L${x+k(14)} ${by}
+       M${x} ${by-k(116)} L${x-k(28)} ${by-k(146)} L${x-k(33)} ${by-k(up)} M${x} ${by-k(116)} L${x+k(28)} ${by-k(146)} L${x+k(33)} ${by-k(up)}`;
+  } else if(pose==='seat'){
+    d=`M${x} ${by-k(30)} L${x-k(5)} ${by-k(86)} M${x} ${by-k(30)} L${x+k(30)} ${by-k(28)} L${x+k(34)} ${by}
+       M${x-k(4)} ${by-k(78)} L${x+k(16)} ${by-k(54)} L${x+k(28)} ${by-k(40)}`;
+  } else if(pose==='stand'){
+    d=`M${x} ${by-k(122)} L${x} ${by-k(66)} M${x} ${by-k(66)} L${x-k(12)} ${by} M${x} ${by-k(66)} L${x+k(12)} ${by}
+       M${x} ${by-k(116)} L${x-k(18)} ${by-k(80)} M${x} ${by-k(116)} L${x+k(18)} ${by-k(80)}`;
+  }
+  const hx=pose==='seat'?x-k(6):x, hy=pose==='seat'?by-k(104):by-k(141);
+  let g=`<defs><radialGradient id="${id}" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${col}" stop-opacity="${glow}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient></defs>`;
+  if(glow>0) g+=`<ellipse cx="${x}" cy="${by-k(90)}" rx="${k(80)}" ry="${k(110)}" fill="url(#${id})"/>`;
+  g+=`<path d="${d}" class="s-ti" stroke="${col}" stroke-width="${w}"/><circle cx="${hx}" cy="${hy}" r="${k(11)}" fill="${col}"/>`;
+  return g;
+}
+function lightTitan(x,by,s,col){ // horizon titan: dotted light
+  s=s||1; const k=v=>v*s; let g='';
+  const pts=[[0,141],[0,122],[0,105],[0,88],[0,70],[-7,48],[-11,24],[-14,2],[7,48],[11,24],[14,2],[-14,130],[-24,145],[-30,160],[14,130],[24,145],[30,160]];
+  pts.forEach((p,i)=>{g+=`<circle class="tw" style="animation-delay:${(i%5)*.6}s" cx="${x+k(p[0])}" cy="${by-k(p[1])}" r="${k(i===0?7:3)}" fill="${col}"/>`});
+  g+=`<ellipse cx="${x}" cy="${by-k(80)}" rx="${k(40)}" ry="${k(90)}" fill="${col}" opacity=".08"/>`;
+  return g;
+}
+function column(x,top,by,fill,col,w){
+  w=w||14; const h=by-top, f=h*fill;
+  return `<rect x="${x-w/2}" y="${top}" width="${w}" height="${h}" rx="2" fill="#1E2640"/>`+
+         `<rect x="${x-w/2}" y="${by-f}" width="${w}" height="${f}" rx="2" fill="${col}" opacity=".85"/>`+
+         `<rect x="${x-w/2-3}" y="${top-4}" width="${w+6}" height="5" rx="1" fill="#2A3352"/>`;
+}
+function stars(n,seed,maxY){
+  let g='',r=seed;
+  for(let i=0;i<n;i++){r=(r*9301+49297)%233280;const x=r/233280*400;r=(r*9301+49297)%233280;const y=r/233280*maxY;
+    g+=`<circle class="${i%4?'':'tw'}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i%7?0.7:1.2}" fill="#C9D3E6" opacity="${i%3?.5:.85}"/>`}
+  return g;
+}
+function bg(id,top,bot){return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs><rect width="400" height="300" fill="url(#${id})"/>`}
+function ground(by,c){return `<rect x="0" y="${by}" width="400" height="80" fill="${c||'#121828'}"/><line x1="0" y1="${by}" x2="400" y2="${by}" stroke="#D8C3A0" stroke-opacity=".35"/>`}
+
+const F={};
+F[1]=()=>{const by=232; return bg('b1','#070A14','#1A2036')+stars(70,7,170)+
+  `<circle cx="200" cy="22" r="3" fill="#F2B66B" class="tw"/>`+
+  `<path d="M70 70 Q200 6 330 70" class="s-sky"/>`+
+  [96,134,266,304].map((x,i)=>column(x,70+ (i%3)*0,by,.18+i*.04,'#C9D3E6')).join('')+
+  `<rect x="0" y="${by-26}" width="400" height="30" fill="#C9D3E6" opacity=".06"/>`+
+  ground(by,'#0E1322')+titan(200,by,'hold','#C9D3E6',.35,.86)+
+  `<text x="200" y="268" text-anchor="middle" class="s-lbl">МЫ ДЕРЖИМ РУТИНУ · ТЫ ДЕРЖИШЬ НЕБО</text>`};
+F[2]=()=>{const by=222;return bg('b2','#1B2140','#C98E73')+stars(25,3,90)+
+  `<path d="M40 222 Q200 30 360 222" fill="none" stroke="#F2B66B" stroke-opacity=".35" stroke-dasharray="2 5"/>`+
+  `<circle cx="300" cy="104" r="40" fill="#F2B66B" opacity=".18"/><circle cx="300" cy="104" r="17" fill="#F6CB8E"/>`+
+  ground(by,'#2A2230')+titan(170,by,'stand','#F6D6A8',.55,.95)+
+  `<text x="250" y="168" class="s-word">Ровно</text>`+
+  `<text x="250" y="188" class="s-verse" fill="#F6E3C8">Сила сегодня — в ровном</text>`};
+F[3]=()=>{const by=226;const fills=[.92,.6,1,.45,.75];const cols=['#D8C3A0','#D8C3A0','#7FB2F0','#7FB2F0','#C9D3E6'];
+  return bg('b3','#4C6C9C','#1B2742')+
+  `<circle cx="200" cy="30" r="14" fill="#F6E3C8" opacity=".9"/>`+
+  [45,90,130,320,362].map((x,i)=>column(x,96,by,fills[i],cols[i],16)).join('')+
+  ground(by,'#162036')+
+  `<circle cx="225" cy="${by-82}" r="74" fill="none" stroke="#F2B66B" stroke-width="1.6"/><circle cx="225" cy="${by-82}" r="80" fill="none" stroke="#F2B66B" stroke-opacity=".45" stroke-width="1"/>`+
+  titan(225,by-6,'stand','#E8ECF4',.25,.8)+
+  `<text x="88" y="${by+18}" text-anchor="middle" class="s-lbl">ОПОРЫ ДНЯ</text>`};
+F[4]=()=>{const by=226;return bg('b4','#131A30','#242B44')+stars(30,11,110)+
+  [110,170,230,290].map(x=>column(x,104,by,.7,'#7FB2F0',14)).join('')+
+  `<path d="M90 100 Q200 40 310 100" class="s-sky"/><line x1="94" y1="100" x2="306" y2="100" stroke="#C9D3E6" stroke-opacity=".25"/>`+
+  ground(by,'#141A2C')+titan(318,by,'seat','#C9D3E6',.25,.95)+
+  `<text x="200" y="${by+22}" text-anchor="middle" class="s-lbl">ПАУЗА · ТЫ ЗДЕСЬ</text>`};
+F[5]=()=>{const by=228;let fog='';for(let i=0;i<9;i++)fog+=`<circle cx="${130+i*18}" cy="${80+(i%3)*14}" r="${16+(i%4)*5}" fill="#C9D3E6" opacity=".06" class="fl" style="animation-delay:${i*.5}s"/>`;
+  return bg('b5','#1A1E2E','#2B2A33')+
+  `<rect x="128" y="70" width="144" height="${by-70}" rx="6" fill="#D8C3A0" opacity=".08"/>`+fog+
+  `<rect x="150" y="${by-14}" width="100" height="14" rx="2" fill="#D8C3A0" opacity=".55"/>`+
+  titan(200,by-14,'stand','#D8C3A0',.3,.78)+
+  `<circle cx="218" cy="${by-100}" r="5" fill="#F2B66B" class="tw"/>`+
+  ground(by,'#1C1B24')+
+  [0,1,2,3,4,5,6].map(i=>`<rect x="${120+i*24}" y="${by+16}" width="16" height="6" rx="2" fill="#D8C3A0" opacity="${i<7?.8:.2}"/>`).join('')+
+  `<text x="300" y="${by+22}" class="s-lbl">7 / 7</text>`};
+F[6]=()=>{const by=220;let path='';for(let i=0;i<12;i++){const t=i/11;const x=110+t*230,y=by-2-t*30;path+=`<ellipse cx="${x}" cy="${y}" rx="${9-t*4}" ry="${3-t*1.3}" fill="#D8C3A0" opacity="${i==4||i==8?.95:.4}"/>`}
+  let sparks='';[[120,150,250],[132,166,280],[118,178,230]].forEach((p,i)=>{sparks+=`<path d="M${p[2]+60} ${p[1]-60} Q${(p[2]+p[0])/2+40} ${p[1]-120} ${p[0]+12} ${p[1]-14}" fill="none" stroke="#F2B66B" stroke-opacity=".5" stroke-dasharray="1 5"/><circle class="fl" style="animation-delay:${i}s" cx="${(p[2]+p[0])/2+40}" cy="${p[1]-92}" r="2.6" fill="#F2B66B"/>`});
+  return bg('b6','#0B1022','#2A3150')+stars(60,21,140)+
+  `<circle cx="200" cy="18" r="3" fill="#F2B66B" class="tw"/>`+
+  `<rect x="0" y="${by-36}" width="400" height="40" fill="#E9A27A" opacity=".06"/>`+
+  ground(by,'#111729')+path+sparks+
+  titan(92,by,'stand','#E8ECF4',.25,.7)+lightTitan(330,by-32,.55,'#F2B66B')+
+  `<text x="92" y="${by+22}" text-anchor="middle" class="s-lbl">ТЫ</text><text x="330" y="${by+22}" text-anchor="middle" class="s-lbl">ТИТАН ГОРИЗОНТА</text><text x="200" y="${by+40}" text-anchor="middle" class="s-lbl">ВЕХИ · 4 · 8 · 12</text>`};
+F[7]=()=>{const by=200;let rings='';for(let i=0;i<4;i++)rings+=`<ellipse cx="${80+i*40}" cy="${by+22+i*4}" rx="${30-i*4}" ry="${7-i}" fill="none" stroke="#E9A27A" stroke-opacity="${.25+i*.1}" stroke-width="2"/>`;
+  let relief='';for(let i=0;i<12;i++){const a=i/12*Math.PI*2;relief+=`<rect x="${270+Math.cos(a)*56-4}" y="${by+12+Math.sin(a)*12-3}" width="8" height="6" rx="1" fill="#F2B66B" opacity=".85"/>`}
+  return bg('b7','#2A2140','#E0946B')+
+  `<circle cx="80" cy="${by-8}" r="30" fill="#F6CB8E" opacity=".9"/><circle cx="80" cy="${by-8}" r="60" fill="#F6CB8E" opacity=".15"/>`+
+  ground(by,'#2B1F2C')+rings+
+  `<ellipse cx="270" cy="${by+12}" rx="56" ry="12" fill="none" stroke="#F2B66B" stroke-width="1.5"/>`+relief+
+  `<circle cx="270" cy="${by-80}" r="70" fill="#F6CB8E" opacity=".12"/>`+
+  titan(270,by+8,'rise','#FBE6C6',.5,.85)+
+  `<text x="270" y="${by+42}" text-anchor="middle" class="s-verse" fill="#FBE6C6">Глава 1. Вечера вернулись домой</text>`+
+  `<text x="80" y="${by+42}" text-anchor="middle" class="s-lbl">ПРЕЖНИЕ КОЛЬЦА</text>`};
+F.map=()=>{let g=bg('bm','#0A0E1C','#141A2C')+stars(40,5,60);
+  g+=`<circle cx="200" cy="16" r="4" fill="#F2B66B" class="tw"/><text x="210" y="20" class="s-verse" fill="#F2B66B">Зачем</text>`;
+  [0,1,2,3].forEach(i=>{g+=`<path d="M${70+i*8} ${98-i*0} Q200 ${30+i*10} ${330-i*8} 98" fill="none" stroke="#C9D3E6" stroke-opacity="${.9-i*.18}" stroke-width="2.2"/>`});
+  g+=`<text x="340" y="70" class="s-lbl">НЕБО</text>`;
+  [104,140,260,296].forEach(x=>g+=column(x,100,176,.6,'#C9D3E6',10));
+  g+=titan(200,176,'hold','#E8ECF4',.25,.42);
+  for(let i=0;i<5;i++)g+=`<rect x="${60+i*57}" y="178" width="53" height="16" rx="2" fill="#D8C3A0" opacity="${.35+i*.08}"/>`;
+  g+=`<text x="350" y="190" class="s-lbl">ЗЕМЛЯ</text>`;
+  for(let i=0;i<5;i++)g+=`<path d="M60 ${204+i*7} q 17 -4 35 0 t 35 0 t 35 0 t 35 0 t 35 0 t 35 0 t 35 0 t 35 0" fill="none" stroke="#7FB2F0" stroke-opacity="${.85-i*.12}" stroke-width="1.6"/>`;
+  g+=`<text x="350" y="222" class="s-lbl">ВОДА</text>`;
+  g+=`<rect x="56" y="244" width="288" height="24" rx="3" fill="#3A4260"/><text x="200" y="260" text-anchor="middle" class="s-lbl" style="fill:#C9D3E6">ДАНО</text>`;
+  g+=lightTitan(372,176,.32,'#F2B66B')+`<text x="372" y="290" text-anchor="middle" class="s-lbl">ВОСТОК</text>`;
+  for(let i=0;i<3;i++)g+=`<ellipse cx="28" cy="${150+i*10}" rx="${18-i*3}" ry="4" fill="none" stroke="#E9A27A" stroke-opacity=".6"/>`;
+  g+=`<text x="28" y="290" text-anchor="middle" class="s-lbl">ЗАПАД</text>`;
+  return g;};
+document.querySelectorAll('[data-frame]').forEach(el=>{
+  const k=el.dataset.frame; const h=k==='map'?300:(k==='1'?280:250);
+  const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox',`0 0 400 ${h}`);svg.setAttribute('preserveAspectRatio','xMidYMid slice');svg.setAttribute('aria-hidden','true');
+  svg.innerHTML=F[k]();el.appendChild(svg);
+});
+})();
+</script>

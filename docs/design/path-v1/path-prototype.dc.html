@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HoT · Путь</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Cormorant+Garamond:ital,wght@1,500;1,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0E1A}
+a{color:#E8C47A}a:hover{color:#F3D9A4}
+button{font-family:inherit;color:inherit}
+.hot-scroll::-webkit-scrollbar{width:0;height:0}
+@keyframes hotHalo{0%{opacity:.12}50%{opacity:.55}100%{opacity:.12}}
+.hot-halo{animation:hotHalo 4s ease-in-out 3}
+@keyframes hotStar{0%{opacity:.7}50%{opacity:1}100%{opacity:.7}}
+.hot-star{animation:hotStar 6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.hot-halo,.hot-star{animation:none}}
+</style>
+</helmet>
+<div style="width: 412px; height: 915px; box-sizing: border-box; background: #0F1220; color: #EDEBE4; font-family: 'Manrope', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 4px 16px">
+    <button aria-label="Наставник Винс" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A3048; background: #171B2E; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #E8C47A; cursor: pointer">В</button>
+    <span style="font-size: 17px; font-weight: 700; letter-spacing: 0.3px">Путь</span>
+    <button aria-label="Профиль и настройки" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A3048; background: #171B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9CCD8" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+    </button>
+  </header>
+
+  <div class="hot-scroll" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column">
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 16px 0 16px">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 19px; font-weight: 700">Фигура и фитнес мечты</span>
+        <span style="font-size: 13px; color: #9AA0B4">к 31 декабря · этап 1 из 2</span>
+      </div>
+      <div style="display: flex; gap: 5px; align-items: center" aria-label="Цель 1 из 2">
+        <span style="width: 7px; height: 7px; border-radius: 4px; background: #EDEBE4"></span>
+        <span style="width: 7px; height: 7px; border-radius: 4px; background: #4A5272"></span>
+      </div>
+      <button aria-label="Добавить цель" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A3048; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9CCD8" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="text-align: center; padding: 10px 24px 0 24px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 500; font-size: 18px; color: #D9D4C4">ради лёгкости и сил на лето с детьми</div>
+
+    <svg width="388" height="424" viewBox="0 0 388 424" role="img" aria-label="{{sliceLabel}}" style="display: block; margin: 0 12px">
+      <defs>
+        <radialGradient id="hotSky" cx="50%" cy="10%" r="70%">
+          <stop offset="0%" stop-color="#1C2440" stop-opacity="1"></stop>
+          <stop offset="100%" stop-color="#0F1220" stop-opacity="0"></stop>
+        </radialGradient>
+        <linearGradient id="hotDeep" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0F1220" stop-opacity="0"></stop>
+          <stop offset="100%" stop-color="#0E2036" stop-opacity="1"></stop>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="388" height="210" fill="url(#hotSky)"></rect>
+      <rect x="0" y="318" width="388" height="84" fill="url(#hotDeep)"></rect>
+
+      <line x1="194" y1="34" x2="194" y2="402" stroke="#E8C47A" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="2 4"></line>
+      <g class="hot-star">
+        <path d="M194 12 L197 21 L206 24 L197 27 L194 36 L191 27 L182 24 L191 21 Z" fill="#F3D9A4"></path>
+      </g>
+      <text x="212" y="28" fill="#9AA0B4" font-size="10" font-family="Manrope, sans-serif" letter-spacing="1.5">ЗАЧЕМ</text>
+
+      <text x="16" y="60" fill="#C9D3E6" fill-opacity="0.8" font-size="10" font-weight="700" font-family="Manrope, sans-serif" letter-spacing="2">НЕБО</text>
+      <text x="16" y="276" fill="#D8C3A0" fill-opacity="0.85" font-size="10" font-weight="700" font-family="Manrope, sans-serif" letter-spacing="2">ЗЕМЛЯ</text>
+      <text x="16" y="330" fill="#7FB2F0" fill-opacity="0.9" font-size="10" font-weight="700" font-family="Manrope, sans-serif" letter-spacing="2">ВОДА</text>
+
+      <sc-for list="{{parts}}" as="p" hint-placeholder-count="14">
+        <g>
+          <path d="{{p.d}}" fill="none" stroke="{{p.color}}" stroke-width="{{p.sw}}" stroke-opacity="{{p.trackOp}}" stroke-linecap="{{p.cap}}"></path>
+          <path d="{{p.d}}" pathLength="100" fill="none" stroke="{{p.color}}" stroke-width="{{p.sw}}" stroke-opacity="{{p.fillOp}}" stroke-dasharray="{{p.dash}}" stroke-linecap="{{p.cap}}"></path>
+        </g>
+      </sc-for>
+
+      <sc-if value="{{showHalo}}" hint-placeholder-val="{{ true }}">
+        <path class="hot-halo" d="{{haloD}}" fill="none" stroke="#E8B86A" stroke-width="12" stroke-opacity="0.5" stroke-linecap="round"></path>
+      </sc-if>
+
+      <line x1="0" y1="262" x2="388" y2="262" stroke="#F3D9A4" stroke-opacity="0.18" stroke-width="1"></line>
+      <defs><filter id="hotGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter></defs>
+      <g transform="{{hzTransform}}">
+        <sc-if value="{{hzStanding}}" hint-placeholder-val="{{ true }}">
+          <g fill="none" stroke="#F3D9A4" stroke-width="4" stroke-linecap="round" stroke-opacity="0.35" filter="url(#hotGlow)"><circle cx="0" cy="214" r="6"></circle><path d="M0 220 L0 244 M0 226 L-11 238 M0 226 L11 238 M0 244 L-7 262 M0 244 L7 262"></path></g>
+          <g fill="none" stroke="#F3D9A4" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.85"><circle cx="0" cy="214" r="6"></circle><path d="M0 220 L0 244 M0 226 L-11 238 M0 226 L11 238 M0 244 L-7 262 M0 244 L7 262"></path></g>
+          <circle cx="0" cy="230" r="2.6" fill="#D8C3A0"></circle>
+          <circle cx="-3" cy="238" r="2.6" fill="#D8C3A0"></circle>
+          <circle cx="3" cy="222" r="2.4" fill="#C9D3E6"></circle>
+          <circle cx="0" cy="250" r="2.6" fill="#7FB2F0"></circle>
+        </sc-if>
+        <sc-if value="{{hzSeated}}" hint-placeholder-val="{{ false }}">
+          <rect x="-9" y="252" width="18" height="10" rx="3" fill="#2F3652"></rect>
+          <g fill="none" stroke="#F3D9A4" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.75"><circle cx="0" cy="228" r="6"></circle><path d="M0 234 L0 252 M0 240 L-9 248 M0 240 L9 248 M0 252 L11 252 L11 262 M0 252 L-4 252 L-4 262"></path></g>
+          <circle cx="0" cy="242" r="2.4" fill="#D8C3A0"></circle>
+          <circle cx="3" cy="236" r="2.2" fill="#C9D3E6"></circle>
+        </sc-if>
+        <text x="0" y="200" text-anchor="middle" fill="#D9D4C4" font-size="12" font-style="italic" font-family="Cormorant Garamond, Georgia, serif">{{hzName}}</text>
+      </g>
+      <circle cx="194" cy="190" r="6" fill="#D8C3A0" opacity="0.35" filter="url(#hotGlow)"></circle>
+      <g fill="none" stroke="#E6E2D6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="{{headX}}" cy="146" r="11" fill="#0F1220"></circle>
+        <path d="M194 158 L194 222"></path>
+        <path d="M194 172 L140 118"></path>
+        <path d="{{rightArm}}"></path>
+        <path d="M194 222 L178 260"></path>
+        <path d="M194 222 L210 260"></path>
+      </g>
+      <circle cx="194" cy="190" r="3" fill="#D8C3A0"></circle>
+
+      <rect x="24" y="404" width="340" height="18" rx="4" fill="#1A1E2B"></rect>
+      <text x="34" y="417" fill="#8A90A6" font-size="10" font-weight="700" font-family="Manrope, sans-serif" letter-spacing="2">ДАНО</text>
+      <text x="82" y="417" fill="#8A90A6" font-size="11" font-family="Manrope, sans-serif">колено: без прыжков · смены по средам</text>
+      <path d="M252 270 Q 300 330 300 404" fill="none" stroke="#8A90A6" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="2 3"></path>
+    </svg>
+
+    <div style="margin: 6px 16px 0 16px; padding: 14px 16px; border-radius: 20px; background: #151A2C; border: 1px solid #22283D; display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 16px; font-weight: 700; color: {{labelColor}}">{{labelTitle}}</span>
+      <span style="font-size: 14px; color: #B7BCCC">{{labelSub}}</span>
+      <a href="#" style="margin-top: 6px; font-size: 14px; font-weight: 600; text-decoration: none; min-height: 28px; display: flex; align-items: center">{{labelAction}}</a>
+    </div>
+
+    <div style="margin: 14px 16px 0 16px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #9AA0B4">ЭТАП · 12 НЕДЕЛЬ</span>
+        <span style="font-size: 13px; color: #B7BCCC">неделя 5 из 12 · Встреча на вехе через 17 дней</span>
+      </div>
+      <svg width="380" height="34" viewBox="0 0 380 34" role="img" aria-label="Тропа этапа: неделя 5 из 12, вехи на 4, 8 и 12 неделе">
+        <path d="M10 20 C 80 8, 140 30, 200 18 S 320 10, 370 20" fill="none" stroke="#2F3652" stroke-width="2"></path>
+        <path d="M10 20 C 80 8, 140 30, 200 18 S 320 10, 370 20" pathLength="100" fill="none" stroke="#D8C3A0" stroke-width="2" stroke-dasharray="38 100"></path>
+        <sc-for list="{{trail}}" as="t" hint-placeholder-count="12">
+          <circle cx="{{t.x}}" cy="{{t.y}}" r="{{t.r}}" fill="{{t.fill}}" stroke="{{t.stroke}}" stroke-width="1.5"></circle>
+        </sc-for>
+      </svg>
+      <span style="font-size: 13px; color: #9AA0B4">{{hzLine}}</span>
+    </div>
+
+    <div style="margin: 14px 12px 16px 12px; display: flex; flex-direction: column; gap: 8px">
+      <sc-for list="{{elements}}" as="e" hint-placeholder-count="3">
+        <div style="border-radius: 20px; background: #151A2C; border: 1px solid #22283D; overflow: hidden">
+          <button onClick="{{e.toggle}}" aria-expanded="{{e.open}}" style="width: 100%; min-height: 56px; padding: 12px 16px; border: 0; background: transparent; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left">
+            <span style="width: 10px; height: 10px; border-radius: 5px; background: {{e.color}}"></span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+              <span style="font-size: 16px; font-weight: 700">{{e.name}}</span>
+              <span style="font-size: 13px; color: #9AA0B4; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 15px">{{e.motto}}</span>
+            </span>
+            <span style="font-size: 13px; color: #B7BCCC">{{e.status}}</span>
+          </button>
+          <sc-if value="{{e.open}}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 0 16px 12px 38px; display: flex; flex-direction: column; gap: 10px">
+              <sc-for list="{{e.items}}" as="c" hint-placeholder-count="2">
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <div style="display: flex; justify-content: space-between; gap: 8px">
+                    <span style="font-size: 15px; font-weight: 600">{{c.name}}</span>
+                    <span style="font-size: 13px; color: {{e.color}}">{{c.role}}</span>
+                  </div>
+                  <span style="font-size: 13px; color: #9AA0B4">{{c.mark}}</span>
+                </div>
+              </sc-for>
+              <span style="font-size: 13px; color: #8A90A6">{{e.more}}</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <nav aria-label="Разделы" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #22283D; background: #0F1220; padding: 6px 8px 14px 8px">
+    <a href="#" style="min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #9AA0B4; font-size: 13px">Сегодня</a>
+    <a href="#" style="min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #9AA0B4; font-size: 13px">Неделя</a>
+    <a href="#" aria-current="page" style="min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: #E8C47A; font-size: 13px; font-weight: 700">Путь</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["Слабое звено","Ровно","Тяжёлая неделя"],"default":"Слабое звено"},"$preview":{"width":412,"height":915}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { open: null }; }
+  arc(r) { return 'M ' + (194 - r) + ' 200 A ' + r + ' ' + r + ' 0 0 1 ' + (194 + r) + ' 200'; }
+  slab(i) { var w = 210 + i * 32; var y = 266 + i * 11; return 'M ' + (194 - w / 2) + ' ' + y + ' L ' + (194 + w / 2) + ' ' + y; }
+  wave(i) { var y = 340 + i * 13; var d = 'M 14 ' + y + ' q 9 -5 18 0'; for (var k = 0; k < 19; k++) d += ' t 18 0'; return d; }
+  part(d, color, sw, cap, kind, mark) {
+    if (kind === 'off') return { d: d, color: color, sw: sw, cap: cap, trackOp: 0.15, fillOp: 0, dash: '0 100' };
+    if (kind === 'live') return { d: d, color: color, sw: sw, cap: cap, trackOp: 0.25, fillOp: 0.95, dash: '1.2 2.4' };
+    return { d: d, color: color, sw: sw, cap: cap, trackOp: 0.28, fillOp: 1, dash: (mark * 20) + ' 100' };
+  }
+  renderVals() {
+    var mode = this.props.mode ?? 'Слабое звено';
+    var lever = mode === 'Слабое звено', heavy = mode === 'Тяжёлая неделя';
+    var SKY = '#C9D3E6', EARTH = '#D8C3A0', WATER = '#7FB2F0';
+    var sleepMark = lever ? 2 : 3;
+    var parts = [
+      this.part(this.arc(150), SKY, 5, 'round', 'off'),
+      this.part(this.arc(136), SKY, 5, 'round', 'off'),
+      this.part(this.arc(122), SKY, 5, 'round', 'on', 2),
+      this.part(this.arc(108), SKY, 5, 'round', 'off'),
+      this.part(this.slab(0), EARTH, 8, 'butt', 'off'),
+      this.part(this.slab(1), EARTH, 8, 'butt', 'on', 2),
+      this.part(this.slab(2), EARTH, 8, 'butt', 'off'),
+      this.part(this.slab(3), EARTH, 8, 'butt', 'on', 2.5),
+      this.part(this.slab(4), EARTH, 8, 'butt', 'live'),
+      this.part(this.wave(0), WATER, 3, 'round', 'on', sleepMark),
+      this.part(this.wave(1), WATER, 3, 'round', 'off'),
+      this.part(this.wave(2), WATER, 3, 'round', 'live'),
+      this.part(this.wave(3), WATER, 3, 'round', 'off'),
+      this.part(this.wave(4), WATER, 3, 'round', 'off')
+    ];
+    var trail = [];
+    for (var i = 0; i < 12; i++) {
+      var x = 22 + i * 30.5;
+      var y = 20 - 6 * Math.sin((i / 11) * Math.PI * 1.6);
+      var stone = (i + 1) % 4 === 0;
+      var done = i < 4, now = i === 4;
+      trail.push({ x: x, y: y, r: stone ? 7 : (now ? 6 : 3.5), fill: now ? '#E8C47A' : (done ? '#D8C3A0' : '#0F1220'), stroke: stone ? '#D8C3A0' : (now ? '#E8C47A' : '#4A5272') });
+    }
+    var open = this.state.open ?? (lever ? 'water' : 'earth');
+    var self = this;
+    var mk = function (key, name, color, motto, status, items, more) {
+      return { key: key, name: name, color: color, motto: motto, status: status, items: items, more: more, open: open === key,
+        toggle: function () { self.setState({ open: open === key ? 'none' : key }); } };
+    };
+    var elements = [
+      mk('sky', 'Небо', SKY, 'Меньше шума. Больше неба.', 'держит план', [
+        { name: 'Ясность и решения', role: 'держит', mark: 'рубеж: база → уверенно · планы «если — то»' }
+      ], 'ещё 3 в Небе · вне этой цели'),
+      mk('earth', 'Земля', EARTH, 'Крепкий шаг. Долгий бег.', heavy ? 'взятое при тебе' : 'ведёт цель', [
+        { name: 'Сила и мощность', role: 'ведёт', mark: 'рубеж: база → сильно · отжимания 18 → 30' },
+        { name: 'Состав тела', role: 'ведёт', mark: 'талия: −3 см из −8 · по твоей цели' },
+        { name: 'Топливо', role: 'держит', mark: 'практика · белок в 5 днях из 7' }
+      ], 'ещё 2 в Земле · Дано: колено — без прыжков'),
+      mk('water', 'Вода', WATER, 'Покой — тоже движение.', lever ? 'упирается: сон' : 'держим', [
+        { name: 'Сон', role: 'бережёт', mark: lever ? 'рубеж: база · 6,1 ч из 7 в среднем' : 'рубеж: уверенно · 7,2 ч в среднем' },
+        { name: 'Чувства', role: 'бережёт', mark: 'без шкалы · еда «на нервах» — замечаем' }
+      ], 'ещё 3 в Воде · вне этой цели')
+    ];
+    var label = lever
+      ? { t: 'Упирается в Воду: сон', s: '6,1 ч из 7 в среднем за неделю. Без сна сила и форма растут медленнее.', a: 'Шаг недели: экран в сторону в 22:30 ›', c: '#E8B86A' }
+      : heavy
+        ? { t: 'Неделя на восстановление', s: 'Тоже часть пути. Всё взятое остаётся за тобой.', a: 'На эту неделю — одно дело ›', c: '#A9C8F2' }
+        : { t: 'Ровно', s: 'Все три стихии не ниже порога. Ведут Сила и Состав тела.', a: 'До вехи 17 дней · тест отжиманий ›', c: '#D8C3A0' };
+    return {
+      parts: parts,
+      trail: trail,
+      elements: elements,
+      showHalo: lever,
+      haloD: this.wave(0),
+      headX: lever ? 197 : 194,
+      rightArm: heavy ? 'M194 172 L214 206' : 'M194 172 L248 118',
+      labelTitle: label.t, labelSub: label.s, labelAction: label.a, labelColor: label.c,
+      sliceLabel: 'Срез мира: Небо, Земля, Вода, Титан горизонта. ' + label.t,
+      hzTransform: 'translate(' + (heavy ? 318 : 318) + ' 0)',
+      hzStanding: !heavy,
+      hzSeated: heavy,
+      hzName: heavy ? 'ждёт' : 'та, у кого силы на лето',
+      hzLine: heavy ? 'Титан горизонта ждёт на камне · путь на паузе не сгорает' : 'Титан горизонта · шаг 5 из 12 · огонь «Сила» близко'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.healthofatitan.app.domain.engine
 
+import com.healthofatitan.app.core.model.profile.AddressForm
 import java.time.LocalDate
 
 /**
@@ -201,6 +202,12 @@ data class DayInput(
     val history: List<Session> = emptyList(),
     /** RET-01: whole days before today without opening HoT ([ReturnPolicy.silenceDays]). */
     val silenceDays: Int = 0,
+    /**
+     * How the texts speak to the person (A61 §4.1, D-055): like the mentor's character it changes
+     * only the words, never the plan, the rules or safety. The texts of [DayEngine] are neutral
+     * (A39); the `why` of rules with m/f forms read it once their texts are reviewed (Agents 10, 16).
+     */
+    val address: AddressForm = AddressForm.NEUTRAL,
 )
 
 /** Kinds of plan items; the budget and the order of «Сегодня» use them. */

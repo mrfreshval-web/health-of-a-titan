@@ -335,8 +335,33 @@ object Migrations {
         }
     }
 
+    /**
+     * Profile «Я» (A61 §2.1, D-055): address form, year of birth and sex for calculations, one row
+     * per user. The age and sex the fitness age of «Неделя» kept in `body_input` («a temporary home
+     * until the profile has these fields») seed the row: the year of birth is the year of the
+     * entry minus the age. Nothing is deleted; the address form starts neutral.
+     */
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `person_profile` (`user_id` TEXT NOT NULL, `address_form` TEXT NOT NULL, " +
+                    "`birth_year` INTEGER, `sex_for_calc` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`))",
+            )
+            db.execSQL(
+                "INSERT OR IGNORE INTO `person_profile` (`user_id`, `address_form`, `birth_year`, `sex_for_calc`, `updated_at`) " +
+                    "SELECT u.`user_id`, 'n', " +
+                    "(SELECT CAST(substr(a.`day_key`, 1, 4) AS INTEGER) - CAST(a.`value` AS INTEGER) FROM `body_input` a " +
+                    "WHERE a.`user_id` = u.`user_id` AND a.`kind` = 'age_years' AND a.`value` IS NOT NULL ORDER BY a.`day_key` DESC LIMIT 1), " +
+                    "COALESCE((SELECT s.`text` FROM `body_input` s WHERE s.`user_id` = u.`user_id` AND s.`kind` = 'sex' " +
+                    "AND s.`text` IN ('male', 'female') ORDER BY s.`day_key` DESC LIMIT 1), 'unspecified'), " +
+                    "(SELECT MAX(b.`at`) FROM `body_input` b WHERE b.`user_id` = u.`user_id` AND b.`kind` IN ('age_years', 'sex')) " +
+                    "FROM (SELECT DISTINCT `user_id` FROM `body_input` WHERE `kind` IN ('age_years', 'sex')) u",
+            )
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
     )
 }

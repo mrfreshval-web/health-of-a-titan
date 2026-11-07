@@ -2,6 +2,7 @@ package com.healthofatitan.app.integration.whoop.di
 
 import android.app.AlarmManager
 import android.content.Context
+import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
@@ -125,7 +126,11 @@ object WhoopModule {
         alarms: NextAlarmSource,
         loop: DailyLoopRepository,
         checkin: CheckinDao,
-    ): DayPlanRepository = DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock, loop, CheckinMorningSelf(checkin))
+        profile: ProfileSettingsStore,
+    ): DayPlanRepository = DayPlanRepository(
+        metricDao, dayDao, alarms, SystemZoneClock, loop, CheckinMorningSelf(checkin),
+        address = { profile.current().addressForm },
+    )
 
     /** Return after a pause (A18 И4.4) and the crisis log without text (A07 §4.7). */
     @Provides
@@ -182,11 +187,13 @@ object WhoopModule {
         store: WhoopCredentialStore,
         dawn: DawnRepository,
         path: java.util.Optional<WeekPathBridge>,
+        profile: ProfileSettingsStore,
     ): WeekRepository = WeekRepository(
         weekDao, todayDao, dayDao, metricDao, checkinDao, plans, syncer.glance, signals, SystemZoneClock,
         whoopConnected = store.credentials.map { it != null },
         haiku = { day -> runCatching { dawn.shownHaiku(day).first() }.getOrNull() },
         path = path.orElse(WeekPathBridge.None),
+        profile = profile,
     )
 
     /** Tasks of the day come from the week (A52 §2.2): the real source replaces the legacy one. */

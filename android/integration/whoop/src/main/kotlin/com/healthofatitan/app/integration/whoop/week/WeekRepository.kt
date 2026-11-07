@@ -1,6 +1,7 @@
 package com.healthofatitan.app.integration.whoop.week
 
 import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
@@ -15,6 +16,8 @@ import com.healthofatitan.app.core.database.entity.WeekFrameEntity
 import com.healthofatitan.app.core.database.entity.WeekGoalEntity
 import com.healthofatitan.app.core.database.entity.WeekPlanEntity
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.profile.ProfileSettings
+import com.healthofatitan.app.core.model.profile.SexForCalc
 import com.healthofatitan.app.domain.engine.DayEngine
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.ItemStatus
@@ -49,13 +52,12 @@ import com.healthofatitan.app.domain.today.week.ExperimentRules
 import com.healthofatitan.app.domain.today.week.ExperimentSeed
 import com.healthofatitan.app.domain.today.week.ExperimentSource
 import com.healthofatitan.app.domain.today.week.ExperimentStatus
-import com.healthofatitan.app.domain.today.week.FitnessMilestones
-import com.healthofatitan.app.domain.today.week.MilestoneInputs
-import com.healthofatitan.app.domain.today.week.SculptureRevealed
-import com.healthofatitan.app.domain.today.week.TitanOfWeek
+import com.healthofatitan.app.domain.today.week.FitnessAge
 import com.healthofatitan.app.domain.today.week.FitnessGate
 import com.healthofatitan.app.domain.today.week.FitnessInput
+import com.healthofatitan.app.domain.today.week.FitnessMilestones
 import com.healthofatitan.app.domain.today.week.LastWeek
+import com.healthofatitan.app.domain.today.week.MilestoneInputs
 import com.healthofatitan.app.domain.today.week.Pattern
 import com.healthofatitan.app.domain.today.week.PatternTexts
 import com.healthofatitan.app.domain.today.week.PlanStatus
@@ -64,9 +66,11 @@ import com.healthofatitan.app.domain.today.week.RitualAnswers
 import com.healthofatitan.app.domain.today.week.RitualRules
 import com.healthofatitan.app.domain.today.week.RitualState
 import com.healthofatitan.app.domain.today.week.RitualView
+import com.healthofatitan.app.domain.today.week.SculptureRevealed
 import com.healthofatitan.app.domain.today.week.Sex
 import com.healthofatitan.app.domain.today.week.Skew
 import com.healthofatitan.app.domain.today.week.SupportsWeekInput
+import com.healthofatitan.app.domain.today.week.TitanOfWeek
 import com.healthofatitan.app.domain.today.week.TitanWeekLook
 import com.healthofatitan.app.domain.today.week.WeekBuilder
 import com.healthofatitan.app.domain.today.week.WeekCopy
@@ -79,20 +83,24 @@ import com.healthofatitan.app.domain.today.week.WeekPush
 import com.healthofatitan.app.domain.today.week.WeekScoring
 import com.healthofatitan.app.domain.today.week.WeekSky
 import com.healthofatitan.app.domain.today.week.WeekView
-import com.healthofatitan.app.domain.today.week.FitnessAge
 import com.healthofatitan.app.domain.today.week.WeightInput
 import com.healthofatitan.app.integration.whoop.WhoopDay
 import com.healthofatitan.app.integration.whoop.WhoopGlance
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
@@ -101,11 +109,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 
 /** What overrides the week, bound in :app (crisis log, StormNet of the state cards, the profile). */
 interface WeekSignals {
@@ -191,6 +194,11 @@ class WeekRepository(
     /** The haiku shown at «Рассвет» that day, for the read-only day (A52 §2.1 «Тап по колонне»). */
     private val haiku: suspend (LocalDate) -> List<String>? = { null },
     private val path: WeekPathBridge = WeekPathBridge.None,
+    /**
+     * The profile «Я» (A61 §2.1, D-055): the year of birth and the sex for calculations live there
+     * now; `body_input` keeps the waist (and is read for age and sex only without a profile, in tests).
+     */
+    private val profile: ProfileSettingsStore? = null,
 ) : WeekPlanSource {
     private val user = HotDatabase.LOCAL_USER
     private val changes = MutableStateFlow(0)
@@ -783,19 +791,39 @@ class WeekRepository(
 
     suspend fun bodyInputs(): BodyInputs {
         val waist = weekDao.latestInput(user, BodyInputEntity.KIND_WAIST)
+        // MIGRATION_12_13 seeded the profile from the legacy rows: with a profile, it alone decides
+        // (a «не указывать» chosen there must not bring an old sex back).
+        val person = profile?.current()
         return BodyInputs(
-            ageYears = weekDao.latestInput(user, BodyInputEntity.KIND_AGE)?.value?.toInt(),
-            sex = weekDao.latestInput(user, BodyInputEntity.KIND_SEX)?.text?.let { t -> Sex.entries.firstOrNull { it.name.equals(t, ignoreCase = true) } },
+            ageYears = if (person != null) {
+                person.ageIn(now().year)
+            } else {
+                weekDao.latestInput(user, BodyInputEntity.KIND_AGE)?.value?.toInt()
+            },
+            sex = if (person != null) {
+                person.sexForCalc.toSex()
+            } else {
+                weekDao.latestInput(user, BodyInputEntity.KIND_SEX)?.text?.let { t -> Sex.entries.firstOrNull { it.name.equals(t, ignoreCase = true) } }
+            },
             waistCm = waist?.value,
             waistDay = waist?.dayKey?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
         )
     }
 
+    /**
+     * The age and the sex typed under the fitness age go to the profile «Я» (one place for them,
+     * A61 §2.1); the legacy rows are still written for builds without the profile.
+     */
     suspend fun saveBodyInputs(ageYears: Int?, sex: Sex?, waistCm: Double?) {
         val day = now().toLocalDate().toString()
         val at = clock.millis()
         ageYears?.takeIf { it in 14..100 }?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_AGE, day, it.toDouble(), null, at)) }
         sex?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_SEX, day, null, it.name.lowercase(), at)) }
+        profile?.let { p ->
+            val birthYear = ageYears?.let { now().year - it }
+            if (ProfileSettings.validBirthYear(birthYear, now().year)) p.setBirthYear(birthYear)
+            sex?.let { p.setSexForCalc(if (it == Sex.MALE) SexForCalc.MALE else SexForCalc.FEMALE) }
+        }
         waistCm?.takeIf { it in 40.0..200.0 }?.let { weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_WAIST, day, it, null, at)) }
         bump()
     }
@@ -886,4 +914,11 @@ class WeekRepository(
         const val MAX_TEXT = 280
         private val TASK_ITEMS = setOf(DayEngine.Ids.TRAINING, DayEngine.Ids.FOCUS)
     }
+}
+
+/** «Пол для расчётов» of the profile as the HUNT model reads it; «не указывать» gives no sex. */
+private fun SexForCalc.toSex(): Sex? = when (this) {
+    SexForCalc.MALE -> Sex.MALE
+    SexForCalc.FEMALE -> Sex.FEMALE
+    SexForCalc.UNSPECIFIED -> null
 }

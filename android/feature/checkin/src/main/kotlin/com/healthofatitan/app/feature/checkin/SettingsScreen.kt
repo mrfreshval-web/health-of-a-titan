@@ -39,6 +39,7 @@ import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.component.HotTextButton
+import com.healthofatitan.app.core.ui.text.text
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.domain.checkin.CardId
 
@@ -101,7 +102,7 @@ fun CheckinSettingsScreen(
                     }
                 }
             }
-            Text(CheckinTexts.STACK_HINT, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
+            Text(CheckinTexts.STACK_HINT.text(), style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
         }
         Group(CheckinTexts.S_EVENING) {
             Toggle(CheckinTexts.S_EVENING, CheckinTexts.S_EVENING_WHY, p.evening) { onChange { it.copy(evening = !it.evening) } }

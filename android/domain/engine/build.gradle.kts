@@ -3,6 +3,11 @@ plugins {
     jacoco
 }
 
+dependencies {
+    // AddressForm (A61 §4.1, D-055): the person's address form is an input of the day plan.
+    api(project(":core:model"))
+}
+
 // Crisis protocol (A07 §4.8, D-029): CrisisGuard is covered 100 % by the T1–T15 tests.
 // CI: ./gradlew :domain:engine:crisisGuardCoverage
 val crisisClasses = listOf(

@@ -48,6 +48,7 @@ import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
+import com.healthofatitan.app.core.ui.text.LocalAddressForm
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.checkin.Discovery
@@ -106,7 +107,7 @@ fun DiscoveryScreen(d: Discovery?, tiles: List<Tile>, persona: MentorPersona, on
                     Spacer(Modifier.height(6.dp))
                     HotOverline(CheckinTexts.counts(d.n1, d.n0))
                     Spacer(Modifier.height(10.dp))
-                    Text(CheckinTexts.discoveryLine(persona), style = HotType.quote)
+                    Text(CheckinTexts.discoveryLine(persona, LocalAddressForm.current), style = HotType.quote)
                     HotTextButton(CheckinTexts.HOW_COUNTED, onClick = { how = !how })
                     AnimatedVisibility(how) {
                         Text(CheckinTexts.howCounted(d.n1, d.n0, d.ciLow, d.ciHigh), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

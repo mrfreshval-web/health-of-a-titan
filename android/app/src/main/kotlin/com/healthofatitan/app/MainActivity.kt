@@ -11,14 +11,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.datastore.MentorPrefs
 import com.healthofatitan.app.core.datastore.MentorSettings
+import com.healthofatitan.app.core.model.profile.AddressForm
+import com.healthofatitan.app.core.ui.text.LocalAddressForm
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
 import com.healthofatitan.app.integration.whoop.WhoopConnection
@@ -67,6 +71,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var mentor: MentorSettings
+
+    /** The profile «Я» (A61, D-055): its address form reaches every text through [LocalAddressForm]. */
+    @Inject
+    lateinit var profile: ProfileSettingsStore
 
     /** State cards (A44, D-036): which morning screen is due. */
     @Inject
@@ -136,15 +144,18 @@ class MainActivity : ComponentActivity() {
                 val syncProgress by whoop.progress.collectAsStateWithLifecycle()
                 val ritual by rassvet.collectAsStateWithLifecycle(Pair<RassvetStep?, RassvetStep?>(null, null))
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
-                HotApp(
-                    pendingRoute = pendingRoute,
-                    onPendingRouteConsumed = { pendingRoute = null },
-                    syncProgress = syncProgress,
-                    rassvetDue = ritual.first,
-                    rassvetNext = ritual.second,
-                    onRassvetOffered = ::markRassvetOffered,
-                    persona = mentorPrefs.persona,
-                )
+                val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
+                CompositionLocalProvider(LocalAddressForm provides addressForm) {
+                    HotApp(
+                        pendingRoute = pendingRoute,
+                        onPendingRouteConsumed = { pendingRoute = null },
+                        syncProgress = syncProgress,
+                        rassvetDue = ritual.first,
+                        rassvetNext = ritual.second,
+                        onRassvetOffered = ::markRassvetOffered,
+                        persona = mentorPrefs.persona,
+                    )
+                }
             }
         }
     }

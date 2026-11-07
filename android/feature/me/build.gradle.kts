@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(project(":integration:whoop"))
+    implementation(project(":core:database"))
     implementation(libs.androidx.activity.compose)
 
     testImplementation(libs.robolectric)

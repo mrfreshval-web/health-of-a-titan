@@ -1,5 +1,6 @@
 package com.healthofatitan.app.domain.engine
 
+import com.healthofatitan.app.core.model.profile.AddressForm
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -398,6 +399,17 @@ class DayScenariosTest {
                 banned.forEach { w -> assertFalse(text.lowercase().contains(w), "«$w» in «$text»") }
             }
             assertTrue(p.headline.length <= 40 && p.summary.length <= 110, p.headline + " / " + p.summary)
+        }
+    }
+
+    @Test
+    fun `the address form is an input of the day and never changes the plan`() {
+        // A61 §4.1, D-055: like the mentor's character, the address changes only the words.
+        val base = input(NightFacts(orsZ = 0.8, orsEwma7 = 0.3, sleepHours = 7.6, prevSleepHours = 7.2))
+        assertEquals(AddressForm.NEUTRAL, base.address)
+        val neutral = DayEngine.plan(base)
+        AddressForm.entries.forEach { form ->
+            assertEquals(neutral, DayEngine.plan(base.copy(address = form)), form.name)
         }
     }
 }

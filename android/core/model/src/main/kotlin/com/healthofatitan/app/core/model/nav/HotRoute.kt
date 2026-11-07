@@ -21,6 +21,12 @@ object HotRoute {
      */
     const val ME = "me"
 
+    /**
+     * «Настройки › Ты» (A61 §5.1, D-055): the profile — address form, year of birth, sex for
+     * calculations. Inside a tab.
+     */
+    const val PROFILE = "profile"
+
     /** «Аватар › Наставник» (D-030, A38 §9): the mentor's character. */
     const val MENTOR_PERSONA = "mentor_persona"
 

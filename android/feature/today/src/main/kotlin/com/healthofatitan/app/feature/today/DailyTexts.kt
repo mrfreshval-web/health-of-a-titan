@@ -1,5 +1,7 @@
 package com.healthofatitan.app.feature.today
 
+import com.healthofatitan.app.core.model.profile.AddressForm
+import com.healthofatitan.app.core.model.text.G
 import com.healthofatitan.app.domain.engine.Body
 import com.healthofatitan.app.domain.engine.FoodClose
 import com.healthofatitan.app.domain.engine.ReturnPolicy
@@ -31,11 +33,18 @@ object DailyTexts {
     const val HELP = "Помощь"
     const val DAY_LIGHT = "Свет дня"
 
-    val TRAINING_OPTIONS = listOf(
-        TrainingClose.DONE to "Сделал",
-        TrainingClose.CHANGED to "Изменил",
-        TrainingClose.NOT_TODAY to "Не сегодня",
+    /**
+     * A61 §4.2 example of [G] (D-055): «Сделано» · «По-другому» without a chosen address. The
+     * neutral wording is the A61 draft and waits for Agents 16 and 10.
+     */
+    private val TRAINING_LABELS = listOf(
+        TrainingClose.DONE to G(n = "Сделано", m = "Сделал", f = "Сделала"),
+        TrainingClose.CHANGED to G(n = "По-другому", m = "Изменил", f = "Изменила"),
+        TrainingClose.NOT_TODAY to G("Не сегодня"),
     )
+
+    fun trainingOptions(address: AddressForm): List<Pair<TrainingClose, String>> =
+        TRAINING_LABELS.map { (value, label) -> value to label.of(address) }
     val FOOD_OPTIONS = listOf(
         FoodClose.PLATE to "По тарелке",
         FoodClose.PARTLY to "Частично",

@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -62,6 +64,7 @@ import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.SecureScreen
+import com.healthofatitan.app.core.ui.text.text
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.checkin.Answer
@@ -80,8 +83,6 @@ import com.healthofatitan.app.domain.checkin.Sky
 import com.healthofatitan.app.domain.checkin.Stack
 import com.healthofatitan.app.domain.checkin.TitanLook
 import com.healthofatitan.app.domain.checkin.Yesterday
-import androidx.compose.ui.res.painterResource
-import androidx.compose.material3.Icon
 import java.time.format.DateTimeFormatter
 
 const val DECK_TAG = "checkin_deck"
@@ -464,7 +465,7 @@ private fun RitualBody(ui: DeckUi, chosen: Answer?, haptics: Boolean, actions: D
         }
     }
     Spacer(Modifier.height(8.dp))
-    Text(CheckinTexts.STACK_HINT, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
+    Text(CheckinTexts.STACK_HINT.text(), style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
     if (!adding) {
         HotTextButton("+ ${CheckinTexts.ADD_TO_STACK}", onClick = { adding = true })
     } else {

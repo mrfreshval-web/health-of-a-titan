@@ -173,6 +173,9 @@ object FitnessAge {
     /** The fitness age with one decimal; null when an input is missing. */
     fun estimate(i: FitnessInput): Double? {
         val age = i.ageYears ?: return null
+        // TODO(A61 §2.2, D-055 п. 3, ⚑ Agent 3): without the sex for calculations the fitness age
+        //  is to be shown as a range over both HUNT formulas, marked «оценка» — only after Agent 3
+        //  checks it. Until then no sex means no estimate (FIT_NEED_INPUT).
         val sex = i.sex ?: return null
         val waist = i.waistCm?.takeIf { it in 40.0..200.0 } ?: return null
         val rhr = i.restingHr?.takeIf { it in 25.0..140.0 } ?: return null

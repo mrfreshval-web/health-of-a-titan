@@ -202,13 +202,14 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `me opens the food profile inside the me tab and back returns to me`() {
+    fun `settings open the food profile inside the path tab and back returns to settings`() {
         launch()
-        compose.onNodeWithTag(HotTab.ME.testTag).performClick()
+        compose.onNodeWithTag(AVATAR_TAG).performClick()
+        compose.onNodeWithTag(AVATAR_SETTINGS_TAG).performClick()
         compose.onNodeWithTag(ME_NUTRITION_ROW_TAG).performClick()
         compose.onNodeWithTag(PROFILE_SCREEN_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(NutritionTexts.SET_UP)
-        compose.onNodeWithTag(HotTab.ME.testTag).assertIsSelected()
+        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }

@@ -6,10 +6,12 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
+import com.healthofatitan.app.core.database.ProfileStore
 import com.healthofatitan.app.core.database.dao.ConsentDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -60,4 +62,12 @@ object DatabaseModule {
 
     @Provides
     fun provideDawnDao(db: HotDatabase): DawnDao = db.dawnDao()
+
+    @Provides
+    fun provideNutritionDao(db: HotDatabase): NutritionDao = db.nutritionDao()
+
+    /** The shared profile of specifics (S4): nutrition and training read the same store. */
+    @Provides
+    @Singleton
+    fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao())
 }

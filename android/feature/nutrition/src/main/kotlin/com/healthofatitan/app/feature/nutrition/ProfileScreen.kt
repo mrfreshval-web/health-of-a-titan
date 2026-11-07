@@ -225,7 +225,8 @@ private fun AllergenTile(
             Spacer(Modifier.height(8.dp))
             Text(
                 name.substringBefore(" ("),
-                style = MaterialTheme.typography.labelMedium,
+                // A long single word («Ракообразные») would break mid-word in a quarter-width tile.
+                style = if (name.substringBefore(" (").split(' ').any { it.length > 10 }) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

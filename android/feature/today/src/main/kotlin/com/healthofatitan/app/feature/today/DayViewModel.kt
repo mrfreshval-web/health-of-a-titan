@@ -9,9 +9,15 @@ import com.healthofatitan.app.domain.engine.CrisisSource
 import com.healthofatitan.app.domain.engine.DayClose
 import com.healthofatitan.app.domain.engine.DayEngine
 import com.healthofatitan.app.domain.engine.FoodClose
+import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.Steps
 import com.healthofatitan.app.domain.engine.TrainingClose
 import com.healthofatitan.app.domain.engine.WorkoutMatcher
+import com.healthofatitan.app.domain.today.DayTask
+import com.healthofatitan.app.domain.today.RitualSettings
+import com.healthofatitan.app.domain.today.Safety
+import com.healthofatitan.app.domain.today.TaskMove
+import com.healthofatitan.app.domain.today.WeekPlan
 import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.healthconnect.StepsRepository
 import com.healthofatitan.app.integration.healthconnect.WalkWindow
@@ -19,13 +25,25 @@ import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.DayView
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
+import com.healthofatitan.app.integration.whoop.day.TodayMarks
+import com.healthofatitan.app.integration.whoop.day.TodayMarksRepository
+import com.healthofatitan.app.integration.whoop.day.TodayMorning
+import com.healthofatitan.app.integration.whoop.day.TodaySafetySource
+import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -46,6 +64,21 @@ data class DayUiState(
     val closed: DayClose? = null,
     /** Phone steps from Health Connect (D-024), memory only. */
     val steps: PhoneSteps = PhoneSteps.Unavailable,
+    /** Water, meals and task marks of today (A46 §2.3, §2.4). */
+    val marks: TodayMarks = TodayMarks.EMPTY,
+    /** What the week offers for today (A52 §4). */
+    val candidates: List<DayTask> = emptyList(),
+    val week: WeekPlan? = null,
+    /** What overrides the day (A46 §4.8). */
+    val safety: Safety = Safety.NONE,
+    /** «ты» of «Рассвет», 1–5. */
+    val self: Int? = null,
+    /** The haiku shown at «Рассвет» today (T-07). */
+    val haiku: List<String>? = null,
+    val dawnShown: Boolean = false,
+    /** «С возвращением» is due (A18 И4.4). */
+    val returning: Boolean = false,
+    val rituals: RitualSettings = RitualSettings(),
 ) {
     val today: LocalDate get() = now.toLocalDate()
 
@@ -101,12 +134,30 @@ internal fun walkWindow(plan: DayView?, zone: ZoneId): WalkWindow? {
     )
 }
 
+/** Everything of «Сегодня» v3 that belongs to one calendar day. */
+private data class DayExtras(
+    val marks: TodayMarks = TodayMarks.EMPTY,
+    val candidates: List<DayTask> = emptyList(),
+    val week: WeekPlan? = null,
+    val safety: Safety = Safety.NONE,
+    val haiku: List<String>? = null,
+    val dawnShown: Boolean = false,
+    val self: Int? = null,
+)
+
+/** A source that fails or has not answered yet reads as its fallback: the screen never waits on it. */
+private fun <T> Flow<T>.orElse(fallback: T): Flow<T> = onStart { emit(fallback) }.catch { emit(fallback) }
+
 @HiltViewModel
 class DayViewModel @Inject constructor(
     private val plans: DayPlanRepository,
     private val morning: MorningCoordinator,
     private val loop: DailyLoopRepository,
     private val steps: StepsRepository,
+    private val marks: TodayMarksRepository,
+    private val weekPlan: WeekPlanSource,
+    private val safety: TodaySafetySource,
+    private val morningOf: TodayMorning,
 ) : ViewModel() {
 
     private val justSaved = MutableStateFlow(false)
@@ -118,7 +169,7 @@ class DayViewModel @Inject constructor(
         }
     }
 
-    val state: StateFlow<DayUiState> =
+    private val base: Flow<DayUiState> =
         combine(plans.latest, plans.latestEvening, clock, justSaved, steps.state) { plan, evening, now, saved, phone ->
             DayUiState(
                 plan = plan,
@@ -129,11 +180,38 @@ class DayViewModel @Inject constructor(
                 closed = evening?.toClose(),
                 steps = phone,
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
+        }
 
-    /** «С возвращением» is due (A18 И4.4: silence ≥ 7 days, once). */
-    val welcome: StateFlow<Boolean> =
-        loop.welcomeDue().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    /** The day's marks, tasks, safety and «Рассвет»; switches to the new day at midnight. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val extras: Flow<DayExtras> = clock.map { it.toLocalDate() }.distinctUntilChanged().flatMapLatest { d ->
+        val first = combine(
+            marks.observe(d).orElse(TodayMarks.EMPTY),
+            weekPlan.candidates(d).orElse(emptyList()),
+            weekPlan.week(d).map<WeekPlan, WeekPlan?> { it }.orElse(null),
+            safety.safety(d).orElse(Safety.NONE),
+            morningOf.haiku(d).orElse(null),
+        ) { m, c, w, s, h -> DayExtras(marks = m, candidates = c, week = w, safety = s, haiku = h) }
+        val second = combine(
+            morningOf.dawnShown(d).orElse(false),
+            flow { emit(morningOf.self(d)) }.orElse(null),
+        ) { shown, self -> shown to self }
+        combine(first, second) { e, s -> e.copy(dawnShown = s.first, self = s.second) }
+    }
+
+    val state: StateFlow<DayUiState> =
+        combine(base, extras.orElse(DayExtras()), loop.welcomeDue().orElse(false)) { b, e, returning ->
+            b.copy(
+                marks = e.marks,
+                candidates = e.candidates,
+                week = e.week,
+                safety = e.safety,
+                self = e.self,
+                haiku = e.haiku,
+                dawnShown = e.dawnShown,
+                returning = returning,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
     init {
         // Phone steps: re-read every few minutes while «Сегодня» lives (memory only, R-11).
@@ -182,6 +260,40 @@ class DayViewModel @Inject constructor(
 
     fun welcomeSeen() {
         viewModelScope.launch { runCatching { loop.welcomeShown() } }
+    }
+
+    /** «вода»: one glass more or less. */
+    fun water(day: LocalDate, delta: Int) {
+        viewModelScope.launch { runCatching { marks.water(day, delta) } }
+    }
+
+    /** «питание»: a meal of [slot] marked or unmarked (a check-in only: no calories, A46 §2.3). */
+    fun meal(day: LocalDate, slot: String, eaten: Boolean) {
+        viewModelScope.launch { runCatching { marks.meal(day, slot, eaten) } }
+    }
+
+    /**
+     * A task of the day done or taken back: a plan item (training, focus) keeps the plan's own mark
+     * (OPEN ⇄ DONE_SELF); any other task is a mark of the day.
+     */
+    fun taskDone(day: LocalDate, task: DayTask, done: Boolean) {
+        viewModelScope.launch {
+            val item = state.value.plan?.takeIf { it.dayKey == day }?.items?.firstOrNull { it.id == task.id }
+            if (item != null) {
+                if (canMark(item) && (item.status == ItemStatus.OPEN) == done) plans.toggle(day, item.id)
+            } else {
+                runCatching { marks.taskDone(day, task.id, done) }
+            }
+        }
+    }
+
+    /** T-08: «Не сегодня» — the task goes back to its week goal for today. */
+    fun toWeek(move: TaskMove) {
+        viewModelScope.launch { runCatching { marks.toWeek(move) } }
+    }
+
+    fun backFromWeek(day: LocalDate, taskId: String) {
+        viewModelScope.launch { runCatching { marks.undoToWeek(day, taskId) } }
     }
 
     private companion object {

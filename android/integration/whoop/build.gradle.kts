@@ -16,6 +16,7 @@ dependencies {
     api(project(":domain:metrics"))
     api(project(":domain:engine"))
     implementation(project(":domain:checkin"))
+    api(project(":domain:today"))
 
     api(libs.appauth)
     api(libs.androidx.work.runtime.ktx)
@@ -23,4 +24,6 @@ dependencies {
 
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext.junit)
 }

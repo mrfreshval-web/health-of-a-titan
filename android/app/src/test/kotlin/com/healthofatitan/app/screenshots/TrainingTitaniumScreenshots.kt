@@ -182,7 +182,6 @@ class TrainingTitaniumScreenshots {
                     TodayUiState(whoop = WhoopStatus(configured = true, connected = true, whoopUserId = "1", lastSyncAt = System.currentTimeMillis(), baselineNights = 21), metrics = TodayMetrics.EMPTY),
                     onConnectWhoop = {},
                     day = DayUiState(plan = dayView(Regime.STEADY, "Силовая · 45 мин"), now = LocalDateTime.now().withHour(17).withMinute(30), loaded = true),
-                    slots = TodaySlots(training = { TrainingDayCard(ui, onOpen = {}) }),
                 )
             }
         }

@@ -17,8 +17,6 @@ import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.STATUS_RINGS_TAG
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
@@ -38,10 +36,6 @@ import com.healthofatitan.app.feature.path.PathScreen
 import com.healthofatitan.app.feature.path.PathView
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
-import com.healthofatitan.app.feature.today.CHARGE_SCALE_TAG
-import com.healthofatitan.app.feature.today.DAY_NOW_TAG
-import com.healthofatitan.app.feature.today.DAY_PLAN_TOGGLE_TAG
-import com.healthofatitan.app.feature.today.HERO_CHIP_TAG
 import com.healthofatitan.app.integration.whoop.SleepStages
 import com.healthofatitan.app.integration.whoop.StrainGlance
 import com.healthofatitan.app.feature.today.DayUiState
@@ -57,6 +51,8 @@ import com.healthofatitan.app.integration.whoop.WhoopStatus
 import com.healthofatitan.app.integration.whoop.day.DayItemView
 import com.healthofatitan.app.integration.whoop.day.DayView
 import com.healthofatitan.app.navigation.AvatarMenu
+import com.healthofatitan.app.navigation.MentorCircle
+import com.healthofatitan.app.navigation.TabHeaders
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -139,24 +135,23 @@ class UxPolishScreenshots {
         windDownMin = 60 + 50,
     )
 
-    private val rings = StatusRings(strain = 0.3, strainCeiling = 12.0, steps = 6_420, stepsGoal = 8_900, untilBedMin = 15 * 60 + 2, dayFraction = 0.1f, bedtimeMin = 2 * 60 + 50, mode = HotMode.ROVNO)
-
     @Composable
-    private fun Header(title: String? = null, back: Boolean = false, overline: String? = null, ringsNow: StatusRings = rings) {
+    private fun Header(title: String? = null, back: Boolean = false, overline: String? = null, center: String? = null) {
         HotTopBar(
             title = title,
             overline = overline,
             onBack = if (back) ({}) else null,
-            rings = ringsNow,
+            mentor = { MentorCircle(MentorPersona.SENSEI) {} },
+            center = center,
             avatar = { AvatarMenu(MentorPersona.SENSEI, onHelp = {}, onMentor = {}, onSettings = {}) },
         )
     }
 
     @Composable
-    private fun Today(at: LocalDateTime, nights: Int = 28, day: DayView = plan(), ringsNow: StatusRings = rings) {
+    private fun Today(at: LocalDateTime, nights: Int = 28, day: DayView = plan()) {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                Header(ringsNow = ringsNow)
+                Header(center = TabHeaders.today(at.toLocalDate()))
                 TodayScreen(
                     TodayUiState(whoop = whoop(nights), metrics = if (nights >= 14) metrics else metrics.copy(charge = null), glance = glance),
                     onConnectWhoop = {},
@@ -179,12 +174,6 @@ class UxPolishScreenshots {
         Today(LocalDateTime.now().withHour(20).withMinute(30), day = plan(light = ItemStatus.DONE_SELF))
     }
 
-    /** R2 / Y1: what a tap on the header rings shows. */
-    @Test
-    fun todayHeaderTapped() = shoot("u04-today-header-tap", before = { compose.onNodeWithTag(STATUS_RINGS_TAG).performClick() }) {
-        Today(LocalDateTime.now().withHour(11).withMinute(48))
-    }
-
     /** R5 on «Сегодня»: the norm is still being learned (9 nights). */
     @Test
     fun todayCalibration() = shoot("u05-today-calibration") {
@@ -199,38 +188,7 @@ class UxPolishScreenshots {
             day = plan().copy(
                 items = plan().items + DayItemView("nap", ItemKind.NAP, "Короткий сон", "до 20 мин", 13 * 60 + 40, 16 * 60 + 40, ItemStatus.OPEN),
             ),
-            ringsNow = rings.copy(strain = 20.9, steps = 23_480, stepsGoal = 12_000, untilBedMin = 23 * 60 + 59),
         )
-    }
-
-    /** Y2: the sleep chip opens the composition of the night. */
-    @Test
-    fun sleepFact() = shoot("u12-today-sleep-fact", before = { compose.onNodeWithTag(HERO_CHIP_TAG + "sleep").performClick() }) {
-        Today(LocalDateTime.now().withHour(10).withMinute(40))
-    }
-
-    /** Y2: the load ceiling in strain units, 0–21. */
-    @Test
-    fun loadFact() = shoot("u13-today-load-fact", before = { compose.onNodeWithTag(HERO_CHIP_TAG + "load").performClick() }) {
-        Today(LocalDateTime.now().withHour(10).withMinute(40))
-    }
-
-    /** Y3: Заряд explained on a tap. */
-    @Test
-    fun chargeOpen() = shoot("u14-today-charge-open", before = { compose.onNodeWithTag(CHARGE_SCALE_TAG).performClick() }) {
-        Today(LocalDateTime.now().withHour(10).withMinute(40))
-    }
-
-    /** Y5 / R1: the folded plan opened, the time column with the longest slots. */
-    @Test
-    fun planOpen() = shoot("u15-today-plan-open", before = { compose.onNodeWithTag(DAY_PLAN_TOGGLE_TAG).performClick() }) {
-        Today(LocalDateTime.now().withHour(13).withMinute(5), day = plan(light = ItemStatus.DONE_SELF))
-    }
-
-    /** R3: a long press marks the item in focus and «Отменить» stays for 5 s. */
-    @Test
-    fun markUndo() = shoot("u16-today-mark-undo", before = { compose.onNodeWithTag(DAY_NOW_TAG).performTouchInput { longClick() } }) {
-        Today(LocalDateTime.now().withHour(11).withMinute(48))
     }
 
     @Test

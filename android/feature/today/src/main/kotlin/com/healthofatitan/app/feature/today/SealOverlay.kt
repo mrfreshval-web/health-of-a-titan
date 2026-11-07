@@ -55,14 +55,14 @@ fun SealOverlay(plan: DayView, glance: WhoopGlance?) {
     val context = LocalContext.current
     val seen = remember(context) { SealSeen(context) }
     val item = plan.items.firstOrNull { it.kind == ItemKind.TRAINING && it.status == ItemStatus.DONE_WHOOP } ?: return
-    val key = "${plan.dayKey}:${item.id}"
+    val key = sealKey(plan, glance, ZoneId.systemDefault()) ?: return
     var open by remember(key) { mutableStateOf(!seen.has(key)) }
     if (!open) return
     val close = {
         seen.add(key)
         open = false
     }
-    val workout = glance?.workout?.takeIf { it.start.atZone(ZoneId.systemDefault()).toLocalDate() == plan.dayKey }
+    val workout = glance?.workout
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         HotBackground(aura = HotThemeTokens.colors.modeRovno, auraCenterY = 0.38f, modifier = Modifier.fillMaxSize().testTag(SEAL_OVERLAY_TAG)) {
             Column(
@@ -98,6 +98,16 @@ fun SealOverlay(plan: DayView, glance: WhoopGlance?) {
             }
         }
     }
+}
+
+/**
+ * T-09: the seal belongs to one confirmed workout, not to the day: the key is the day and the
+ * workout's start. No confirmed training today, or no workout of today in the glance → no seal.
+ */
+fun sealKey(plan: DayView, glance: WhoopGlance?, zone: ZoneId): String? {
+    plan.items.firstOrNull { it.kind == ItemKind.TRAINING && it.status == ItemStatus.DONE_WHOOP } ?: return null
+    val workout = glance?.workout?.takeIf { it.start.atZone(zone).toLocalDate() == plan.dayKey } ?: return null
+    return "${plan.dayKey}:${workout.start.epochSecond}"
 }
 
 private class SealSeen(context: Context) {

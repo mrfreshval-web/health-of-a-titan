@@ -119,7 +119,7 @@ object WhyBuilder {
             WhyMetric(TodayCopy.M_AWAKE, i.disturbances?.toString() ?: clock(i.awakeMin), null, null, TodayCopy.SRC_SLEEP),
             WhyMetric(TodayCopy.M_EFFICIENCY, i.efficiency?.let { f(it) + " %" }, null, null, TodayCopy.SRC_SLEEP),
             WhyMetric(TodayCopy.M_CONSISTENCY, i.consistency?.let { f(it) + " %" }, null, null, TodayCopy.SRC_SLEEP),
-            WhyMetric(TodayCopy.M_DEBT, i.debtHours?.let { MeRules.clock((it * 60).roundToInt().coerceAtLeast(0)) }, null, null, "HoT · ${TodayCopy.ESTIMATE}", estimate = true),
+            WhyMetric(TodayCopy.M_DEBT, i.debtHours?.let { MeRules.clock((it * 60).roundToInt().coerceAtLeast(0)) }, null, null, "HoT", estimate = true),
         )
         val heart = listOf(
             metric(TodayCopy.M_RHR, i.restingHr, i.restingHrCorridor, "", TodayCopy.SRC_RECOVERY),

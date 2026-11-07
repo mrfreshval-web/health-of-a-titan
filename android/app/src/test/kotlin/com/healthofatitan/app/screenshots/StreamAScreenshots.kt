@@ -14,7 +14,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.domain.engine.Body
 import com.healthofatitan.app.domain.engine.DayClose
@@ -29,7 +28,6 @@ import com.healthofatitan.app.domain.engine.TrainingClose
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
 import com.healthofatitan.app.feature.today.TodayUiState
-import com.healthofatitan.app.feature.today.WelcomeBackScreen
 import com.healthofatitan.app.feature.today.mode
 import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.whoop.FacetValue
@@ -111,13 +109,12 @@ class StreamAScreenshots {
     )
 
     private val steps = PhoneSteps.Ready(today = 6_420, goal = 8_900, inSlot = 2_150)
-    private val rings = StatusRings(strain = 9.1, strainCeiling = 12.0, steps = steps.today, stepsGoal = steps.goal, untilBedMin = 2 * 60 + 30, dayFraction = 0.85f, bedtimeMin = 23 * 60, mode = HotMode.ROVNO)
 
     @Composable
-    private fun Today(day: DayUiState, ringsNow: StatusRings = rings) {
+    private fun Today(day: DayUiState) {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = ringsNow.copy(mode = day.plan?.regime?.mode()))
+                HotTopBar(title = null)
                 TodayScreen(TodayUiState(whoop = whoop, metrics = metrics), onConnectWhoop = {}, day = day)
             }
         }
@@ -161,19 +158,20 @@ class StreamAScreenshots {
         )
     }
 
+    /** «С возвращением» is the scenario 4.9 of «Сегодня» now: «Начать с малого» is the task. */
     @Test
     fun welcomeBack() = shoot("a05-welcome-back") {
-        HotBackground { WelcomeBackScreen(today = today, onStart = {}) }
+        Today(DayUiState(plan = plan(returning = true), now = morning, loaded = true, steps = steps, returning = true))
     }
 
     @Test
     fun returnDay() = shoot("a06-return-day") {
-        Today(DayUiState(plan = plan(returning = true), now = morning, loaded = true, steps = PhoneSteps.Ready(1_250, 8_900)), rings.copy(steps = 1_250))
+        Today(DayUiState(plan = plan(returning = true), now = morning, loaded = true, steps = PhoneSteps.Ready(1_250, 8_900)))
     }
 
     @Test
     fun stepsAsk() = shoot("a07-steps-ask") {
-        Today(DayUiState(plan = plan(), now = morning, loaded = true, steps = PhoneSteps.NeedsPermission), rings.copy(steps = null, stepsGoal = null))
+        Today(DayUiState(plan = plan(), now = morning, loaded = true, steps = PhoneSteps.NeedsPermission))
     }
 
     @Test

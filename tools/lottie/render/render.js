@@ -1,5 +1,5 @@
 // Preview renderer: lottie-web (SVG) in headless Chromium via Playwright.
-//   node render/render.js storyboard <out.png> <a.json> [b.json …]   — 6 frames per file, one row each
+//   node render/render.js storyboard <out.png> <a.json> [b.json …]   — 6 frames per file, one row each (or FRAMES=…)
 //   node render/render.js frames <dir> <a.json> [fps=30] [size=360] [mode] — PNG sequence for GIF/WebM
 //   node render/render.js sheet <out.png> <cols> <a.json> …          — poster frames in a grid
 // Mode recolours the light like the app does (dynamic properties): rovno | razgon | berezhno | light.
@@ -81,7 +81,9 @@ async function frames(browser, dir, file, fps = 30, size = 360, mode = 'rovno') 
 }
 
 // 6 frames: the markers of key poses first, the rest evenly in between.
+// FRAMES="f:label;f:label…" picks them by hand (a file of sections: the ends of the sections).
 function pickFrames(doc) {
+  if (process.env.FRAMES) return process.env.FRAMES.split(';').map((x) => { const [f, l] = x.split(':'); return [Number(f), l || `f${f}`]; });
   const n = doc.op;
   const named = (doc.markers || []).filter((m) => !['poster', 'hold_loop_end', 'exit', 'enter', 'enter_end'].includes(m.cm)).map((m) => [m.tm, m.cm]);
   const out = new Map(named.slice(0, 6));

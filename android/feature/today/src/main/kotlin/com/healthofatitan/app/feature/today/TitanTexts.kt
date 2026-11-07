@@ -1,9 +1,7 @@
 package com.healthofatitan.app.feature.today
 
 import com.healthofatitan.app.core.ui.component.HotMode
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.domain.engine.Regime
-import com.healthofatitan.app.integration.whoop.day.HeaderRings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -75,20 +73,21 @@ object TitanTexts {
     ).joinToString(", ").ifEmpty { "Титан ждёт данные WHOOP" }
 }
 
-/** The D-029 header rings as the top bar draws them. */
-fun HeaderRings.toStatusRings(): StatusRings = StatusRings(
-    strain = strain,
-    strainCeiling = strainCeiling,
-    steps = steps,
-    stepsGoal = stepsGoal,
-    untilBedMin = untilBedMin,
-    dayFraction = dayFraction,
-    bedtimeMin = bedtimeMin,
-    mode = regime?.mode(),
-)
-
 fun Regime.mode(): HotMode = when (this) {
     Regime.BOOST -> HotMode.RAZGON
     Regime.STEADY -> HotMode.ROVNO
     Regime.GENTLE -> HotMode.BEREZHNO
+}
+
+/** The engine's regime as the mode of «Сегодня» v3 (A45 §6.2). */
+fun Regime.dayMode(): com.healthofatitan.app.domain.today.DayMode = when (this) {
+    Regime.BOOST -> com.healthofatitan.app.domain.today.DayMode.RAZGON
+    Regime.STEADY -> com.healthofatitan.app.domain.today.DayMode.ROVNO
+    Regime.GENTLE -> com.healthofatitan.app.domain.today.DayMode.BEREZHNO
+}
+
+fun com.healthofatitan.app.domain.today.DayMode.hotMode(): HotMode = when (this) {
+    com.healthofatitan.app.domain.today.DayMode.RAZGON -> HotMode.RAZGON
+    com.healthofatitan.app.domain.today.DayMode.ROVNO -> HotMode.ROVNO
+    com.healthofatitan.app.domain.today.DayMode.BEREZHNO -> HotMode.BEREZHNO
 }

@@ -32,11 +32,32 @@ const val AVATAR_TAG = "top_bar_avatar"
 const val AVATAR_HELP_TAG = "avatar_menu_help"
 const val AVATAR_MENTOR_TAG = "avatar_menu_mentor"
 const val AVATAR_SETTINGS_TAG = "avatar_menu_settings"
+const val MENTOR_CIRCLE_TAG = "top_bar_mentor"
+
+/** Винс on the left of the header (D-038): one tap opens the conversation. */
+@Composable
+fun MentorCircle(persona: MentorPersona?, onClick: () -> Unit) {
+    val tokens = HotThemeTokens.colors
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, tokens.rule),
+        modifier = Modifier
+            .size(44.dp)
+            .semantics { contentDescription = "Винс, наставник" }
+            .testTag(MENTOR_CIRCLE_TAG),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            PersonaAvatar(persona ?: MentorPersona.DEFAULT, size = 26.dp)
+        }
+    }
+}
 
 /**
- * The mentor's avatar in the corner of every header (D-033, j2-path): one tap opens «Помощь ·
- * Наставник · Настройки». Help is the first item, so it stays two taps from any tab (D-029). The
- * crisis screen and its texts are unchanged; only the way in moved.
+ * The profile circle in the right corner of every header (D-033, D-038): one tap opens «Помощь ·
+ * Наставник · Настройки». Help is the first item, so it stays two taps from any tab (D-029, T-06).
+ * The crisis screen and its texts are unchanged; only the way in moved.
  */
 @Composable
 fun AvatarMenu(
@@ -55,11 +76,11 @@ fun AvatarMenu(
             border = BorderStroke(1.dp, tokens.rule),
             modifier = Modifier
                 .size(44.dp)
-                .semantics { contentDescription = "Меню: помощь, наставник, настройки" }
+                .semantics { contentDescription = "Профиль: помощь, наставник, настройки" }
                 .testTag(AVATAR_TAG),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                PersonaAvatar(persona ?: MentorPersona.DEFAULT, size = 26.dp)
+                Icon(painterResource(R.drawable.core_ui_ic_me), contentDescription = null, modifier = Modifier.size(22.dp))
             }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

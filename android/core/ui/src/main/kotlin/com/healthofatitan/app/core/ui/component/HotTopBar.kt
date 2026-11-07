@@ -1,7 +1,7 @@
 package com.healthofatitan.app.core.ui.component
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,20 +18,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,18 +35,19 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 const val TOP_BAR_TITLE_TAG = "top_bar_title"
 const val TOP_BAR_BACK_TAG = "top_bar_back"
 const val TOP_BAR_GLYPH_TAG = "top_bar_glyph"
-const val TOP_BAR_WHY_TAG = "top_bar_why"
+const val TOP_BAR_CENTER_TAG = "top_bar_center"
 
 /**
- * Header of every tab, «Титаниум» (A37 §1, mockup s2; D-029): the Titan glyph in a glass circle
- * (it becomes the sync indicator «Титан приходит» while data comes), the telemetry line (date,
- * «Винс · ИИ», week), the three status rings and the mentor's avatar in the corner. There is no
- * SOS button here (D-029): help is two taps away — «аватар › Помощь» (D-033) and «⋮ › Помощь» in
- * the mentor chat — plus the quick settings tile and the launcher shortcut; the crisis card
- * appears by itself on detection. A tap on the rings opens what each ring is (UX review 119, Y1).
+ * Header of every tab (D-038, A46 v0.3 §2.1): the mentor Винс as a circle on the left, the date in
+ * the middle, the profile and settings as a circle on the right. No status rings any more (A46 §5).
+ * While data comes the Titan glyph «Титан приходит» stands next to the date. There is no SOS button
+ * here (D-029): help is two taps away — «профиль › Помощь» — plus the quick settings tile and the
+ * launcher shortcut; the crisis card appears by itself on detection.
  *
- * @param title the screen title under the line (null on «Сегодня»: the hero speaks there)
- * @param avatar the avatar in the corner with its menu (D-033: settings, mentor, help)
+ * @param title the screen title under the row (null on «Сегодня»)
+ * @param mentor the mentor's circle on the left (D-038); null shows the Titan glyph there
+ * @param center the line in the middle of the row (the date on «Сегодня»)
+ * @param avatar the profile circle on the right with its menu (help, mentor, settings)
  */
 @Composable
 fun HotTopBar(
@@ -61,11 +56,10 @@ fun HotTopBar(
     overline: String? = null,
     onBack: (() -> Unit)? = null,
     sync: SyncMarkState? = null,
-    rings: StatusRings = StatusRings.Empty,
+    mentor: (@Composable () -> Unit)? = null,
+    center: String? = null,
     avatar: (@Composable () -> Unit)? = null,
 ) {
-    // Not saveable: the explanation closes when the screen changes (it stayed open on the device, R2).
-    var why by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -73,27 +67,36 @@ fun HotTopBar(
             .padding(start = HotSpacing.edge - 4.dp, end = HotSpacing.edge - 8.dp, top = 10.dp, bottom = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) BackButton(onBack, overline) else TitanGlyph(sync)
-            Spacer(Modifier.weight(1f))
-            Spacer(Modifier.width(8.dp))
-            HotStatusRings(rings, onClick = { why = !why }, expanded = why)
-            if (avatar != null) {
-                Spacer(Modifier.width(6.dp))
-                avatar()
+            when {
+                onBack != null -> BackButton(onBack, overline)
+                mentor != null -> mentor()
+                else -> TitanGlyph(sync)
             }
+            Row(
+                Modifier.weight(1f).padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (mentor != null && onBack == null && sync != null && sync.phase != SyncMarkPhase.IDLE) {
+                    Box(Modifier.size(28.dp).testTag(TOP_BAR_GLYPH_TAG), contentAlignment = Alignment.Center) {
+                        HotSyncMark(state = sync, size = 28.dp, haptics = true)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                if (center != null) {
+                    Text(
+                        center,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag(TOP_BAR_CENTER_TAG),
+                    )
+                }
+            }
+            if (avatar != null) avatar()
         }
-        // UX review 119 (R2, Y1): no run-on status line any more; a tap opens three named rows.
-        AnimatedVisibility(why) {
-            HotRingsExplainer(
-                rings,
-                modifier = Modifier
-                    .padding(start = 4.dp, top = 10.dp)
-                    .semantics { liveRegion = LiveRegionMode.Polite }
-                    .testTag(TOP_BAR_WHY_TAG),
-            )
-        }
-        // The telemetry line («Винс · ИИ», the week, «Настройки · Подключения») under the row: the
-        // rings with their pictograms (Y1) need the width, and a breadcrumb must not wrap per letter.
+        // The telemetry line («Винс · ИИ», the week, «Настройки · Подключения») under the row.
         if (overline != null) {
             Spacer(Modifier.size(12.dp))
             HotOverline(overline, modifier = Modifier.padding(start = 4.dp).clearAndSetSemantics { })

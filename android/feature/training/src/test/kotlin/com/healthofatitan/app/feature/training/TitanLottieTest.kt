@@ -147,6 +147,42 @@ class TitanLottieTest {
     }
 
     @Test
+    fun `the Titan of the day on the Path has its five files and the markers of the package`() {
+        // docs/design/path-v1/visual-production.md §3.2: 7 poses in 5 files, no floor, poster first
+        val want = mapOf(
+            "path-hold" to setOf(
+                "poster", "hold_loop_start", "hold_loop_end", "look_sky", "look_earth", "look_water",
+                "to_one_hand", "one_hand_loop_start", "one_hand_loop_end", "to_two_hands",
+            ),
+            "path-palms" to setOf("poster", "offer", "release"),
+            "path-sky" to setOf("poster"),
+            "path-earth" to setOf("poster"),
+            "path-water" to setOf("poster"),
+        )
+        want.forEach { (id, markers) ->
+            val e = assertNotNull(manifest[id], "$id is missing in lottie/manifest.json")
+            assertEquals("path", e.kind, id)
+            assertEquals(markers, e.markers.keys, id)
+            val json = File(dir, "$id.json").readText()
+            assertTrue("\"nm\":\"floor\"" !in json, "$id: the Path has no floor")
+            assertTrue(File(dir, "$id.json").length() <= 150 * 1024, id)
+        }
+        // §4.0 timings at 60 fps: look 400 ms, one hand 800 ms, offer 600 ms, the loops 6 / 4 / 0.73 / 2.4 s
+        val hold = manifest.getValue("path-hold").markers
+        assertEquals(360, hold.getValue("hold_loop_end") - hold.getValue("hold_loop_start"))
+        assertEquals(48, hold.getValue("one_hand_loop_start") - hold.getValue("to_one_hand"))
+        assertEquals(360, hold.getValue("one_hand_loop_end") - hold.getValue("one_hand_loop_start"))
+        assertEquals(0, hold.getValue("poster"))
+        assertEquals(36, manifest.getValue("path-palms").markers.getValue("release") - manifest.getValue("path-palms").markers.getValue("offer"))
+        assertEquals(240, manifest.getValue("path-sky").frames)
+        assertEquals(44, manifest.getValue("path-earth").frames) // 733 ms, 164 steps/min (Agent 12)
+        assertEquals(144, manifest.getValue("path-water").frames)
+        // the breath loops from the start in the player of the training too
+        val e = manifest.getValue("path-hold")
+        assertEquals(e.progress(1_000, 0), e.progress(7_000, 0), 1e-3f)
+    }
+
+    @Test
     fun `the light has exactly the three stops of the file`() {
         assertEquals(3, TitanLottie.stops(emptyList()).size)
         assertEquals(3, TitanLottie.stops(listOf(androidx.compose.ui.graphics.Color.White)).size)

@@ -27,11 +27,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotListRow
 import com.healthofatitan.app.core.ui.component.HotPendingCard
 import com.healthofatitan.app.core.ui.component.HotSpacing
-import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopRoute
@@ -133,7 +133,7 @@ fun MeScreen(
             HotListRow(
                 title = "Помощь",
                 onClick = onOpenHelp,
-                caption = rememberHelpLines().caption, // Y6: the numbers of the phone's country
+                caption = HelpNumbers.CAPTION,
                 divider = false,
                 modifier = Modifier.testTag(ME_HELP_ROW_TAG),
             )

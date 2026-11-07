@@ -51,7 +51,7 @@ def hand_spec(spec, side):
 
 
 def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=(), breath_scale=0.035, belly_scale=0.07,
-                stops=NEUTRAL_STOPS, hands=None, cloth=True, pulses=(), fold=()):
+                stops=NEUTRAL_STOPS, hands=None, cloth=True, pulses=(), fold=(), arms_over=()):
     """Adds the rig and the cut-out figure to the builder; returns the per-frame bone values."""
     s = b.fr.s
     vals = [bone_values(p, front) for p in frames]
@@ -128,6 +128,21 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
         of a standing figure), so near and far share every path."""
         if key in made_assets:
             return made_assets[key]
+        if key in P.get("_same", {}):
+            made_assets[key] = shared(P["_same"][key], pc)
+            return made_assets[key]
+        if key in P.get("_mirror", {}):
+            # the other side's drawing, mirrored inside its own precomp (a mirrored layer would turn
+            # its children the wrong way)
+            src = P["_mirror"][key]
+            said, half, size = shared(src, P[src])
+            inner = lt.layer(1, key, 0, n, lt.transform(p=lt.static([half, half, 0]), a=lt.static([half, half, 0]),
+                                                         s=lt.static([-100, 100, 100])))
+            inner.update({"refId": said, "w": size, "h": size})
+            aid = "piece_" + key
+            b.assets.append({"id": aid, "nm": key, "fr": 60, "layers": [inner]})
+            made_assets[key] = (aid, half, size)
+            return made_assets[key]
         xs = [x for p in pc.line + pc.knock for x, _ in p["v"]]
         ys = [y for p in pc.line + pc.knock for _, y in p["v"]]
         half = math.ceil(max(max(map(abs, xs)), max(map(abs, ys))) + 2)
@@ -201,7 +216,31 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
 
     for pr in props_behind:
         pr(b, vals, frames)
-    if front:
+    if front == "3q":
+        # far arm behind the body (unless it reaches in front of the chest), far leg under the near
+        # one, the wrap over the thighs, the near arm on top
+        mark = len(b.layers)
+        piece_layer("pelvis")
+        piece_layer("chest")
+        piece_layer("head")
+        body = b.layers[mark:]
+        del b.layers[mark:]
+        arms_front = "F" in arms_over
+        if not arms_front:
+            chain(["uaF", "faF", "hdF"], keys=hand_key("F"))
+        chain(["thF", "shF", "ftF"])
+        chain(["thN", "shN", "ftN"])
+        b.layers += [body[1], body[0], body[2]]
+        mark = len(b.layers)
+        if arms_front:
+            chain(["uaF", "faF", "hdF"], keys=hand_key("F"))
+        chain(["uaN", "faN", "hdN"], keys=hand_key("N"))
+        arms = b.layers[mark:]
+        del b.layers[mark:]
+        for pr in props_held:
+            pr(b, vals, frames)
+        b.layers += arms
+    elif front:
         mark = len(b.layers)
         piece_layer("pelvis")
         piece_layer("chest")

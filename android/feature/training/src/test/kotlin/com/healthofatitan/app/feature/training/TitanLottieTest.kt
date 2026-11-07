@@ -66,15 +66,23 @@ class TitanLottieTest {
 
     @Test
     fun `the limbs of both sides share one drawing`() {
-        // v2: a limb piece is a precomp asset used by the near and the far side (the size budget)
-        listOf("ex-goblet-squat", "ex-pullup", "ex-stretch-quad").forEach { id ->
+        // v2: a limb piece is a precomp asset used by the near and the far side (the size budget);
+        // v3: in the front and 3/4 views one side is the other's drawing mirrored in a wrapper precomp
+        listOf("ex-goblet-squat", "ex-pullup", "ex-stretch-quad", "ex-arm-circles").forEach { id ->
             val doc = JSONObject(File(dir, "$id.json").readText())
             val layers = doc.getJSONArray("layers")
             val refs = (0 until layers.length()).mapNotNull { layers.getJSONObject(it).optString("refId").ifEmpty { null } }
-            val assets = doc.getJSONArray("assets").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") }.toSet() }
+            val assetList = doc.getJSONArray("assets").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+            val assets = assetList.associateBy { it.getString("id") }
+            // a wrapper's single layer refers to the drawing it mirrors
+            fun drawing(ref: String): String {
+                val inner = assets.getValue(ref).getJSONArray("layers").getJSONObject(0)
+                return inner.optString("refId").ifEmpty { null }?.let { drawing(it) } ?: ref
+            }
             assertTrue(refs.size >= 10, "$id: ${refs.size} piece layers")
-            assertTrue(refs.size > refs.toSet().size, "$id: no piece is shared")
             refs.forEach { assertTrue(it in assets, "$id: $it") }
+            val drawings = refs.map { drawing(it) }
+            assertTrue(drawings.size > drawings.toSet().size, "$id: no piece is shared")
         }
     }
 

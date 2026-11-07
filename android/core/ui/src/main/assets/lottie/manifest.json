@@ -11,7 +11,7 @@
     "touch": 60,
     "poster": 60
    },
-   "bytes": 76717
+   "bytes": 78153
   },
   "ex-arm-circles": {
    "file": "lottie/ex-arm-circles.json",
@@ -22,7 +22,7 @@
     "poster": 0,
     "up": 30
    },
-   "bytes": 94142
+   "bytes": 69059
   },
   "ex-band-dislocate": {
    "file": "lottie/ex-band-dislocate.json",
@@ -34,7 +34,7 @@
     "poster": 60,
     "behind": 120
    },
-   "bytes": 59569
+   "bytes": 61005
   },
   "ex-breath-long-exhale": {
    "file": "lottie/ex-breath-long-exhale.json",
@@ -45,7 +45,7 @@
     "inhale": 240,
     "poster": 240
    },
-   "bytes": 60147
+   "bytes": 61583
   },
   "ex-cat-cow": {
    "file": "lottie/ex-cat-cow.json",
@@ -57,7 +57,7 @@
     "poster": 90,
     "cow": 330
    },
-   "bytes": 77647
+   "bytes": 79083
   },
   "ex-deep-squat-hold": {
    "file": "lottie/ex-deep-squat-hold.json",
@@ -72,7 +72,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 89588
+   "bytes": 91024
   },
   "ex-goblet-squat": {
    "file": "lottie/ex-goblet-squat.json",
@@ -83,7 +83,7 @@
     "bottom": 180,
     "poster": 180
    },
-   "bytes": 88809
+   "bytes": 86516
   },
   "ex-leg-swings": {
    "file": "lottie/ex-leg-swings.json",
@@ -94,7 +94,7 @@
     "front": 48,
     "poster": 48
    },
-   "bytes": 63998
+   "bytes": 65434
   },
   "ex-pullup": {
    "file": "lottie/ex-pullup.json",
@@ -106,7 +106,7 @@
     "top": 72,
     "poster": 72
    },
-   "bytes": 75336
+   "bytes": 79613
   },
   "ex-scap-pushup": {
    "file": "lottie/ex-scap-pushup.json",
@@ -117,7 +117,7 @@
     "protract": 60,
     "poster": 60
    },
-   "bytes": 74673
+   "bytes": 76109
   },
   "ex-stretch-calf": {
    "file": "lottie/ex-stretch-calf.json",
@@ -132,7 +132,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 75747
+   "bytes": 77183
   },
   "ex-stretch-chest-doorway": {
    "file": "lottie/ex-stretch-chest-doorway.json",
@@ -147,7 +147,7 @@
     "hold_loop_end": 696,
     "exit": 696
    },
-   "bytes": 95786
+   "bytes": 70703
   },
   "ex-stretch-child": {
    "file": "lottie/ex-stretch-child.json",
@@ -162,7 +162,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 89766
+   "bytes": 91202
   },
   "ex-stretch-hamstring": {
    "file": "lottie/ex-stretch-hamstring.json",
@@ -177,7 +177,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 63028
+   "bytes": 64464
   },
   "ex-stretch-hip-flexor": {
    "file": "lottie/ex-stretch-hip-flexor.json",
@@ -192,7 +192,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 71928
+   "bytes": 73364
   },
   "ex-stretch-lat-wall": {
    "file": "lottie/ex-stretch-lat-wall.json",
@@ -207,7 +207,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 89678
+   "bytes": 91114
   },
   "ex-stretch-pigeon": {
    "file": "lottie/ex-stretch-pigeon.json",
@@ -222,7 +222,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 76237
+   "bytes": 77673
   },
   "ex-stretch-quad": {
    "file": "lottie/ex-stretch-quad.json",
@@ -237,7 +237,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 74836
+   "bytes": 75999
   },
   "ex-worlds-greatest": {
    "file": "lottie/ex-worlds-greatest.json",
@@ -249,7 +249,7 @@
     "reach_up": 240,
     "poster": 240
    },
-   "bytes": 85964
+   "bytes": 87400
   },
   "ex-wrist-prep": {
    "file": "lottie/ex-wrist-prep.json",
@@ -261,7 +261,7 @@
     "poster": 48,
     "back": 132
    },
-   "bytes": 86617
+   "bytes": 88053
   },
   "hero-first-skill": {
    "file": "lottie/hero-first-skill.json",
@@ -275,7 +275,7 @@
     "pause": 105,
     "poster": 179
    },
-   "bytes": 97732
+   "bytes": 99168
   },
   "hero-level-up": {
    "file": "lottie/hero-level-up.json",
@@ -287,7 +287,7 @@
     "level": 100,
     "poster": 209
    },
-   "bytes": 108435
+   "bytes": 83352
   },
   "hero-record": {
    "file": "lottie/hero-record.json",
@@ -309,7 +309,7 @@
     "seal": 66,
     "poster": 164
    },
-   "bytes": 108174
+   "bytes": 83091
   },
   "hero-test-passed": {
    "file": "lottie/hero-test-passed.json",
@@ -321,7 +321,7 @@
     "mark": 120,
     "poster": 134
    },
-   "bytes": 109610
+   "bytes": 84527
   }
  }
 }

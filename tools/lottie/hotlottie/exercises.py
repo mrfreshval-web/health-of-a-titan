@@ -13,6 +13,16 @@ from __future__ import annotations
 import math
 
 from . import props as pr
+from .rig import side_offsets
+
+Q = "3q"                 # three-quarter view (threeq.py): the mark's own anatomy, turned
+
+
+def q_grip(x, y, width=1.6):
+    """Both hands on a bar in the 3/4 view, a grip wider than the shoulders (the pull-up of the
+    brief): the arms open in a V and the face stays clear between them."""
+    return [("armN", "hand", (x + width * side_offsets(Q, "N")[0], y)), ("armF", "hand", (x + width * side_offsets(Q, "F")[0], y))]
+
 
 FEET = [("legN", "ankle"), ("legF", "ankle")]
 HANDS = [("armN", "hand"), ("armF", "hand")]
@@ -198,15 +208,15 @@ EXERCISES = {
     ),
     # 19 · pull-ups: up 1 s, a short pause over the bar, 2 s down, no swing
     "ex-pullup": dict(
-        start="hang", kind="reps", poster="top", floor=False,
+        start="hang", kind="reps", poster="top", floor=False, front=Q,
         steps=[("move", "mid", 0.55, "in"), ("move", "top", 0.65, "out"), ("hold", 0.5), ("move", "hang", 2.0, "inout"), ("hold", 0.3)],
-        contacts=[("armN", "hand", (50.0, 8.0)), ("armF", "hand", (50.0, 8.0))],
+        contacts=q_grip(50.0, 8.0),
         springs={"head": (3.0, 0.7), "shN": (2.2, 0.8), "shF": (2.2, 0.8)},
         props_behind=[pr.bar(8.0, 28, 72, grip_x=50.0)], frame_pts=[(28, 6), (72, 6)], hands={"N": "fist", "F": "fist"},
     ),
     # 20 · goblet squat, tempo 3-0-1-0
     "ex-goblet-squat": dict(
-        start="stand", kind="reps", poster="bottom",
+        start="stand", kind="reps", poster="bottom", front=Q, arms_over="F",
         steps=[("move", "bottom", 3.0, "inout"), ("hold", 0.15), ("move", "stand", 1.0, "inout"), ("hold", 0.35)],
         contacts=FEET, springs=HEAD, props_front=[pr.kettlebell("N")], hands={"N": "fist", "F": "fist"},
     ),

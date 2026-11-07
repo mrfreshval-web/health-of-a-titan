@@ -48,8 +48,6 @@ def bone_values(p, front):
     torso = p["torso"]
     head = p["head"] + p.get("nod", 0.0)
     chest_abs = torso + d
-    sw = rig.FRONT_SHOULDER if front else 0.0
-    hw = rig.FRONT_HIP if front else 0.0
     v = {}
     hip = (p["rx"], p["ry"])
     v["pelvis"] = dict(r=torso - d, p=(0.0, 0.0), abs=torso - d, o=hip)
@@ -57,15 +55,16 @@ def bone_values(p, front):
     v["chest"] = dict(r=2 * d, p=(0.0, -h), abs=chest_abs, o=mid)
     sh = rig.step(mid, chest_abs, h)
     v["head"] = dict(r=head - chest_abs, p=(0.0, -h), abs=head, o=sh)
-    for side, sgn in (("N", 1), ("F", -1)):
+    for side in "NF":
+        sw, hw = rig.side_offsets(front, side)
         ln = p.get("armLen" + side, 1.0)
-        # the shoulder offset of the front view is along the chest's local x
-        so = (sh[0] + sgn * sw * math.cos(math.radians(chest_abs)), sh[1] + sgn * sw * math.sin(math.radians(chest_abs)))
-        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sgn * sw, -h), abs=p["ua" + side], o=so, sy=ln)
+        # the shoulder offset of the front and 3/4 views is along the chest's local x
+        so = (sh[0] + sw * math.cos(math.radians(chest_abs)), sh[1] + sw * math.sin(math.radians(chest_abs)))
+        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sw, -h), abs=p["ua" + side], o=so, sy=ln)
         el = rig.step(so, p["ua" + side], rig.L["ua"] * ln)
         v["fa" + side] = dict(r=p["fa" + side] - p["ua" + side], p=(0.0, -rig.L["ua"] * ln), abs=p["fa" + side], o=el, sy=ln)
-        ho = (hip[0] + sgn * hw, hip[1])
-        v["th" + side] = dict(r=p["th" + side], p=(sgn * hw, 0.0), abs=p["th" + side], o=ho)
+        ho = (hip[0] + hw, hip[1])
+        v["th" + side] = dict(r=p["th" + side], p=(hw, 0.0), abs=p["th" + side], o=ho)
         kn = rig.step(ho, p["th" + side], rig.L["th"])
         v["sh" + side] = dict(r=p["sh" + side] - p["th" + side], p=(0.0, -rig.L["th"]), abs=p["sh" + side], o=kn)
         an = rig.step(kn, p["sh" + side], rig.L["sh"])

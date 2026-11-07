@@ -55,3 +55,6 @@ include(":feature:path")
 // Stream C «Еда» (A41): nutrition engine and screens.
 include(":domain:nutrition")
 include(":feature:nutrition")
+// State cards (A44 v0.2, D-036): the decks, the reveal, discoveries, «Только ты».
+include(":domain:checkin")
+include(":feature:checkin")

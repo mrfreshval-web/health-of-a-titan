@@ -13,6 +13,7 @@ import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
+import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
@@ -73,6 +74,9 @@ object DatabaseModule {
 
     @Provides
     fun provideNutritionDao(db: HotDatabase): NutritionDao = db.nutritionDao()
+
+    @Provides
+    fun provideCheckinDao(db: HotDatabase): CheckinDao = db.checkinDao()
 
     /** The shared profile of specifics (S4): nutrition and training read the same store. */
     @Provides

@@ -25,6 +25,12 @@ import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import com.healthofatitan.app.core.database.entity.RoutineAnchorEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
 import com.healthofatitan.app.core.database.entity.TrainingSessionEntity
+import com.healthofatitan.app.core.database.entity.CheckinAnswerEntity
+import com.healthofatitan.app.core.database.entity.CheckinPrivateEntity
+import com.healthofatitan.app.core.database.entity.CheckinDayEntity
+import com.healthofatitan.app.core.database.entity.CheckinDiscoveryEntity
+import com.healthofatitan.app.core.database.entity.CheckinEventEntity
+import com.healthofatitan.app.core.database.dao.CheckinDao
 import kotlin.reflect.KClass
 
 /**
@@ -49,8 +55,13 @@ import kotlin.reflect.KClass
         PathStepEntity::class,
         NutritionProfileEntity::class,
         NutritionEveningEntity::class,
+        CheckinAnswerEntity::class,
+        CheckinPrivateEntity::class,
+        CheckinDayEntity::class,
+        CheckinDiscoveryEntity::class,
+        CheckinEventEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -67,6 +78,8 @@ abstract class HotDatabase : RoomDatabase() {
     abstract fun pathDao(): PathDao
 
     abstract fun nutritionDao(): NutritionDao
+
+    abstract fun checkinDao(): CheckinDao
 
     companion object {
         const val FILE_NAME = "hot.db"
@@ -92,6 +105,11 @@ abstract class HotDatabase : RoomDatabase() {
             PathStepEntity::class,
             NutritionProfileEntity::class,
             NutritionEveningEntity::class,
+            CheckinAnswerEntity::class,
+            CheckinPrivateEntity::class,
+            CheckinDayEntity::class,
+            CheckinDiscoveryEntity::class,
+            CheckinEventEntity::class,
         )
     }
 }

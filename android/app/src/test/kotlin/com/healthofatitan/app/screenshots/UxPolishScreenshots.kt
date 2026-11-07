@@ -36,6 +36,14 @@ import com.healthofatitan.app.feature.mentor.MentorScreen
 import com.healthofatitan.app.feature.path.PathActions
 import com.healthofatitan.app.feature.path.PathScreen
 import com.healthofatitan.app.feature.path.PathView
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performTouchInput
+import com.healthofatitan.app.feature.today.CHARGE_SCALE_TAG
+import com.healthofatitan.app.feature.today.DAY_NOW_TAG
+import com.healthofatitan.app.feature.today.DAY_PLAN_TOGGLE_TAG
+import com.healthofatitan.app.feature.today.HERO_CHIP_TAG
+import com.healthofatitan.app.integration.whoop.SleepStages
+import com.healthofatitan.app.integration.whoop.StrainGlance
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
 import com.healthofatitan.app.feature.today.TodayUiState
@@ -100,9 +108,10 @@ class UxPolishScreenshots {
     private val metrics = TodayMetrics(today, charge = facet(32.0, -1), balance = facet(0.1), recovery = facet(-0.9, -1), sleepHours = facet(6.8), sleepDebt = facet(1.4))
     private val glance = WhoopGlance(
         fetchedAt = System.currentTimeMillis(),
-        sleep = SleepGlance(today, Instant.now(), 6.8, 8.1),
+        sleep = SleepGlance(today, Instant.now(), 6.8, 8.1, SleepStages(lightMin = 232, deepMin = 85, remMin = 91, awakeMin = 41)),
         recovery = RecoveryGlance(48.0, 59.0),
         workout = null,
+        dayStrain = StrainGlance(Instant.now(), 0.3),
     )
 
     private fun whoop(nights: Int = 28) = WhoopStatus(configured = true, connected = true, whoopUserId = "1", lastSyncAt = System.currentTimeMillis(), baselineNights = nights)
@@ -192,6 +201,36 @@ class UxPolishScreenshots {
             ),
             ringsNow = rings.copy(strain = 20.9, steps = 23_480, stepsGoal = 12_000, untilBedMin = 23 * 60 + 59),
         )
+    }
+
+    /** Y2: the sleep chip opens the composition of the night. */
+    @Test
+    fun sleepFact() = shoot("u12-today-sleep-fact", before = { compose.onNodeWithTag(HERO_CHIP_TAG + "sleep").performClick() }) {
+        Today(LocalDateTime.now().withHour(10).withMinute(40))
+    }
+
+    /** Y2: the load ceiling in strain units, 0–21. */
+    @Test
+    fun loadFact() = shoot("u13-today-load-fact", before = { compose.onNodeWithTag(HERO_CHIP_TAG + "load").performClick() }) {
+        Today(LocalDateTime.now().withHour(10).withMinute(40))
+    }
+
+    /** Y3: Заряд explained on a tap. */
+    @Test
+    fun chargeOpen() = shoot("u14-today-charge-open", before = { compose.onNodeWithTag(CHARGE_SCALE_TAG).performClick() }) {
+        Today(LocalDateTime.now().withHour(10).withMinute(40))
+    }
+
+    /** Y5 / R1: the folded plan opened, the time column with the longest slots. */
+    @Test
+    fun planOpen() = shoot("u15-today-plan-open", before = { compose.onNodeWithTag(DAY_PLAN_TOGGLE_TAG).performClick() }) {
+        Today(LocalDateTime.now().withHour(13).withMinute(5), day = plan(light = ItemStatus.DONE_SELF))
+    }
+
+    /** R3: a long press marks the item in focus and «Отменить» stays for 5 s. */
+    @Test
+    fun markUndo() = shoot("u16-today-mark-undo", before = { compose.onNodeWithTag(DAY_NOW_TAG).performTouchInput { longClick() } }) {
+        Today(LocalDateTime.now().withHour(11).withMinute(48))
     }
 
     @Test

@@ -28,6 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -39,6 +40,7 @@ import kotlin.test.assertTrue
  * marks it and «Отменить» takes the mark back.
  */
 @RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
 class TodayPolishTest {
 

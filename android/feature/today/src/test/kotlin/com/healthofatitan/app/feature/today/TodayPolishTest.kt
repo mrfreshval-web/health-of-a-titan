@@ -86,7 +86,11 @@ class TodayPolishTest {
         (starts + spans).forEach { node ->
             val layout = node.layout()
             assertEquals(1, layout.lineCount, "one line: ${layout.layoutInput.text}")
-            assertFalse(layout.didOverflowWidth, "fits the column: ${layout.layoutInput.text}")
+            // softWrap = false lays the paragraph out unbounded, so compare the text's own width
+            // with the column it was given.
+            val need = layout.multiParagraph.intrinsics.maxIntrinsicWidth
+            val room = layout.layoutInput.constraints.maxWidth
+            assertTrue(need <= room, "fits the column: ${layout.layoutInput.text} needs $need px of $room")
         }
     }
 

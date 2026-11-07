@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- «Путь» (D-033, A42 §3.1): the Titan between two columns, arms to the columns. Line icon, 1.5 dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,3.75V20.25M20,3.75V20.25M2.75,3.75H5.25M18.75,3.75H21.25M2.75,20.25H5.25M18.75,20.25H21.25"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,4.5A1.75,1.75 0,1 1,12,8A1.75,1.75 0,1 1,12,4.5Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M5,9.75L9,9.25H15L19,9.75M12,9.25V14.5M12,14.5L9.75,20.25M12,14.5L14.25,20.25"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

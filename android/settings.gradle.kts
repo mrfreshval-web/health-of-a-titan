@@ -48,3 +48,7 @@ include(":integration:whoop")
 include(":domain:engine")
 // Stream A (D-024): phone steps from Health Connect
 include(":integration:healthconnect")
+// Stream Г «Наставник и Путь» (D-030, D-033, A42): mentor character, 12-week goal, tab «Путь».
+include(":core:datastore")
+include(":domain:path")
+include(":feature:path")

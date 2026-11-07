@@ -92,10 +92,17 @@ import kotlin.math.roundToInt
  *
  * @param onOpenHelp the crisis card (SOS): CrisisGuard level ≥ 2 in the evening note opens it.
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
+ * @param pathStep «шаг дня» of the path (A42 §3.1, stream Г): a slot, the path module owns it.
  */
-fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, onOpenHelp: () -> Unit = {}, stateful: Boolean = true) {
+fun NavGraphBuilder.todayScreen(
+    onConnectWhoop: () -> Unit,
+    onOpenHelp: () -> Unit = {},
+    stateful: Boolean = true,
+    pathStep: @Composable () -> Unit = {},
+) {
+    val slots = TodaySlots(afterPlan = { pathStep() })
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp) else TodayScreen(TodayUiState(), onConnectWhoop)
+        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp, slots) else TodayScreen(TodayUiState(), onConnectWhoop, slots = slots)
     }
 }
 
@@ -144,6 +151,7 @@ class TodayViewModel @Inject constructor(
 private fun TodayRoute(
     onConnectWhoop: () -> Unit,
     onOpenHelp: () -> Unit,
+    slots: TodaySlots,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
@@ -171,6 +179,7 @@ private fun TodayRoute(
             onOpenHelp = onOpenHelp,
             onSteps = dayModel::refreshSteps,
         ),
+        slots = slots,
     )
 }
 

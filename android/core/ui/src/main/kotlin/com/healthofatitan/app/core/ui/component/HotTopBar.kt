@@ -46,12 +46,13 @@ const val TOP_BAR_WHY_TAG = "top_bar_why"
 /**
  * Header of every tab, «Титаниум» (A37 §1, mockup s2; D-029): the Titan glyph in a glass circle
  * (it becomes the sync indicator «Титан приходит» while data comes), the telemetry line (date,
- * «Винс · ИИ», week) and the three status rings on the right. There is no SOS button here any
- * more (D-029): help is two taps away — «Я › Помощь» and «⋮ › Помощь» in the mentor chat — plus
- * the quick settings tile and the launcher shortcut; the crisis card appears by itself on
- * detection. A tap on the rings shows one line «почему».
+ * «Винс · ИИ», week), the three status rings and the mentor's avatar in the corner. There is no
+ * SOS button here (D-029): help is two taps away — «аватар › Помощь» (D-033) and «⋮ › Помощь» in
+ * the mentor chat — plus the quick settings tile and the launcher shortcut; the crisis card
+ * appears by itself on detection. A tap on the rings shows one line «почему».
  *
  * @param title the screen title under the line (null on «Сегодня»: the hero speaks there)
+ * @param avatar the avatar in the corner with its menu (D-033: settings, mentor, help)
  */
 @Composable
 fun HotTopBar(
@@ -61,6 +62,7 @@ fun HotTopBar(
     onBack: (() -> Unit)? = null,
     sync: SyncMarkState? = null,
     rings: StatusRings = StatusRings.Empty,
+    avatar: (@Composable () -> Unit)? = null,
 ) {
     var why by rememberSaveable { mutableStateOf(false) }
     Column(
@@ -82,6 +84,10 @@ fun HotTopBar(
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             HotStatusRings(rings, onClick = { why = !why }, expanded = why)
+            if (avatar != null) {
+                Spacer(Modifier.width(6.dp))
+                avatar()
+            }
         }
         AnimatedVisibility(why) {
             Text(

@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.healthofatitan.app.core.datastore.MentorPrefs
+import com.healthofatitan.app.core.datastore.MentorSettings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
 import com.healthofatitan.app.integration.whoop.WhoopConnection
@@ -54,6 +56,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var steps: StepsRepository
+
+    @Inject
+    lateinit var mentor: MentorSettings
 
     /**
      * D-029 header rings: the plan, the WHOOP glance (memory only), the phone's steps (Health
@@ -100,12 +105,14 @@ class MainActivity : ComponentActivity() {
                 val syncProgress by whoop.progress.collectAsStateWithLifecycle()
                 val headerRings by rings.collectAsStateWithLifecycle(StatusRings.Empty)
                 val dawnDue by dawn.due.collectAsStateWithLifecycle(false)
+                val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
                 HotApp(
                     pendingRoute = pendingRoute,
                     onPendingRouteConsumed = { pendingRoute = null },
                     syncProgress = syncProgress,
                     rings = headerRings,
                     dawnDue = dawnDue,
+                    persona = mentorPrefs.persona,
                 )
             }
         }

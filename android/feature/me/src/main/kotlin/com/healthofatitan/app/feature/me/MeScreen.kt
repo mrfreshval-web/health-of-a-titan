@@ -45,14 +45,24 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 /**
- * Tab «Я» (A11 §1.1) and «Я → Подключения → WHOOP» (slice 1).
+ * «Настройки» under the avatar in the header corner (D-033: the tab «Я» became «Путь») and
+ * «Настройки → Подключения → WHOOP» (slice 1). Help stays the first row.
  *
  * @param stateful false renders the screens from default state without ViewModels (navigation
  *   tests run without Hilt).
  */
-fun NavGraphBuilder.meScreen(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit = {}, stateful: Boolean = true) {
+fun NavGraphBuilder.meScreen(
+    onOpenWhoop: () -> Unit,
+    onOpenHelp: () -> Unit = {},
+    onOpenMentor: () -> Unit = {},
+    stateful: Boolean = true,
+) {
     composable(route = HotRoute.ME) {
-        if (stateful) MeRoute(onOpenWhoop, onOpenHelp) else MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
+        if (stateful) {
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor)
+        } else {
+            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor)
+        }
     }
 }
 
@@ -65,6 +75,7 @@ fun NavGraphBuilder.whoopScreen(stateful: Boolean = true) {
 const val ME_SCREEN_TAG = "screen_me"
 const val ME_WHOOP_ROW_TAG = "me_whoop_row"
 const val ME_HELP_ROW_TAG = "me_help_row"
+const val ME_MENTOR_ROW_TAG = "me_mentor_row"
 
 @HiltViewModel
 class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel() {
@@ -73,13 +84,19 @@ class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel()
 }
 
 @Composable
-private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
+private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, onOpenMentor: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
+    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor)
 }
 
 @Composable
-fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = Modifier, onOpenHelp: () -> Unit = {}) {
+fun MeScreen(
+    whoop: WhoopStatus?,
+    onOpenWhoop: () -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenHelp: () -> Unit = {},
+    onOpenMentor: () -> Unit = {},
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -95,7 +112,7 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
-        // D-029: the way to help moved from the header to «Я › Помощь» (≤ 2 taps from any tab);
+        // D-029 / D-033: help is «аватар › Помощь» in two taps from any tab and the first row here;
         // the quick settings tile and the launcher shortcut still open it in one.
         HotCard(modifier = Modifier.fillMaxWidth()) {
             HotListRow(
@@ -104,6 +121,15 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
                 caption = "988 · 911",
                 divider = false,
                 modifier = Modifier.testTag(ME_HELP_ROW_TAG),
+            )
+        }
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = "Наставник",
+                onClick = onOpenMentor,
+                caption = "Сенсей · Бро · Дворецкий",
+                divider = false,
+                modifier = Modifier.testTag(ME_MENTOR_ROW_TAG),
             )
         }
         Section("Подключения")
@@ -118,7 +144,7 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
         }
         HotPendingCard(
             title = "Скоро",
-            caption = "Цели · Стек · Практики · Скрининг · Настройки",
+            caption = "Стек · Практики · Скрининг",
             modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
         )
     }

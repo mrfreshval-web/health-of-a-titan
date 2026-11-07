@@ -21,7 +21,10 @@ Library checks:
     must swap; template RPE fits the level cap; advanced/extreme templates carry the screening
     and consent codes; at least 3 templates per level and 3 mobility templates;
   * block minutes add up to duration_min (±10 %, at least ±3 min);
-  * red-line words in every *_ru text (rules.yaml stopwords_ru).
+  * red-line words in every *_ru text (rules.yaml stopwords_ru);
+  * TitanPose keyframes (poses.yaml, A40 §6.3): every exercise id exists, frame keys equal
+    `animation.poses[].key`, 12 joint angles per frame, knee and elbow within anatomical limits,
+    no joint below the floor; coverage of the most used Classic exercises is reported.
 
 Candidate checks: everything above for the one session, plus the request — level, regime cap,
 place and equipment, profile codes (contraindications and forbidden risk tags), minutes.
@@ -35,6 +38,8 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+
+import math
 
 import yaml
 
@@ -537,6 +542,110 @@ class Checker:
                 if hit:
                     self.rep.err(w, f"{e['id']} contraindicated for {sorted(hit)}")
 
+# --------------------------------------------------------------------------- TitanPose (A40 §6.3)
+# Same forward kinematics as TitanPose.kt and docs/design/training/src/pose.js.
+POSE_LEN = dict(torso=26, neck=3.6, head=5.4, ua=14, fa=13, th=21, sh=21, ft=6)
+POSE_FLOOR = 92.0
+KNEE_LIMITS = (-10.0, 165.0)
+ELBOW_LIMITS = (-10.0, 160.0)
+FRONT_VIEWS = {"front", "top"}
+
+
+def _shortest(a: float, b: float) -> float:
+    d = (b - a) % 360.0
+    if d > 180.0:
+        d -= 360.0
+    return d
+
+
+def _step(o, a, length):
+    r = math.radians(a)
+    return (o[0] + math.sin(r) * length, o[1] - math.cos(r) * length)
+
+
+def pose_points(p: dict, front: bool):
+    hip = tuple(p["root"])
+    sh = _step(hip, p["torso"], POSE_LEN["torso"])
+    head_a = p.get("head", p["torso"])
+    head = _step(_step(sh, head_a, POSE_LEN["neck"]), head_a, POSE_LEN["head"])
+    sw, hw = (6.5, 4.0) if front else (0.0, 0.0)
+    pts = [hip, sh, head]
+    for key, s in (("arm_n", sw), ("arm_f", -sw)):
+        a = p.get(key, p["arm_n"])
+        e = _step((sh[0] + s, sh[1]), a[0], POSE_LEN["ua"])
+        pts += [e, _step(e, a[1], POSE_LEN["fa"])]
+    for key, s in (("leg_n", hw), ("leg_f", -hw)):
+        leg = p.get(key, p["leg_n"])
+        k = _step((hip[0] + s, hip[1]), leg[0], POSE_LEN["th"])
+        an = _step(k, leg[1], POSE_LEN["sh"])
+        pts += [k, an, _step(an, leg[2], POSE_LEN["ft"])]
+    return pts
+
+
+def check_poses(path: Path, exercises: list, templates: list, rep: "Report"):
+    if not path.exists():
+        rep.warn("poses.yaml", "missing: every exercise shows the standing Titan")
+        return 0
+    data = load(path) or {}
+    for key in ("version", "reviewedBy"):
+        if key not in data:
+            rep.err("poses.yaml", f"missing {key}")
+    poses = data.get("poses") or {}
+    ex = {e["id"]: e for e in exercises if isinstance(e, dict) and "id" in e}
+    for ex_id, frames in poses.items():
+        w = f"poses {ex_id}"
+        e = ex.get(ex_id)
+        if not e:
+            rep.err(w, "unknown exercise")
+            continue
+        if e.get("retired"):
+            rep.warn(w, "exercise is retired")
+        want = [p.get("key") for p in (e.get("animation") or {}).get("poses") or []]
+        if not isinstance(frames, dict):
+            rep.err(w, "frames must be a mapping key → pose")
+            continue
+        missing = [k for k in want if k not in frames]
+        extra = [k for k in frames if k not in want]
+        if missing:
+            rep.err(w, f"no frame for key(s) {missing} (animation.poses)")
+        if extra:
+            rep.err(w, f"frame key(s) {extra} not in animation.poses")
+        front = (e.get("animation") or {}).get("view") in FRONT_VIEWS
+        for k, p in frames.items():
+            wk = f"{w}.{k}"
+            if not isinstance(p, dict):
+                rep.err(wk, "pose must be a mapping")
+                continue
+            shape = {"root": 2, "arm_n": 2, "leg_n": 3, "arm_f": 2, "leg_f": 3}
+            bad = [f for f, n in shape.items() if (f in p or f in ("root", "arm_n", "leg_n"))
+                   and not (isinstance(p.get(f), list) and len(p[f]) == n and all(isinstance(x, (int, float)) for x in p[f]))]
+            if bad or not isinstance(p.get("torso"), (int, float)):
+                rep.err(wk, f"needs root[2], torso, arm_n[2], leg_n[3] (optional head, arm_f[2], leg_f[3], spine); bad: {bad or ['torso']}")
+                continue
+            for leg_key in ("leg_n", "leg_f"):
+                leg = p.get(leg_key, p["leg_n"])
+                knee = _shortest(leg[0], leg[1])
+                if not KNEE_LIMITS[0] <= knee <= KNEE_LIMITS[1]:
+                    rep.err(wk, f"{leg_key} knee flexion {knee:.0f}° outside {KNEE_LIMITS}")
+            for arm_key in ("arm_n", "arm_f"):
+                arm = p.get(arm_key, p["arm_n"])
+                elbow = -_shortest(arm[0], arm[1])
+                if not ELBOW_LIMITS[0] <= elbow <= ELBOW_LIMITS[1]:
+                    rep.err(wk, f"{arm_key} elbow flexion {elbow:.0f}° outside {ELBOW_LIMITS}")
+            if abs(p.get("spine", 0)) > 0.5:
+                rep.err(wk, "spine bend must be within ±0.5")
+            lowest = max(pt[1] for pt in pose_points(p, front))
+            if lowest > POSE_FLOOR + 2.5:
+                rep.err(wk, f"a joint is {lowest - POSE_FLOOR:.1f} below the floor")
+    # Coverage: the most used exercises of Classic and mobility templates should move first.
+    use = Counter(it["ex"] for t in templates if t.get("level") in ("classic", "all")
+                  for b in t.get("blocks") or [] for it in b.get("items") or [])
+    top = [x for x, _ in use.most_common(20)]
+    without = [x for x in top if x not in poses]
+    if without:
+        rep.warn("poses.yaml", f"top-20 Classic exercises without keyframes: {without}")
+    return len(poses)
+
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -554,6 +663,7 @@ def main():
     ch.check_exercises()
     ch.check_templates()
     ch.check_rules()
+    n_poses = check_poses(d / "poses.yaml", exercises, templates, rep)
     if a.candidate:
         if not a.request:
             print("--candidate needs --request", file=sys.stderr)
@@ -573,7 +683,7 @@ def main():
     n_tpl = len(templates)
     by = Counter(e.get("level") for e in exercises)
     print(f"\n{n_ex} exercises ({', '.join(f'{k} {v}' for k, v in sorted(by.items()))}), {n_tpl} templates; "
-          f"{len(rep.errors)} errors, {len(rep.warnings)} warnings")
+          f"{n_poses} with TitanPose keyframes; {len(rep.errors)} errors, {len(rep.warnings)} warnings")
     sys.exit(1 if rep.errors else 0)
 
 

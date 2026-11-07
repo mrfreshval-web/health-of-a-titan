@@ -77,6 +77,7 @@ dependencies {
     implementation(project(":core:datastore"))
     implementation(project(":domain:path"))
     implementation(project(":feature:nutrition"))
+    implementation(project(":feature:training"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

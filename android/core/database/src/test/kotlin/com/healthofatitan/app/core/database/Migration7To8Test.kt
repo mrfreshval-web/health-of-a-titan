@@ -5,25 +5,20 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.entity.CheckinAnswerEntity
-import com.healthofatitan.app.core.database.entity.CheckinDayEntity
-import com.healthofatitan.app.core.database.entity.CheckinDiscoveryEntity
-import com.healthofatitan.app.core.database.entity.CheckinEventEntity
-import com.healthofatitan.app.core.database.entity.CheckinPrivateEntity
+import com.healthofatitan.app.core.database.entity.TrainingSetEntity
+import com.healthofatitan.app.core.database.entity.TrainingWorkoutEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * State cards (A44, D-036) on the founder's phone: a version-4 database (schema 1–4 frozen as raw
- * SQL) opens with the latest schema through every migration up to the `checkin_*` tables. Room
- * validates them against the entities; old data survive; a skip is stored as a skip; «Выключить и
- * удалить всё» removes every S5 row and S5 discovery and nothing else.
+ * «Титаниум» → stream B «Тренировка»: a version-4 database (schema frozen as raw SQL, with a plan
+ * of the day) opens with schema 8 through MIGRATION_4_5 … MIGRATION_7_8. Room validates `training_workout`
+ * and `training_set`; the plan survives; a workout and its sets are saved and read back.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -71,56 +66,46 @@ class Migration7To8Test {
                     "PRIMARY KEY(`user_id`, `day_key`))",
                 "CREATE INDEX IF NOT EXISTS `index_dawn_log_user_id_haiku_id` ON `dawn_log` (`user_id`, `haiku_id`)",
                 "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-                "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'titanium')",
-                "INSERT INTO dawn_log VALUES ('local', '2026-11-10', 'hk-ravno-001', 'весло', 'oar', 'STEADY', 1)",
-                "INSERT INTO metric_daily VALUES ('local', '2026-11-10', 'SLP', 1, 7.2, 0.3, 0, 1.0, 7.0, 1)",
-                "INSERT INTO metric_daily VALUES ('local', '2026-11-11', 'SLP', 1, 6.1, -0.8, -1, 1.0, 6.9, 1)",
-                "INSERT INTO training_session VALUES ('local', 'w-1', '2026-11-10', 1080, 45, 'CARDIO', 'ZONE2', 1)",
-                "INSERT INTO training_session VALUES ('local', 'w-2', '2026-11-10', 1200, 20, 'STRENGTH', 'MIXED', 1)",
+                "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'slice-3')",
+                "INSERT INTO day_plan VALUES ('local', '2026-11-10', 'STEADY', 'STEADY', 1, 'SG-SLEEP', '', '', 'day@1', " +
+                    "'Ровно · день по плану', 'Сон 6 ч 40 мин.', 1410, 840, 1350, 10, NULL)",
             ).forEach(db::execSQL)
             db.version = 4
         }
     }
 
     @Test
-    fun `version 4 upgrades to the state cards and keeps the dawn`() = runTest {
-        val name = "migration-4-checkin.db"
+    fun `version 4 upgrades to 8, keeps the plan and accepts the training log`() = runTest {
+        val name = "migration-4-8.db"
         createVersion4(name)
         val db = Room.databaseBuilder(context, HotDatabase::class.java, name)
             .addMigrations(*Migrations.ALL)
             .allowMainThreadQueries()
             .build()
         try {
-            db.openHelper.writableDatabase // runs and validates every migration
-            assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
-            val dao = db.checkinDao()
-            dao.upsertAnswers(
-                listOf(
-                    CheckinAnswerEntity("local", "2026-11-11", "charge@1", "WAKE", 2, "", null, false, 1L),
-                    CheckinAnswerEntity("local", "2026-11-11", "head@1", "WAKE", null, "", null, true, 2L),
-                    CheckinAnswerEntity("local", "2026-11-11", "ritual@1", "RITUAL", null, "COFFEE", null, false, 3L),
-                ),
+            db.openHelper.writableDatabase // runs and validates MIGRATION_4_5 … MIGRATION_7_8
+            assertEquals("STEADY", db.dayDao().plan("local", "2026-11-10")?.regime)
+
+            val log = db.trainingLogDao()
+            assertTrue(log.observeDay("local", "2026-11-10").first().isEmpty())
+            val workout = TrainingWorkoutEntity(
+                userId = "local", workoutId = "w1", dayKey = "2026-11-10", templateRef = "tpl-functional-home@1",
+                mode = "STEADY", lighter = false, startedAt = 1_000L, finishedAt = 2_000_000L, activeS = 1_800L,
+                setsDone = 2, setsSkipped = 1, setsPlanned = 3, rpeMedian = 7, feltBad = false, stretchDone = true,
             )
-            val rows = dao.answers("local", "2026-11-11").associateBy { it.card }
-            assertEquals(2, rows.getValue("charge@1").level)
-            assertTrue(rows.getValue("head@1").skipped)
-            assertNull(rows.getValue("head@1").level)
-
-            dao.upsertDay(CheckinDayEntity("local", "2026-11-11", wakeDoneAt = 10L, youLevel = 2, dataLevel = 4))
-            assertEquals(4, dao.observeDay("local", "2026-11-11").first()?.dataLevel)
-            assertEquals("2026-11-11", dao.firstDay("local"))
-
-            dao.upsertPrivate(listOf(CheckinPrivateEntity("local", "2026-11-11", "intimacy@1", byteArrayOf(1, 2, 3), 4L)))
-            dao.insertDiscovery(CheckinDiscoveryEntity("local", "SHOWER_CHARGE", 9, 8, 1.5, 0.5, 2.0, "m@1", 5L, "S3"))
-            dao.insertDiscovery(CheckinDiscoveryEntity("local", "CLOSENESS_SLEEP", 8, 8, 0.6, 0.1, 0.9, "m@1", 6L, "S5"))
-            dao.insertEvents(listOf(CheckinEventEntity(userId = "local", dayKey = "2026-11-11", phase = "WAKE", card = "charge@1", kind = "ANSWERED", durationMs = 2_000, at = 7L)))
-            assertEquals(1, dao.eventsFrom("local", "2026-11-01").size)
-
-            dao.deletePrivate("local")
-            dao.deletePrivateDiscoveries("local")
-            assertEquals(0, dao.privateFrom("local", "2026-11-01").size)
-            assertEquals(listOf("SHOWER_CHARGE"), dao.discoveries("local").map { it.pairId })
-            assertEquals(3, dao.answersFrom("local", "2026-11-01").size)
+            val sets = listOf(
+                TrainingSetEntity("local", "w1", 0, "ex-squat-bw", "warmup", 1, null, "10", 40, false, null),
+                TrainingSetEntity("local", "w1", 2, "ex-pushup", "main", 1, null, "8", 35, false, 7),
+                TrainingSetEntity("local", "w1", 1, "ex-reverse-lunge", "main", 1, "left", null, 0, true, null),
+            )
+            log.save(workout, sets)
+            assertEquals(listOf("w1"), log.observeDay("local", "2026-11-10").first().map { it.workoutId })
+            assertEquals(listOf(0, 1, 2), log.sets("local", "w1").map { it.stepIndex })
+            assertEquals(7, log.recent("local", 5).single().rpeMedian)
+            // saving again replaces, never duplicates
+            log.save(workout.copy(feltBad = true), sets)
+            assertTrue(log.recent("local", 5).single().feltBad)
+            assertEquals(3, log.sets("local", "w1").size)
         } finally {
             db.close()
         }

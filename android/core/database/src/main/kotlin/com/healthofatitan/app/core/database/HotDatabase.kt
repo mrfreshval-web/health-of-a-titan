@@ -9,6 +9,7 @@ import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.PathDao
+import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.database.entity.BaselineSnapshotEntity
 import com.healthofatitan.app.core.database.entity.ConsentRecordEntity
 import com.healthofatitan.app.core.database.entity.DawnLogEntity
@@ -25,6 +26,8 @@ import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import com.healthofatitan.app.core.database.entity.RoutineAnchorEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
 import com.healthofatitan.app.core.database.entity.TrainingSessionEntity
+import com.healthofatitan.app.core.database.entity.TrainingSetEntity
+import com.healthofatitan.app.core.database.entity.TrainingWorkoutEntity
 import com.healthofatitan.app.core.database.entity.CheckinAnswerEntity
 import com.healthofatitan.app.core.database.entity.CheckinPrivateEntity
 import com.healthofatitan.app.core.database.entity.CheckinDayEntity
@@ -55,13 +58,16 @@ import kotlin.reflect.KClass
         PathStepEntity::class,
         NutritionProfileEntity::class,
         NutritionEveningEntity::class,
+
+        TrainingWorkoutEntity::class,
+        TrainingSetEntity::class,
         CheckinAnswerEntity::class,
         CheckinPrivateEntity::class,
         CheckinDayEntity::class,
         CheckinDiscoveryEntity::class,
         CheckinEventEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -79,6 +85,7 @@ abstract class HotDatabase : RoomDatabase() {
 
     abstract fun nutritionDao(): NutritionDao
 
+    abstract fun trainingLogDao(): TrainingLogDao
     abstract fun checkinDao(): CheckinDao
 
     companion object {
@@ -105,6 +112,8 @@ abstract class HotDatabase : RoomDatabase() {
             PathStepEntity::class,
             NutritionProfileEntity::class,
             NutritionEveningEntity::class,
+            TrainingWorkoutEntity::class,
+            TrainingSetEntity::class,
             CheckinAnswerEntity::class,
             CheckinPrivateEntity::class,
             CheckinDayEntity::class,

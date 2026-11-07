@@ -16,6 +16,7 @@ dependencies {
     api(project(":domain:metrics"))
     api(project(":domain:engine"))
     implementation(project(":domain:checkin"))
+    api(project(":domain:today"))
 
     api(libs.appauth)
     api(libs.androidx.work.runtime.ktx)

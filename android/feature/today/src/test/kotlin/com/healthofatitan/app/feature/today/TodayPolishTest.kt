@@ -1,27 +1,42 @@
 package com.healthofatitan.app.feature.today
 
 import android.app.Application
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.ui.component.TIME_CELL_SPAN_TAG
-import com.healthofatitan.app.core.ui.component.TIME_CELL_START_TAG
+import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.theme.HotTheme
+import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.Regime
+import com.healthofatitan.app.domain.today.DayTask
+import com.healthofatitan.app.domain.today.Safety
+import com.healthofatitan.app.domain.today.Scenario
+import com.healthofatitan.app.domain.today.SupportTone
+import com.healthofatitan.app.domain.today.TaskKind
+import com.healthofatitan.app.domain.today.TaskMove
+import com.healthofatitan.app.domain.today.TodayBlock
+import com.healthofatitan.app.domain.today.TodayCopy
+import com.healthofatitan.app.domain.today.WhyBuilder
+import com.healthofatitan.app.domain.today.WhyInput
+import com.healthofatitan.app.integration.whoop.WhoopGlance
+import com.healthofatitan.app.integration.whoop.WhoopStatus
+import com.healthofatitan.app.integration.whoop.WorkoutGlance
 import com.healthofatitan.app.integration.whoop.day.DayItemView
 import com.healthofatitan.app.integration.whoop.day.DayView
 import org.junit.Rule
@@ -30,26 +45,31 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * UX review of build 119 on a narrow phone (360 dp): R1 — the longest times of a plan stay on one
- * line in their column; R3 — a tap opens or unfolds an item and never marks it, a long press
- * marks it and «Отменить» takes the mark back.
+ * «Сегодня» v3 on the Pixel 9 Pro XL width (412 dp): the blocks in their order (T-01), one ▶
+ * (T-02), never red (T-04), help one tap away in the sober scenario (T-06), «Не сегодня» back to
+ * the week (T-08), one seal per workout (T-09), the numbers in one line (T-10), «нет данных» with a
+ * source (T-11). A tap opens, a swipe marks, «Отменить» takes it back.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
+@Config(sdk = [35], application = Application::class, qualifiers = "w412dp-h915dp-xxhdpi")
 class TodayPolishTest {
 
     @get:Rule
     val compose = createComposeRule()
 
     private val today = LocalDate.of(2026, 11, 7)
+    private val whoop = WhoopStatus(configured = true, connected = true, whoopUserId = "1", lastSyncAt = 0L, baselineNights = 28)
 
-    /** The founder's day of the review plus the longest slot a plan makes (a 180-minute nap). */
     private val plan = DayView(
         dayKey = today,
         regime = Regime.STEADY,
@@ -58,80 +78,177 @@ class TodayPolishTest {
         summary = "",
         fired = emptyList(),
         items = listOf(
-            DayItemView("light", ItemKind.LIGHT, "Дневной свет 10–20 мин", null, 10 * 60 + 22, 11 * 60 + 22, ItemStatus.OPEN),
-            DayItemView("training", ItemKind.TRAINING, "Силовая · 60 мин", "Зал B · RPE ≤ 7, без отказа", 10 * 60 + 52, 11 * 60 + 52, ItemStatus.OPEN),
+            DayItemView("training", ItemKind.TRAINING, "Силовая · 60 мин", "Зал B · RPE ≤ 7", 10 * 60 + 52, 11 * 60 + 52, ItemStatus.OPEN),
             DayItemView("focus", ItemKind.WORK, "Главная задача", "2 блока по 60 мин", 12 * 60 + 22, 14 * 60 + 22, ItemStatus.OPEN),
-            DayItemView("nap", ItemKind.NAP, "Короткий сон", null, 13 * 60 + 40, 16 * 60 + 40, ItemStatus.OPEN),
-            DayItemView("dinner", ItemKind.NUTRITION, "Ужин", null, 23 * 60 + 5, 23 * 60 + 50, ItemStatus.OPEN),
-            DayItemView("bedtime", ItemKind.SLEEP, "Отбой", null, 2 * 60 + 50, null, ItemStatus.OPEN),
         ),
-        bedtimeMin = 2 * 60 + 50,
-        caffeineCutoffMin = 17 * 60 + 50,
-        windDownMin = 60 + 50,
+        bedtimeMin = 23 * 60,
+        caffeineCutoffMin = 14 * 60,
+        windDownMin = 22 * 60,
     )
 
-    private fun SemanticsNode.layout(): TextLayoutResult {
-        val results = mutableListOf<TextLayoutResult>()
-        config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(results)
-        return results.single()
-    }
+    private val training = DayTask("training", TaskKind.TRAINING, "Силовая · 60 мин", weekGoalId = "body-training", week = "неделя 1 из 3", hasMini = true, route = HotRoute.TRAINING)
+    private val focus = DayTask("focus", TaskKind.FOCUS, "Главная задача", weekGoalId = "work-focus", week = "неделя 2 из 4", hasMini = true)
+
+    private fun day(at: LocalDateTime = today.atTime(11, 0), safety: Safety = Safety.NONE, candidates: List<DayTask> = listOf(training, focus)) =
+        DayUiState(plan = plan, now = at, loaded = true, candidates = candidates, safety = safety)
 
     @Test
-    fun `the longest times stay on one line in the time column`() {
-        compose.setContent { HotTheme { PlanCard(plan, rememberDayMarks { _, _ -> }, onOpen = {}, initiallyOpen = true) } }
-        val starts = compose.onAllNodesWithTag(TIME_CELL_START_TAG, useUnmergedTree = true).fetchSemanticsNodes()
-        val spans = compose.onAllNodesWithTag(TIME_CELL_SPAN_TAG, useUnmergedTree = true).fetchSemanticsNodes()
-        assertEquals(6, starts.size)
-        assertEquals(5, spans.size)
-        (starts + spans).forEach { node ->
-            val layout = node.layout()
-            assertEquals(1, layout.lineCount, "one line: ${layout.layoutInput.text}")
-            // softWrap = false lays the paragraph out unbounded, so compare the text's own width
-            // with the column it was given.
-            val need = layout.multiParagraph.intrinsics.maxIntrinsicWidth
-            val room = layout.layoutInput.constraints.maxWidth
-            assertTrue(need <= room, "fits the column: ${layout.layoutInput.text} needs $need px of $room")
+    fun `T-01 the four blocks stand in one order morning, day and evening`() {
+        listOf(7, 13, 21).forEach { hour ->
+            val view = todayView(TodayUiState(whoop = whoop), day(today.atTime(hour, 5)))
+            assertEquals(TodayBlock.entries.toList(), view.blocks)
         }
+        compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day()) } }
+        val tops = TodayBlock.entries.map { compose.onNodeWithTag(it.tag).fetchSemanticsNode().boundsInRoot.top }
+        assertEquals(tops.sorted(), tops)
     }
 
     @Test
-    fun `bedtime after midnight ends the day`() {
-        assertEquals("bedtime", plan.items.maxBy { dayMin(it.startMin!!) }.id)
-        assertEquals("dinner", nowItem(plan.items, 23 * 60 + 10)?.id)
-        assertEquals("bedtime", nowItem(plan.items, 23 * 60 + 55)?.id)
-        assertEquals("bedtime", nowItem(plan.items, 60)?.id)
+    fun `scenarios follow the data`() {
+        assertEquals(Scenario.NO_WHOOP, todayView(TodayUiState(), null).scenario)
+        assertEquals(Scenario.DAY, todayView(TodayUiState(whoop = whoop), day()).scenario)
+        assertEquals(Scenario.SAFETY, todayView(TodayUiState(whoop = whoop), day(safety = Safety.CRISIS)).scenario)
+        assertEquals(Scenario.RETURN, todayView(TodayUiState(whoop = whoop), day().copy(returning = true)).scenario)
+        val noWhoop = todayView(TodayUiState(), null)
+        assertEquals(listOf(TaskKind.CONNECT_WHOOP), noWhoop.tasks.map { it.kind })
     }
 
     @Test
-    fun `items open their screens`() {
-        assertEquals(HotRoute.TRAINING, itemRoute(plan.items[1]))
-        assertEquals(HotRoute.nutritionMeal("dinner"), itemRoute(plan.items[4]))
-        assertEquals(null, itemRoute(plan.items[0]))
+    fun `T-02 only the first task has the play button`() {
+        compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day()) } }
+        assertEquals(1, compose.onAllNodesWithTag(TASK_PLAY_TAG, useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 
     @Test
-    fun `a tap opens, a long press marks and can be undone`() {
-        val toggled = mutableListOf<String>()
-        val opened = mutableListOf<String>()
+    fun `T-04 the supports have no red, a deviation is a quiet note`() {
+        SupportPalette.all().forEach { assertFalse(SupportPalette.reddish(it), "red in the supports: $it") }
+        assertTrue(SupportPalette.reddish(Color(0xFFE5484D)), "the check itself knows red")
+        assertNotEquals(SupportPalette.of(SupportTone.NOTE, true), SupportPalette.of(SupportTone.LIT, true))
+    }
+
+    @Test
+    fun `T-06 the sober day puts help first, one tap away`() {
+        var help = 0
         compose.setContent {
             HotTheme {
-                val marks = rememberDayMarks { _, id -> toggled += id }
-                Box {
-                    Column { PlanCard(plan, marks, onOpen = { opened += it }, initiallyOpen = true) }
-                    UndoBar(marks)
-                }
+                TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day(safety = Safety.SAF_01), actions = DayActions(onOpenHelp = { help++ }))
             }
         }
-        compose.onNodeWithTag(DAY_ROW_TAG + "dinner").performClick()
-        compose.onNodeWithTag(DAY_ROW_TAG + "training").performClick()
-        compose.onNodeWithTag(DAY_ROW_TAG + "light").performClick()
-        assertEquals(listOf(HotRoute.nutritionMeal("dinner"), HotRoute.TRAINING), opened)
-        assertTrue(toggled.isEmpty(), "a tap never marks")
+        compose.onNodeWithTag(TASK_TAG + "help").performScrollTo().performClick()
+        assertEquals(1, help)
+        compose.onAllNodesWithTag(ME_HAIKU_TAG).fetchSemanticsNodes().let { assertTrue(it.isEmpty(), "no haiku on the sober screen") }
+    }
 
-        compose.onNodeWithTag(DAY_ROW_TAG + "light").performTouchInput { longClick() }
-        assertEquals(listOf("light"), toggled)
+    @Test
+    fun `a tap opens a task and never marks it`() {
+        val opened = mutableListOf<String>()
+        val done = mutableListOf<Boolean>()
+        compose.setContent {
+            HotTheme {
+                TodayScreen(
+                    TodayUiState(whoop = whoop),
+                    onConnectWhoop = {},
+                    day = day(),
+                    actions = DayActions(onOpen = { opened += it }, onTaskDone = { _, _, d -> done += d }),
+                )
+            }
+        }
+        compose.onNodeWithTag(TASK_TAG + "training").performScrollTo().performClick()
+        assertEquals(listOf(HotRoute.TRAINING), opened)
+        assertTrue(done.isEmpty())
+    }
+
+    @Test
+    fun `a swipe marks the task and undo takes it back`() {
+        val done = mutableListOf<Boolean>()
+        compose.setContent {
+            HotTheme {
+                // «Отменить» is the screen's own bar (DayMarks inside TodayScreen)
+                TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day(), actions = DayActions(onTaskDone = { _, _, d -> done += d }))
+            }
+        }
+        compose.onNodeWithTag(TASK_TAG + "focus").performScrollTo().performTouchInput { swipeRight() }
+        assertEquals(listOf(true), done)
         compose.onNodeWithTag(DAY_UNDO_TAG).assertExists()
         compose.onNodeWithText(DayUiTexts.UNDO).performClick()
-        assertEquals(listOf("light", "light"), toggled)
+        assertEquals(listOf(true, false), done)
+    }
+
+    @Test
+    fun `T-08 not today sends the task back to its week goal, never to tomorrow`() {
+        val moves = mutableListOf<TaskMove>()
+        val back = mutableListOf<String>()
+        compose.setContent {
+            HotTheme {
+                TodayScreen(
+                    TodayUiState(whoop = whoop),
+                    onConnectWhoop = {},
+                    day = day(),
+                    actions = DayActions(onTaskToWeek = { moves += it }, onTaskBack = { _, id -> back += id }),
+                )
+            }
+        }
+        compose.onNodeWithTag(TASK_TAG + "focus").performScrollTo().performTouchInput { swipeLeft() }
+        assertEquals(1, moves.size)
+        assertEquals("work-focus", moves.single().weekGoalId)
+        assertEquals(today, moves.single().day)
+        assertFalse(moves.single().toTomorrow)
+        compose.onNodeWithText(TodayCopy.BACK_TO_WEEK).assertExists()
+        compose.onNodeWithText(DayUiTexts.UNDO).performClick()
+        assertEquals(listOf("focus"), back)
+    }
+
+    @Test
+    fun `T-09 one seal per confirmed workout`() {
+        val confirmed = plan.copy(items = plan.items.map { if (it.id == "training") it.copy(status = ItemStatus.DONE_WHOOP) else it })
+        val zone = ZoneId.of("UTC")
+        fun glance(hour: Int) = WhoopGlance(0L, null, null, WorkoutGlance(today.atTime(hour, 0).atZone(zone).toInstant(), 50, "Weightlifting", 80.0))
+        val morning = sealKey(confirmed, glance(9), zone)
+        val evening = sealKey(confirmed, glance(18), zone)
+        assertTrue(morning != null && evening != null)
+        assertNotEquals(morning, evening)
+        assertEquals(morning, sealKey(confirmed, glance(9), zone))
+        assertNull(sealKey(plan, glance(9), zone), "no seal without WHOOP's confirmation")
+        assertNull(sealKey(confirmed, null, zone))
+    }
+
+    @Test
+    fun `T-10 the longest numbers stay in one line at 412 dp`() {
+        var fits = emptyList<Pair<String, Boolean>>()
+        compose.setContent {
+            HotTheme {
+                val measurer = rememberTextMeasurer()
+                val density = LocalDensity.current
+                val card = 412.dp - HotSpacing.edge * 2 - HotSpacing.cardPadding * 2
+                val column = with(density) { ((card - 6.dp * 4) / 5).toPx() }
+                val number = with(density) { ((card - 12.dp * 2) / 3).toPx() }
+                val supports = listOf("20,9", "23 480", "4 из 4", "14 / 14").map {
+                    it to (measurer.measure(it, MaterialTheme.typography.labelLarge, softWrap = false).size.width <= column)
+                }
+                val me = listOf("95", "11:59", "5 / 5").map {
+                    it to (measurer.measure(it, HotType.ringValue, softWrap = false).size.width <= number)
+                }
+                fits = supports + me
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(7, fits.size)
+        fits.forEach { (text, ok) -> assertTrue(ok, "one line: $text") }
+    }
+
+    @Test
+    fun `T-11 why says no data and keeps the source`() {
+        compose.setContent { HotTheme { WhyScreen(WhyBuilder.build(WhyInput()), onAsk = {}) } }
+        assertTrue(compose.onAllNodesWithText(TodayCopy.NO_DATA, substring = true).fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithTag(WHY_SECTION_TAG + "sleep").assertExists()
+        compose.onNodeWithTag(WHY_SECTION_TAG + "you_vs_whoop").performScrollTo()
+    }
+
+    @Test
+    fun `the water support adds a glass at once`() {
+        val water = mutableListOf<Int>()
+        compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day(), actions = DayActions(onWater = { _, d -> water += d })) } }
+        compose.onNodeWithTag(WATER_ADD_TAG).performScrollTo().performClick()
+        assertEquals(listOf(1), water)
     }
 }

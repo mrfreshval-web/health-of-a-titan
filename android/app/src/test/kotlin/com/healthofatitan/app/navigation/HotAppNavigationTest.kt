@@ -9,13 +9,24 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.healthofatitan.app.domain.today.RassvetStep
+import com.healthofatitan.app.domain.today.TodayBlock
+import com.healthofatitan.app.feature.today.BREATHER_HELP_TAG
+import com.healthofatitan.app.feature.today.BREATHER_SCREEN_TAG
+import com.healthofatitan.app.feature.today.BREATHER_TAG
+import com.healthofatitan.app.feature.today.ME_WHY_TAG
+import com.healthofatitan.app.feature.today.SUPPORT_SCREEN_TAG
+import com.healthofatitan.app.feature.today.SUPPORT_TAG
+import com.healthofatitan.app.feature.today.WHY_SCREEN_TAG
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.LocalHelpCountry
-import com.healthofatitan.app.core.ui.component.STATUS_RINGS_TAG
+import com.healthofatitan.app.core.ui.component.TOP_BAR_CENTER_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
-import com.healthofatitan.app.core.ui.component.TOP_BAR_GLYPH_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.theme.HotTheme
@@ -50,13 +61,15 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
- * A14 §9 step 6 acceptance with D-029 and D-033: 4 tabs open («Я» is now «Путь»); the header is
- * the glyph, three rings and the avatar, no SOS button; help is at most 2 taps from every tab
- * («аватар › Помощь», «⋮ › Помощь» in the mentor); the tile and the shortcut open it at once;
- * the crisis line and the emergency number of the phone's country open the dialer (the user
- * confirms): 988 / 911 in the US, 8-800-2000-122 / 112 in Russia (Y6).
+ * A14 §9 step 6 acceptance with D-029, D-033 and D-038: 4 modules open (Сегодня, Неделя, Путь, За
+ * плечами); the header is Винс, the date and the profile, no SOS button and no rings (A46 §2.1);
+ * help is at most 2 taps from every module and from «Передышка» (T-06); nothing opens by itself
+ * except «Рассвет» (T-05); the tile and the shortcut open help at once; the crisis line and the
+ * emergency number of the phone's country open the dialer (the user confirms): 988 / 911 in the
+ * US, 8-800-2000-122 / 112 in Russia (Y6).
  */
 @RunWith(AndroidJUnit4::class)
 // Pixel 9 Pro XL in dp: the floating tab bar and the hero leave the default 320 × 470 dp screen
@@ -69,14 +82,33 @@ class HotAppNavigationTest {
 
     private val screens = mapOf(
         HotTab.TODAY to TODAY_SCREEN_TAG,
-        HotTab.MENTOR to MENTOR_SCREEN_TAG,
         HotTab.WEEK to WEEK_SCREEN_TAG,
         HotTab.PATH to PATH_SCREEN_TAG,
+        HotTab.BEHIND to BEHIND_SCREEN_TAG,
     )
 
-    private fun launch(pendingRoute: String? = null) {
+    private lateinit var nav: NavHostController
+
+    private fun launch(pendingRoute: String? = null, rassvetDue: RassvetStep? = null, offered: MutableList<Unit> = mutableListOf()) {
         // stateful = false: screens render their default state, no Hilt ViewModels in this test.
-        compose.setContent { HotTheme { HotApp(pendingRoute = pendingRoute, stateful = false) } }
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    pendingRoute = pendingRoute,
+                    navController = nav,
+                    stateful = false,
+                    rassvetDue = rassvetDue,
+                    rassvetNext = rassvetDue,
+                    onRassvetOffered = { offered += Unit },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `the four modules are Today, Week, Path and Behind`() {
+        assertEquals(listOf(HotTab.TODAY, HotTab.WEEK, HotTab.PATH, HotTab.BEHIND), HotTab.entries.toList())
     }
 
     @Test
@@ -91,15 +123,61 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `header is the glyph and the rings, without an sos button`() {
+    fun `header is the mentor, the date and the profile, without an sos button or rings`() {
         launch()
+        compose.onNodeWithTag(TOP_BAR_CENTER_TAG).assertExists()
         screens.keys.forEach { tab ->
             compose.onNodeWithTag(tab.testTag).performClick()
-            compose.onNodeWithTag(TOP_BAR_GLYPH_TAG).assertExists()
-            compose.onNodeWithTag(STATUS_RINGS_TAG).assertExists()
+            compose.onNodeWithTag(MENTOR_CIRCLE_TAG).assertExists()
             compose.onNodeWithTag(AVATAR_TAG).assertExists()
             compose.onNodeWithTag("sos_button").assertDoesNotExist()
+            compose.onNodeWithTag("status_rings").assertDoesNotExist()
         }
+    }
+
+    @Test
+    fun `today shows the four blocks in their order`() {
+        launch()
+        TodayBlock.entries.forEach { compose.onNodeWithTag(it.tag).assertExists() }
+    }
+
+    @Test
+    fun `T-05 nothing leaves Today by itself without the dawn`() {
+        val offered = mutableListOf<Unit>()
+        launch(offered = offered)
+        compose.waitForIdle()
+        assertEquals(HotRoute.TODAY, nav.currentDestination?.route)
+        assertTrue(offered.isEmpty())
+    }
+
+    @Test
+    fun `T-05 the dawn opens once at its first step`() {
+        val offered = mutableListOf<Unit>()
+        launch(rassvetDue = RassvetStep.DECK, offered = offered)
+        compose.waitForIdle()
+        assertEquals(HotRoute.CHECKIN, nav.currentDestination?.route)
+        assertEquals(1, offered.size)
+    }
+
+    @Test
+    fun `the breather keeps help one tap away`() {
+        launch()
+        compose.onNodeWithTag(BREATHER_TAG).performScrollTo().performClick() // tap 1
+        compose.onNodeWithTag(BREATHER_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(BREATHER_HELP_TAG).performClick() // tap 2
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `why and a support open from Today and go back`() {
+        launch()
+        compose.onNodeWithTag(ME_WHY_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(WHY_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(HotTab.TODAY.testTag).assertIsSelected()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(SUPPORT_TAG + "water").performScrollTo().performClick()
+        compose.onNodeWithTag(SUPPORT_SCREEN_TAG).assertExists()
     }
 
     @Test
@@ -120,7 +198,7 @@ class HotAppNavigationTest {
     @Test
     fun `mentor menu opens help in two taps`() {
         launch()
-        compose.onNodeWithTag(HotTab.MENTOR.testTag).performClick()
+        compose.onNodeWithTag(MENTOR_CIRCLE_TAG).performClick()
         compose.onNodeWithTag(MENTOR_MENU_TAG).performClick() // tap 1
         compose.onNodeWithTag(MENTOR_HELP_TAG).performClick() // tap 2
         compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
@@ -176,7 +254,6 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(WHOOP_CONNECT_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals("WHOOP")
         compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
-        compose.onNodeWithTag(STATUS_RINGS_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }
@@ -215,7 +292,7 @@ class HotAppNavigationTest {
     @Test
     fun `today without whoop offers to connect it`() {
         launch()
-        compose.onNodeWithTag(TODAY_CONNECT_TAG).performClick()
+        compose.onNodeWithTag(TODAY_CONNECT_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(WHOOP_SCREEN_TAG).assertExists()
     }
 

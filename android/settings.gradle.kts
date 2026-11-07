@@ -61,3 +61,5 @@ include(":feature:training")
 // State cards (A44 v0.2, D-036): the decks, the reveal, discoveries, «Только ты».
 include(":domain:checkin")
 include(":feature:checkin")
+// «Сегодня» v3 (A46 v0.3, D-042): blocks, supports, tasks of the day, rhythm, «Почему так».
+include(":domain:today")

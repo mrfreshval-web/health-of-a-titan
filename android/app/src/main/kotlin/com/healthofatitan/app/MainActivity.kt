@@ -23,23 +23,28 @@ import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.navigation.HotApp
-import com.healthofatitan.app.core.ui.component.StatusRings
-import com.healthofatitan.app.feature.today.toStatusRings
+import com.healthofatitan.app.domain.engine.DayFlag
+import com.healthofatitan.app.domain.today.Rassvet
+import com.healthofatitan.app.domain.today.RassvetStep
 import com.healthofatitan.app.feature.checkin.CheckinRepository
-import com.healthofatitan.app.feature.checkin.MorningDue
 import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
-import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.healthconnect.StepsRepository
-import com.healthofatitan.app.integration.whoop.day.HeaderRingsMapper
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -67,17 +72,31 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var checkin: CheckinRepository
 
+    /** The day «Рассвет» was last opened by itself (a per-device convenience, not health data). */
+    private val rassvetPrefs by lazy { getSharedPreferences("rassvet", MODE_PRIVATE) }
+    private val rassvetOffered by lazy { MutableStateFlow(rassvetPrefs.getString(KEY_OFFERED, null)) }
+
     /**
-     * D-029 header rings: the plan, the WHOOP glance (memory only), the phone's steps (Health
-     * Connect, memory only) and the clock, once a minute. With steps the middle ring is solid.
+     * «Рассвет» as one ritual (D-040): the night is scored (today's plan is built from data), the
+     * steps not yet passed today — the deck, the reveal, the dawn — and whether it was offered.
      */
-    private val rings by lazy {
-        combine(plans.latest, whoop.glance, steps.state, minuteTicks()) { plan, glance, phone, now ->
-            val ready = phone as? PhoneSteps.Ready
-            HeaderRingsMapper.of(plan, glance, now, ZoneId.systemDefault())
-                .copy(steps = ready?.today, stepsGoal = ready?.goal)
-                .toStatusRings()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val rassvet: Flow<Pair<RassvetStep?, RassvetStep?>> by lazy {
+        val facts = minuteTicks().map { it.toLocalDate() }.distinctUntilChanged().flatMapLatest { day ->
+            combine(checkin.state, plans.latest, dawn.shown(day), rassvetOffered, minuteTicks()) { s, plan, dawnShown, offered, now ->
+                val nightReady = plan?.dayKey == now.toLocalDate() && DayFlag.MANUAL !in plan.flags
+                val next = if (nightReady && now.hour >= Rassvet.FROM_HOUR) Rassvet.next(s.wakeDone, s.revealReady, dawnShown) else null
+                val due = Rassvet.trigger(now, nightReady, offered == now.toLocalDate().toString(), s.wakeDone, s.revealReady, dawnShown)
+                due to next
+            }
         }
+        facts.catch { emit(null to null) }
+    }
+
+    private fun markRassvetOffered() {
+        val day = LocalDate.now().toString()
+        rassvetPrefs.edit().putString(KEY_OFFERED, day).apply()
+        rassvetOffered.value = day
     }
 
     private var pendingRoute by mutableStateOf<String?>(null)
@@ -115,18 +134,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             HotTheme {
                 val syncProgress by whoop.progress.collectAsStateWithLifecycle()
-                val headerRings by rings.collectAsStateWithLifecycle(StatusRings.Empty)
-                val dawnDue by dawn.due.collectAsStateWithLifecycle(false)
+                val ritual by rassvet.collectAsStateWithLifecycle(Pair<RassvetStep?, RassvetStep?>(null, null))
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
-                val morningDue by checkin.due.collectAsStateWithLifecycle(MorningDue.NONE)
                 HotApp(
                     pendingRoute = pendingRoute,
                     onPendingRouteConsumed = { pendingRoute = null },
                     syncProgress = syncProgress,
-                    rings = headerRings,
-                    dawnDue = dawnDue,
+                    rassvetDue = ritual.first,
+                    rassvetNext = ritual.second,
+                    onRassvetOffered = ::markRassvetOffered,
                     persona = mentorPrefs.persona,
-                    morningDue = morningDue,
                 )
             }
         }
@@ -160,5 +177,6 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val SPLASH_ICON_MS = 1_000L
         const val SPLASH_FADE_MS = 200L
+        const val KEY_OFFERED = "offered_on"
     }
 }

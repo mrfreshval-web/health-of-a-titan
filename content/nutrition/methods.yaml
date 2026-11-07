@@ -12,12 +12,19 @@ levels:
   - {id: structured, ru: "Опора",    order: 2, pairs_with_training: advanced}
   - {id: precise,    ru: "Точность", order: 3, pairs_with_training: extreme}
 
+# Goals (layer 2). No weight goals on any level (Agent 3 veto A19 §7 №2).
+goals:
+  - {id: habits,        ru: "Ровные привычки",        levels: [base, structured, precise]}
+  - {id: energy,        ru: "Энергия на день",        levels: [base, structured, precise]}
+  - {id: training_fuel, ru: "Топливо под тренировки", levels: [structured, precise]}
+  - {id: recovery,      ru: "Восстановление",         levels: [structured, precise]}
+
 methods:
   # --- every level ---------------------------------------------------------------------------------------
   - id: plate
     ru: "Тарелка"
     from_level: base
-    default: on
+    default: "on"
     evidence: "A (паттерн питания) / D (форма подачи)"
     source: "Dietary Guidelines for Americans 2020–2025 (MyPlate); Harvard Healthy Eating Plate"
     what_ru: "Половина — овощи и фрукты, четверть — белок, четверть — крупа или картофель, немного полезного жира"
@@ -25,7 +32,7 @@ methods:
   - id: hand_portions
     ru: "Порции ладонью"
     from_level: base
-    default: on
+    default: "on"
     evidence: "C (точность сопоставима с ручным взвешиванием в малых исследованиях) / D"
     source: "Precision Nutrition hand-portion method; Gibson 2020 [проверить источник]"
     what_ru: "Белок — ладонь, крахмал — горсть, овощи — кулак, жир — большой палец"
@@ -33,7 +40,7 @@ methods:
   - id: protein_each_meal
     ru: "Белок в каждом приёме"
     from_level: base
-    default: on
+    default: "on"
     evidence: A
     source: "Morton 2018, BJSM (A04 #15); A19 K5"
     what_ru: "В каждом приёме есть ладонь белка"
@@ -41,7 +48,7 @@ methods:
   - id: fiber_plants
     ru: "Клетчатка и растения"
     from_level: base
-    default: on
+    default: "on"
     evidence: A
     source: "Reynolds 2019, Lancet (A19 K6)"
     what_ru: "Овощ, фрукт, бобовые или цельное зерно в каждом приёме"
@@ -49,7 +56,7 @@ methods:
   - id: hydration_cues
     ru: "Вода по признакам"
     from_level: base
-    default: on
+    default: "on"
     evidence: C
     source: "A19 K18; Armstrong urine colour chart [проверить]"
     what_ru: "Стакан воды утром и к каждому приёму; ориентир — светлая моча и отсутствие жажды"
@@ -57,7 +64,7 @@ methods:
   - id: caffeine_cutoff
     ru: "Кофейный рубеж"
     from_level: base
-    default: on
+    default: "on"
     evidence: B
     source: "Drake 2013, J Clin Sleep Med (A04 #4); A09 правило рубежа"
     what_ru: "Последний кофе — за 8–9 часов до твоего отбоя; время считается от твоего сна, без миллиграммов (вето A19 №3)"
@@ -65,7 +72,7 @@ methods:
   - id: alcohol_spacing
     ru: "Алкоголь и сон"
     from_level: base
-    default: on
+    default: "on"
     evidence: "A / B"
     source: "Ebrahim 2013, Alcohol Clin Exp Res [проверить]; A19 N16"
     what_ru: "Вода на каждую порцию, последняя порция — за 3+ часа до сна; это информация, а не запрет"
@@ -73,7 +80,7 @@ methods:
   - id: late_meal_gap
     ru: "Ужин не впритык ко сну"
     from_level: base
-    default: on
+    default: "on"
     evidence: C
     source: "A19 N15; A25 «Ритм»"
     what_ru: "Основной приём — за 2–3 часа до отбоя; если голоден позже — лёгкий перекус, это нормально"
@@ -81,7 +88,7 @@ methods:
   - id: regular_meals
     ru: "Регулярные приёмы"
     from_level: base
-    default: on
+    default: "on"
     evidence: "A (консенсус REDs) / C"
     source: "Mountjoy 2023, IOC REDs (A19 K13)"
     what_ru: "Не пропускать приёмы в нагрузочные и бережные дни; еды должно хватать под нагрузку"
@@ -89,7 +96,7 @@ methods:
   - id: mindful_hunger
     ru: "Голод и сытость"
     from_level: base
-    default: on
+    default: "on"
     evidence: C
     source: "Агент 10; элементы интуитивного питания (Tribole & Resch) — ревью 10"
     what_ru: "Есть медленнее, замечать голод и сытость; еда без оценки «хорошо/плохо»"
@@ -105,7 +112,7 @@ methods:
   - id: less_upf
     ru: "Меньше ультрапереработанного"
     from_level: base
-    default: on
+    default: "on"
     evidence: B
     source: "Hall 2019, Cell Metab (A04 #16; A19 K7)"
     what_ru: "Чаще простая еда из узнаваемых продуктов; готовая курица и пакет салата — тоже простая еда"
@@ -113,7 +120,7 @@ methods:
   - id: sleep_loss_day
     ru: "День после короткой ночи"
     from_level: base
-    default: on
+    default: "on"
     evidence: A
     source: "Al Khatib 2017, Eur J Clin Nutr (A19 K16)"
     what_ru: "Тяга к сладкому — нормальна. Белок с утра, регулярные приёмы, кофе до рубежа"
@@ -121,7 +128,7 @@ methods:
   - id: travel_eating
     ru: "Поездки и аэропорты"
     from_level: base
-    default: on
+    default: "on"
     evidence: D
     source: "A19 N13"
     what_ru: "Запас белка и фруктов с собой, пустая бутылка, еда по местному времени"
@@ -129,17 +136,17 @@ methods:
   - id: restaurant_strategy
     ru: "Ресторан и фастфуд"
     from_level: base
-    default: on
+    default: "on"
     evidence: D
     source: "A19 N10–N12"
-    what_ru: "Белок + овощи + крупа, соус отдельно; половину порции — в контейнер, без вины"
+    what_ru: "Белок + овощи + крупа, соус отдельно; половину порции можно взять с собой — это нормально"
     numbers: none
 
   # --- «Опора» (structured) ------------------------------------------------------------------------------
   - id: athlete_plates
     ru: "Тарелки под нагрузку"
     from_level: structured
-    default: on
+    default: "on"
     evidence: "A (принцип «топливо под работу») / D (форма)"
     source: "Thomas, Erdman, Burke 2016, ACSM/AND/DC (A19 K8); USOPC + UCCS Athlete's Plate (Easy / Moderate / Hard)"
     what_ru: "Три тарелки: «лёгкий день», «рабочий день», «тяжёлый день» — меняется доля крупы и фруктов, белок постоянен"
@@ -147,7 +154,7 @@ methods:
   - id: peri_workout_timing
     ru: "Еда вокруг тренировки"
     from_level: structured
-    default: on
+    default: "on"
     evidence: "A (консенсус)"
     source: "Thomas 2016 (A19 K8); Schoenfeld 2013 (A19 K17)"
     what_ru: "Обычный приём за 1–3 ч, лёгкий перекус если меньше часа; после — белок и крупа или фрукт в ближайший приём"
@@ -155,7 +162,7 @@ methods:
   - id: protein_distribution
     ru: "Белок по приёмам"
     from_level: structured
-    default: on
+    default: "on"
     evidence: B
     source: "Schoenfeld & Aragon 2018, JISSN [проверить]; Areta 2013, J Physiol [проверить]"
     what_ru: "3–4 приёма с белком через 3–5 часов; последний — можно перед сном (творог, кефир, йогурт)"
@@ -163,7 +170,7 @@ methods:
   - id: protein_g_per_kg
     ru: "Белок на кг (по желанию)"
     from_level: structured
-    default: off
+    default: "off"
     opt_in: true
     requires: [body_mass_kg]
     evidence: A
@@ -173,7 +180,7 @@ methods:
   - id: tre_12
     ru: "Ночной перерыв ≈ 12 часов"
     from_level: structured
-    default: off
+    default: "off"
     opt_in: true
     evidence: C
     source: "Manoogian 2022, Endocr Rev (обзор TRE) [проверить]; связь с A25 «Ритм»"
@@ -183,7 +190,7 @@ methods:
   - id: sodium_sweat
     ru: "Соль и вода после пота"
     from_level: structured
-    default: on
+    default: "on"
     evidence: "B / C"
     source: "Thomas 2016 (A19 K8); A19 N09"
     what_ru: "После долгой потной тренировки или в жару — вода и солёная еда; пить по жажде"
@@ -201,7 +208,7 @@ methods:
   - id: carb_periodization
     ru: "Углеводы под нагрузку"
     from_level: precise
-    default: on
+    default: "on"
     evidence: "A (консенсус)"
     source: "Thomas 2016; Burke 2011, J Sports Sci"
     what_ru: "Диапазоны углеводов по классу нагрузки дня: лёгкий 3–5, рабочий 5–7, тяжёлый/длинный 6–10 г/кг; показываются горстями, граммы — по желанию"
@@ -209,7 +216,7 @@ methods:
   - id: during_training_carbs
     ru: "Топливо во время длинной тренировки"
     from_level: precise
-    default: on
+    default: "on"
     evidence: "A (консенсус)"
     source: "Thomas 2016; Jeukendrup 2014, Sports Med"
     what_ru: "Сессия длиннее ~75–90 мин: банан, финики или спортивный напиток по ходу; граммы в час — по желанию"
@@ -217,7 +224,7 @@ methods:
   - id: macro_ranges
     ru: "Белок, углеводы, жиры диапазоном"
     from_level: precise
-    default: off
+    default: "off"
     opt_in: true
     requires: [body_mass_kg]
     evidence: "A (принципы) / C (точность оценки по фото и порциям ±25–50 %)"
@@ -227,7 +234,7 @@ methods:
   - id: tre_window_8_10
     ru: "Окно питания 8–10 часов (эксперимент)"
     from_level: precise
-    default: off
+    default: "off"
     opt_in: true
     status: blocked
     blocked_by: "A19 §7 вето Агента 3 №2 (интервальное голодание как рекомендация) + решение основателя (A41 вопрос 2)"
@@ -238,10 +245,10 @@ methods:
   - id: energy_reference
     ru: "Энергия дня (ккал) диапазоном"
     from_level: precise
-    default: off
+    default: "off"
     opt_in: true
     status: blocked
-    blocked_by: "A19 §7 вето Агента 3 №1, D-029 (калории не показываем) + решение основателя (A41 вопрос 1)"
+    blocked_by: "A19 §7 вето Агента 3 №1, D-010 (без подсчёта калорий как обязательного) + решение основателя (A41 вопрос 1)"
     evidence: "C (оценка расхода носимыми ±20–30 %, оценка съеденного по фото ±20–50 %)"
     source: "A26 §5; Shcherbina 2017, J Pers Med (точность расхода носимыми) [проверить]"
     what_ru: "Если основатель и Агент 3 разрешат: диапазон «расход дня» по WHOOP рядом с диапазоном съеденного, без дефицита и без «осталось»"

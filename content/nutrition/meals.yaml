@@ -9,6 +9,12 @@ version: 1
 reviewedBy: []
 status: draft
 
+# Closed lists for meals (check_nutrition.py validates against them).
+contexts: [home, office, restaurant, fastfood, travel, airport, gym, outdoor]
+meal_tags: [quick, no_time, weekend, meal_prep, plant, russian_classic, us, mediterranean, fermented, fiber, omega3, lean,
+            soft, gentle, sick_day, travel, outside, pantry, fuel, high_load, low_load, tomorrow_long, pre_training,
+            during_training, post_training, protein_before_sleep, after_short_sleep]
+
 meals:
   # ======================= breakfast =======================
   - id: M001
@@ -510,7 +516,7 @@ meals:
     tags: [outside]
     allergens: [fish, sesame, soy]
     may_contain: [crustacean, gluten, wheat]
-    diets: [omnivore, pescatarian, halal, no_pork, no_beef, no_alcohol]
+    diets: [omnivore, pescatarian, halal, kosher, no_pork, no_beef, no_alcohol]
 
   # ======================= snacks, pre / post / during training =======================
   - id: M039
@@ -534,7 +540,7 @@ meals:
     components: [{c: kefir, n: 1}, {c: banana, n: 1}]
     context: [home, office]
     prep_min: 0
-    swaps: {kefir: [soy_drink]}
+    swaps: {kefir: [soy_yogurt]}
     tags: [post_training, russian_classic]
     allergens: [milk]
     may_contain: []

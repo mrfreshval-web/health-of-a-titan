@@ -26,7 +26,7 @@ allergens:
   - {id: sesame,     ru: "Кунжут",                  en: "Sesame",                    eu14: true,  us9: true,  includes_ru: "кунжут, тахини, хумус (обычно с тахини)"}
   - {id: celery,     ru: "Сельдерей",               en: "Celery",                    eu14: true,  us9: false}
   - {id: mustard,    ru: "Горчица",                 en: "Mustard",                   eu14: true,  us9: false}
-  - {id: sulphite,   ru: "Сульфиты (> 10 мг/кг)",   en: "Sulphites",                 eu14: true,  us9: false, includes_ru: "вино, сухофрукты (часто), некоторые соусы"}
+  - {id: sulphite,   ru: "Сульфиты",   en: "Sulphites",                 eu14: true,  us9: false, includes_ru: "вино, сухофрукты (часто), некоторые соусы"}
   - {id: lupin,      ru: "Люпин",                   en: "Lupin",                     eu14: true,  us9: false}
   # Not a major allergen anywhere, but users ask for it often:
   - {id: coconut,    ru: "Кокос",                   en: "Coconut",                   eu14: false, us9: false}
@@ -45,7 +45,7 @@ intolerances:
   - {id: gluten_sensitive, ru: "Чувствительность к глютену (без целиакии)", filter: {exclude_allergens: [gluten]}, may_contain: allowed_with_note}
   - {id: caffeine,         ru: "Чувствительность к кофеину",       rules: {caffeine_cutoff_shift_h: -2}, note_ru: "Кофейный рубеж сдвигается на 2 часа раньше"}
   - {id: spicy,            ru: "Не ем острое",                     filter: {exclude_tags: [spicy]}}
-  - {id: fodmap,           ru: "Чувствительный ЖКТ (FODMAP)",      filter: {}, medical_route: true, note_ru: "Диета low-FODMAP — лечебная, только с врачом или диетологом; продукт ничего не исключает сам"}
+  - {id: fodmap,           ru: "Чувствительный ЖКТ (FODMAP)",      filter: {}, medical_route: true, note_ru: "Схему low-FODMAP подбирают с врачом или диетологом; продукт ничего не исключает сам"}
 
 # ---------------------------------------------------------------------------
 # 3. Diets (тип питания) — HARD filter by component origin and by meal rules.
@@ -59,8 +59,8 @@ diets:
   - {id: pescatarian,  ru: "Пескетарианство",      exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, gelatin]}
   - {id: vegetarian,   ru: "Вегетарианство",       exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood, gelatin]}
   - {id: vegan,        ru: "Веганство",            exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood, dairy, egg, honey, gelatin]}
-  - {id: halal,        ru: "Халяль",               exclude_origins: [meat_pork, alcohol, gelatin], meat_note_ru: "Мясо и птица — халяль-происхождения; HoT не сертифицирует блюда, метка значит «в рецепте нет запрещённого»"}
-  - {id: kosher,       ru: "Кошер",                exclude_origins: [meat_pork, seafood, gelatin], exclude_allergens: [crustacean, mollusc], meal_rule: no_meat_with_dairy, meat_note_ru: "Кошерность зависит от продукта и кухни; HoT не сертифицирует, метка значит «в рецепте нет запрещённого и мясо не смешано с молочным»"}
+  - {id: halal,        ru: "Халяль",               exclude_origins: [meat_pork, alcohol, gelatin], meat_note_ru: "Мясо и птица — халяль-происхождения; HoT не сертифицирует блюда, метка значит «в рецепте нет свинины, алкоголя и желатина»"}
+  - {id: kosher,       ru: "Кошер",                exclude_origins: [meat_pork, seafood, gelatin], exclude_allergens: [crustacean, mollusc], meal_rule: no_meat_with_dairy, meat_note_ru: "Кошерность зависит от продукта и кухни; HoT не сертифицирует, метка значит «в рецепте нет свинины, морепродуктов и желатина, мясо не смешано с молочным»"}
   - {id: gluten_free,  ru: "Без глютена",          exclude_allergens: [gluten], may_contain: excluded}
   - {id: no_pork,      ru: "Без свинины",          exclude_origins: [meat_pork]}
   - {id: no_beef,      ru: "Без говядины",         exclude_origins: [meat_beef]}
@@ -103,6 +103,19 @@ movement_limits:
   - {id: no_floor_work,      ru: "Без упражнений лёжа на полу"}
   - {id: no_high_intensity,  ru: "Без высокой интенсивности (интервалы, RPE > 7)"}
   - {id: no_breath_hold,     ru: "Без задержки дыхания и натуживания"}
+# Ready-made injury codes (snake_case) for the training engine (A40) and the profile screen.
+# Each expands into region + status + movement limits. Exercise lists per code live in A40 (Agents 12, 3).
+injury_presets:
+  - {id: knee_injury,           ru: "Травма колена",                 region: knee,       status: recovering,     limits: [no_impact, no_deep_knee_flexion]}
+  - {id: lower_back_pain,       ru: "Боль в пояснице",               region: lower_back, status: chronic_stable, limits: [no_loaded_spinal_flexion]}
+  - {id: shoulder_injury,       ru: "Травма плеча",                  region: shoulder,   status: recovering,     limits: [no_overhead]}
+  - {id: neck_pain,             ru: "Боль в шее",                    region: neck,       status: chronic_stable, limits: [no_overhead]}
+  - {id: wrist_pain,            ru: "Боль в запястье",               region: wrist_hand, status: recovering,     limits: []}
+  - {id: ankle_injury,          ru: "Травма голеностопа",            region: ankle_foot, status: recovering,     limits: [no_impact]}
+  - {id: hip_pain,              ru: "Боль в тазобедренном суставе",  region: hip,        status: chronic_stable, limits: [no_deep_knee_flexion]}
+  - {id: pregnancy,             ru: "Беременность",                  life_stage: pregnancy,      limits: [no_floor_work, no_breath_hold, no_high_intensity], route: doctor}
+  - {id: hypertension,          ru: "Повышенное давление",           medical_flag: heart_bp_meds, limits: [no_breath_hold, no_high_intensity], route: doctor_before_intensity}
+  - {id: osteoporosis_reported, ru: "Врач говорил об остеопорозе",   medical_flag: other_chronic, limits: [no_impact, no_loaded_spinal_flexion], route: doctor_before_intensity}
 screening: {ref: "A19 §6.1 S1–S9", note_ru: "Любое «да» → щадящий режим тренировок до отметки «врач разрешил нагрузки»"}
 
 # ---------------------------------------------------------------------------

@@ -4,8 +4,8 @@
                   to_one_hand (800 ms), the one-hand breathing loop, to_two_hands (800 ms)
     path-palms  — palms at the chest (rite Э1, Э4): offer (600 ms), release (300 ms)
     path-sky    — soars (front · air): loop 4 s, bob ±1.5 units, wings ±4°
-    path-earth  — runs (side): cycle 1000 ms, the second half is mirror_sides()
-    path-water  — swims, breaststroke (side · water): cycle 2400 ms
+    path-earth  — runs (side): cycle 733 ms (Agent 12; the package had 1000 ms), the second half is mirror_sides()
+    path-water  — swims, breaststroke (side · water): cycle 2400 ms, glide · pull · recovery · kick
 
 Contract (§3.2, as the heroes): 60 fps, 1024 × 1024, ≤ 150 KB, ≤ 40 layers, no expressions, no
 floor; titan_line / titan_knockout / titan_inner; marker `poster` (the still of «Уменьшить
@@ -101,21 +101,33 @@ RELEASE = Y([50, 48.8], 0, 0, [140, 70], [220, 290], nod=0, **LEGS_HOLD)
 STAND = Y([50, 48.8], 0, 0, [172, 176], [188, 184], nod=0, **LEGS_HOLD)
 SOAR = Y([50, 40], 0, 0, [80, 95], [280, 265], [178, 182, 170], [182, 178, 190], nod=6)
 
-RUN_CONTACT = Y([50, 49.5], 8, 4, [200, 115], [150, 60], [150, 165, 95], [205, 250, 200])
+# v2 (Agent 12, PR #45): a bigger arm swing — the back elbow goes past the torso line (torso 8°),
+# the front hand comes up to the chest; the package had [200; 115] · [150; 60]
+RUN_CONTACT = Y([50, 49.5], 8, 4, [220, 118], [130, 45], [150, 165, 95], [205, 250, 200])
 RUN_DOWN = _legs(_with(RUN_CONTACT, ry=51.5), [165, 195, 100], [190, 260, 220])
-RUN_PASS = _legs(_with(RUN_CONTACT, ry=50), [180, 190, 95], [130, 225, 150])
+# the swing leg's heel a little higher than the package's 225 (Agent 12)
+RUN_PASS = _legs(_with(RUN_CONTACT, ry=50), [180, 190, 95], [130, 236, 160])
 RUN_UP = _legs(_with(RUN_CONTACT, ry=47.5), [200, 215, 135], [125, 175, 100])
 
 SWIM_GLIDE = Y([42, 60], 92, 100, [92, 92], [94, 94], [268, 270, 300], [272, 272, 300])
-SWIM_PULL = _arms(_with(SWIM_GLIDE, head=80), [150, 200], [152, 202])
-# the table gives `kick` only arm_n [100; 60]; the far arm recovers with it (+2° as in every other
-# pair of the stroke), otherwise one arm would stay straight while the other folds
-SWIM_KICK = _legs(_arms(SWIM_GLIDE, [100, 60], [102, 62]), [240, 330, 0], [244, 332, 0])
+# v2 of the stroke (Agent 12, PR #45): a consistent breaststroke. In profile the sideways parts
+# (out, toes out) cannot show; what shows is the depth and the order.
+# pull: both arms out and a little down, elbows high (just under the body line), the hands a
+# forearm deep and ahead of the shoulder line; the head comes up to breathe
+SWIM_PULL = _arms(_with(SWIM_GLIDE, head=85), [105, 175], [107, 177])
+# the hands meet under the chin (IK), the legs start to recover
+SWIM_INSWEEP = _legs(_arms(_with(SWIM_GLIDE, head=80), [150, 30], [152, 32]), [246, 290, 300], [248, 292, 300])
+SWIM_INSWEEP = _reach(_reach(SWIM_INSWEEP, "N", (76.0, 67.0), front=False), "F", (76.5, 67.5), front=False)
+# recovery (was `kick`): the hands shoot forward near the surface; the hips flex a little, the
+# knees drop moderately, the heels come towards the buttocks at the body line (never above it)
+SWIM_RECOVERY = _legs(_arms(_with(SWIM_GLIDE, head=95), [96, 110], [98, 112]), [232, 308, 262], [235, 310, 265])
+# kick: the legs drive back (and out), the feet flexed; then they close into the glide
+SWIM_KICK = _legs(SWIM_GLIDE, [256, 266, 180], [260, 268, 184])
 
 POSES = {
     "hold": HOLD, "hold_breath": HOLD_BREATH, "one_hand": ONE_HAND, "look_sky": LOOK["sky"], "look_earth": LOOK["earth"],
     "look_water": LOOK["water"], "palms": PALMS, "soar": SOAR, "run_contact": RUN_CONTACT, "run_down": RUN_DOWN,
-    "run_pass": RUN_PASS, "run_up": RUN_UP, "swim_glide": SWIM_GLIDE, "swim_pull": SWIM_PULL, "swim_kick": SWIM_KICK,
+    "run_pass": RUN_PASS, "run_up": RUN_UP, "swim_glide": SWIM_GLIDE, "swim_pull": SWIM_PULL, "swim_recovery": SWIM_RECOVERY, "swim_kick": SWIM_KICK,
 }
 
 
@@ -261,30 +273,35 @@ def _cycle(keys, period, ease_arms=True):
     return out
 
 
+RUN_CYCLE = 44 / 60   # 733 ms: two steps, 164 steps/min (Agent 12: 160–170; the package had 1000 ms)
+
+
 def path_earth():
-    """Runs (§3.1 run_*): cycle 1000 ms, 8 keys 125 ms apart — contact, down, pass, up, then the
+    """Runs (§3.1 run_*): cycle 733 ms, 8 keys 92 ms apart — contact, down, pass, up, then the
     same with the sides mirrored. Poster = contact."""
     keys = [RUN_CONTACT, RUN_DOWN, RUN_PASS, RUN_UP]
     keys += [mirror_sides(k) for k in keys]
     tl = Timeline()
-    frames = _cycle(keys, 1.0)
+    frames = _cycle(keys, RUN_CYCLE)
     tl.add(frames, ["poster"])
     hands = {"N": ("fist", 0.0), "F": ("fist", 0.0)}
-    return _build("path-earth", tl, False, hands, breaks_extra=[int(i * 60 / 8) for i in range(1, 8)], loop=True)
+    return _build("path-earth", tl, False, hands, breaks_extra=[round(i * 44 / 8) for i in range(1, 8)], loop=True)
 
 
 def path_water():
-    """Swims, breaststroke (§3.1 swim_*): cycle 2400 ms — pull 600 ms (EaseStandard), recovery to
-    `kick` 500 ms, the kick back to glide 400 ms (EaseDecel: a fast whip, then the glide), glide
-    900 ms. Poster = glide."""
-    P = {"swim_glide": SWIM_GLIDE, "swim_pull": SWIM_PULL, "swim_kick": SWIM_KICK}
-    steps = [("move", "swim_pull", 0.6, "standard"), ("move", "swim_kick", 0.5, "inout"), ("move", "swim_glide", 0.4, "decel"),
-             ("hold", 0.9)]
+    """Swims, breaststroke (§3.1 swim_*, Agent 12's review of PR #45): cycle 2400 ms — out-sweep to
+    `swim_pull` 450 ms (EaseStandard), the hands in under the chin 300 ms while the legs start to
+    recover, the hands shoot forward into `swim_recovery` 300 ms, the kick back and out 250 ms
+    (EaseDecel: a whip), the legs close into the glide 300 ms, glide 800 ms. Poster = glide."""
+    P = {"swim_glide": SWIM_GLIDE, "swim_pull": SWIM_PULL, "_insweep": SWIM_INSWEEP, "swim_recovery": SWIM_RECOVERY,
+         "swim_kick": SWIM_KICK}
+    steps = [("move", "swim_pull", 0.45, "standard"), ("move", "_insweep", 0.3, "inout"), ("move", "swim_recovery", 0.3, "inout"),
+             ("move", "swim_kick", 0.25, "decel"), ("move", "swim_glide", 0.3, "standard"), ("hold", 0.8)]
     sc = motion.Script(P, steps, "swim_glide", (), {}, None, front=False, loop=True)
     tl = Timeline()
     tl.add(sc.frames(), ["poster"])
     hands = {"N": ("open", 0.0), "F": ("open", 0.0)}
-    return _build("path-water", tl, False, hands, breaks_extra=[36, 66, 90], loop=True)
+    return _build("path-water", tl, False, hands, breaks_extra=[27, 45, 63, 78, 96], loop=True)
 
 
 PATHS = {

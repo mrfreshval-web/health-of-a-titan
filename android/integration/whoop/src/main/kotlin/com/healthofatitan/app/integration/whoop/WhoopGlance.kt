@@ -29,7 +29,40 @@ data class WhoopGlance(
     val corridors: BodyCorridors? = null,
     /** Minutes in heart-rate zones 2–5 of this calendar week's workouts (A52 «минуты в зонах»). */
     val weekZoneMinutes: Int? = null,
+    /** Every day of the fetched window for «Неделя» (A52 §2.3, §2.4, §2.8); memory only. */
+    val days: List<WhoopDay> = emptyList(),
 )
+
+/**
+ * One local day of the window as «Неделя» reads it: the cycle that started that day, the recovery
+ * and the main sleep that ended that morning, and the workouts that started that day with their
+ * `zone_durations`. **Raw WHOOP values, memory only** — never written anywhere (R-11, D-009).
+ */
+data class WhoopDay(
+    val day: LocalDate,
+    val strain: Double? = null,
+    val steps: Int? = null,
+    val restingHr: Double? = null,
+    val hrvMs: Double? = null,
+    val respiratoryRate: Double? = null,
+    val spo2: Double? = null,
+    val skinTempC: Double? = null,
+    val sleepHours: Double? = null,
+    val needHours: Double? = null,
+    val consistency: Double? = null,
+    val workouts: List<WorkoutZones> = emptyList(),
+)
+
+/** A workout of the day: its minutes and its minutes in each heart-rate zone 0–5 (WHOOP `zone_durations`). */
+data class WorkoutZones(val start: Instant, val minutes: Int, val zoneMinutes: List<Int>) {
+    /** Zones 2–5: «минуты в зонах» of A52 (WHO 150–300 min of moderate-to-vigorous activity). */
+    val activeMinutes: Int get() = zoneMinutes.drop(2).sum()
+
+    /** Zones 4–5 (hard). */
+    val hardMinutes: Int get() = zoneMinutes.drop(4).sum()
+
+    val zonedMinutes: Int get() = zoneMinutes.sum()
+}
 
 /** The latest WHOOP cycle as «Сегодня» v3 reads it; every value may be missing. */
 data class CycleGlance(val start: Instant, val strain: Double?, val kilojoule: Double?, val steps: Int?)
@@ -137,7 +170,53 @@ internal object WhoopGlanceMapper {
             cycle = cycle,
             corridors = corridors(window),
             weekZoneMinutes = weekZones(window, fallbackZone, fetchedAt),
+            days = days(window, fallbackZone),
         )
+    }
+
+    /** The window day by day (A52): cycles by their start, recoveries and sleeps by the morning, workouts by their start. */
+    fun days(window: WhoopWindow, zone: ZoneId): List<WhoopDay> {
+        val byDay = sortedMapOf<LocalDate, WhoopDay>()
+        fun at(d: LocalDate): WhoopDay = byDay.getOrPut(d) { WhoopDay(d) }
+        window.cycles.forEach { c ->
+            val d = parse(c.start)?.atZone(zoneOf(c.timezoneOffset, zone))?.toLocalDate() ?: return@forEach
+            val cur = at(d)
+            byDay[d] = cur.copy(
+                strain = c.score?.strain?.takeIf { it >= 0.0 } ?: cur.strain,
+                steps = (c.score?.stepCount ?: c.stepCount)?.takeIf { it >= 0 } ?: cur.steps,
+            )
+        }
+        val mainSleeps = window.sleeps.filter { !it.nap && it.scoreState == SCORED }
+        mainSleeps.forEach { s ->
+            val d = parse(s.end)?.atZone(zoneOf(s.timezoneOffset, zone))?.toLocalDate() ?: return@forEach
+            val st = s.score?.stageSummary
+            val cur = at(d)
+            byDay[d] = cur.copy(
+                sleepHours = st?.let { (it.light + it.slowWave + it.rem) / 3_600_000.0 } ?: cur.sleepHours,
+                needHours = s.score?.sleepNeeded?.totalMilli?.takeIf { it > 0 }?.let { it / 3_600_000.0 } ?: cur.needHours,
+                consistency = s.score?.consistency ?: cur.consistency,
+                respiratoryRate = s.score?.respiratoryRate?.takeIf { it > 0 } ?: cur.respiratoryRate,
+            )
+            window.recoveries.firstOrNull { it.sleepId == s.id && it.scoreState == SCORED }?.score?.let { r ->
+                val now = byDay.getValue(d)
+                byDay[d] = now.copy(
+                    restingHr = r.restingHeartRate?.takeIf { it > 0 },
+                    hrvMs = r.hrvRmssdMilli?.takeIf { it > 0 },
+                    spo2 = r.spo2Percentage?.takeIf { it > 0 },
+                    skinTempC = r.skinTempCelsius?.takeIf { it > 0 },
+                )
+            }
+        }
+        window.workouts.filter { it.scoreState == SCORED }.forEach { w ->
+            val start = parse(w.start) ?: return@forEach
+            val d = start.atZone(zoneOf(w.timezoneOffset, zone)).toLocalDate()
+            val minutes = parse(w.end)?.let { Duration.between(start, it).toMinutes().toInt() }?.coerceAtLeast(0) ?: 0
+            val z = w.score?.zones
+            val zones = if (z == null) emptyList() else listOf(z.zero, z.one, z.two, z.three, z.four, z.five).map(::minutes)
+            val cur = at(d)
+            byDay[d] = cur.copy(workouts = cur.workouts + WorkoutZones(start, minutes, zones))
+        }
+        return byDay.values.toList()
     }
 
     /** Mean ± SD of the scored recoveries and main sleeps of the window (A46 §3, memory only). */

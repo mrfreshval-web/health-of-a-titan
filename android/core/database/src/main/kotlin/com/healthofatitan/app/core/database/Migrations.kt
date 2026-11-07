@@ -213,14 +213,57 @@ object Migrations {
     }
 
     /**
+     * «Неделя» (A52, D-044, D-045): the plan of a week and its goals, the score of each day counted
+     * at 04:00 the next day, the frames of the Titan of the week and what the person enters for the
+     * fitness age; «Эксперимент недели» (A53 §3.2, D-050). New tables only; nothing existing changes; no WHOOP values. If «Путь» takes 11
+     * too, whichever merges second renumbers.
+     */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_plan` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `status` TEXT NOT NULL, " +
+                    "`assembled_at` INTEGER NOT NULL, `ritual_done_at` INTEGER, `pushed_at` INTEGER, `pride` TEXT, `carry` TEXT, " +
+                    "PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_goal` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `goal_id` TEXT NOT NULL, " +
+                    "`sphere` TEXT NOT NULL, `kind` TEXT NOT NULL, `measure` TEXT NOT NULL, `title` TEXT NOT NULL, `target` INTEGER NOT NULL, " +
+                    "`unit` TEXT NOT NULL, `source` TEXT NOT NULL, `sort_order` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`, `goal_id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_day_score` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `in_support` INTEGER NOT NULL, " +
+                    "`supports_filled` INTEGER NOT NULL, `tasks_done` INTEGER NOT NULL, `mode` TEXT, `sick` INTEGER NOT NULL, " +
+                    "`fills` TEXT NOT NULL, `computed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_frame` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `pose` TEXT NOT NULL, " +
+                    "`mode` TEXT NOT NULL, `light_level` REAL NOT NULL, `columns` TEXT NOT NULL, `sky` TEXT NOT NULL, `detail` TEXT, " +
+                    "`days_in_support` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `revealed_at` INTEGER, `fitness_age` REAL, " +
+                    "`computed_at` INTEGER NOT NULL, `fitness_milestone` INTEGER, `fitness_vo2` REAL, `fitness_pa` REAL, " +
+                    "`fitness_waist` REAL, PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_experiment` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, " +
+                    "`experiment_id` TEXT NOT NULL, `hypothesis` TEXT NOT NULL, `action` TEXT NOT NULL, `metric` TEXT NOT NULL, " +
+                    "`source` TEXT NOT NULL, `food` INTEGER NOT NULL, `status` TEXT NOT NULL, `outcome` TEXT, `result_text` TEXT, " +
+                    "`points` INTEGER, `decided_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `body_input` (`user_id` TEXT NOT NULL, `kind` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`value` REAL, `text` TEXT, `at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `kind`, `day_key`))",
+            )
+        }
+    }
+
+    /**
      * «Путь» v1 (A54–A57, D-046…D-048): the practical goal with its components, versions, change
      * cards, the Titan of the horizon, the letter and the marks. `path_goal` is rebuilt: the v10
      * goals of the 12-week path keep their id, start and history; their status follows the state
      * model of A56 §5 (REPLACED → RELEASED, DONE → TAKEN), the sphere stays in `legacy_sphere` and
      * becomes two components (the sphere leads, Water guards), with version 1 «MIGRATED».
-     * Note: the module «Неделя» may take 10 → 11 too — whoever merges second renumbers.
+     * Renumbered from 10 → 11 after «Неделя» (#46) took 11.
      */
-    val MIGRATION_10_11 = object : Migration(10, 11) {
+    val MIGRATION_11_12 = object : Migration(11, 12) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `path_goal_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
@@ -292,5 +335,8 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+    val ALL: Array<Migration> = arrayOf(
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+    )
 }

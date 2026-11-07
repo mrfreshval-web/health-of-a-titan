@@ -42,6 +42,13 @@ import com.healthofatitan.app.core.database.entity.CheckinEventEntity
 import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.TodayDao
 import com.healthofatitan.app.core.database.entity.TodayMarkEntity
+import com.healthofatitan.app.core.database.dao.WeekDao
+import com.healthofatitan.app.core.database.entity.BodyInputEntity
+import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
+import com.healthofatitan.app.core.database.entity.WeekFrameEntity
+import com.healthofatitan.app.core.database.entity.WeekGoalEntity
+import com.healthofatitan.app.core.database.entity.WeekPlanEntity
 import kotlin.reflect.KClass
 
 /**
@@ -75,6 +82,12 @@ import kotlin.reflect.KClass
         CheckinDiscoveryEntity::class,
         CheckinEventEntity::class,
         TodayMarkEntity::class,
+        WeekPlanEntity::class,
+        WeekGoalEntity::class,
+        WeekDayScoreEntity::class,
+        WeekFrameEntity::class,
+        BodyInputEntity::class,
+        WeekExperimentEntity::class,
         PathGoalComponentEntity::class,
         PathGoalVersionEntity::class,
         PathChangeProposalEntity::class,
@@ -82,7 +95,7 @@ import kotlin.reflect.KClass
         PathLetterEntity::class,
         PathMarkEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -104,6 +117,8 @@ abstract class HotDatabase : RoomDatabase() {
     abstract fun checkinDao(): CheckinDao
 
     abstract fun todayDao(): TodayDao
+
+    abstract fun weekDao(): WeekDao
 
     companion object {
         const val FILE_NAME = "hot.db"
@@ -137,6 +152,12 @@ abstract class HotDatabase : RoomDatabase() {
             CheckinDiscoveryEntity::class,
             CheckinEventEntity::class,
             TodayMarkEntity::class,
+            WeekPlanEntity::class,
+            WeekGoalEntity::class,
+            WeekDayScoreEntity::class,
+            WeekFrameEntity::class,
+            BodyInputEntity::class,
+            WeekExperimentEntity::class,
             PathGoalComponentEntity::class,
             PathGoalVersionEntity::class,
             PathChangeProposalEntity::class,

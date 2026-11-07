@@ -49,7 +49,7 @@ object PathTemplates {
     /** The template of a goal assembled by hand (A56 §2.1 «Своя цель»). */
     const val CUSTOM = "custom"
 
-    /** A goal of the 12-week path before v11 (A42): kept as it was, read by the new screen. */
+    /** A goal of the 12-week path before v12 (A42): kept as it was, read by the new screen. */
     const val LEGACY = "legacy"
 
     private fun c(label: String, low: Double, high: Double, unit: String, metric: PathMetric) = Criterion(label, low, high, unit, metric)

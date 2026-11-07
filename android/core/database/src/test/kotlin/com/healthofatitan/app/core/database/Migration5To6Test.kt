@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 /**
  * «Титаниум» → stream Г «Путь» on the founder's phone: a version-4 database (schema frozen as raw
  * SQL, with a dawn, two nights and two workouts) opens with schema 6 through MIGRATION_4_5 and MIGRATION_5_6.
- * Room validates `path_goal` and `path_step` against the entities (since v11 `path_goal` is the
+ * Room validates `path_goal` and `path_step` against the entities (since v12 `path_goal` is the
  * practical goal of «Путь» v1); old data survives.
  */
 @RunWith(AndroidJUnit4::class)

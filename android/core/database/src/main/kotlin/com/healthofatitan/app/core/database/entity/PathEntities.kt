@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * A practical goal of «Путь» v1 (A56 §1 `PracticalGoal`, D-048). Since v11 (A56 §5) the status is
+ * A practical goal of «Путь» v1 (A56 §1 `PracticalGoal`, D-048). Since v12 (A56 §5) the status is
  * one of DRAFT · ACTIVE · PAUSED · HELD · REVIEW · TAKEN · RELEASED · QUEUED; the v10 goals of the
  * 12-week path (A42) were migrated: REPLACED → RELEASED, DONE → TAKEN, their sphere kept in
  * [legacySphere]. Only on the device (P-21): no network code reads this table.

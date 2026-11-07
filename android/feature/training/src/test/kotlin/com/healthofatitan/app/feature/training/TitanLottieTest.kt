@@ -167,7 +167,7 @@ class TitanLottieTest {
             assertTrue("\"nm\":\"floor\"" !in json, "$id: the Path has no floor")
             assertTrue(File(dir, "$id.json").length() <= 150 * 1024, id)
         }
-        // §4.0 timings at 60 fps: look 400 ms, one hand 800 ms, offer 600 ms, the loops 6 / 4 / 1 / 2.4 s
+        // §4.0 timings at 60 fps: look 400 ms, one hand 800 ms, offer 600 ms, the loops 6 / 4 / 0.73 / 2.4 s
         val hold = manifest.getValue("path-hold").markers
         assertEquals(360, hold.getValue("hold_loop_end") - hold.getValue("hold_loop_start"))
         assertEquals(48, hold.getValue("one_hand_loop_start") - hold.getValue("to_one_hand"))
@@ -175,7 +175,7 @@ class TitanLottieTest {
         assertEquals(0, hold.getValue("poster"))
         assertEquals(36, manifest.getValue("path-palms").markers.getValue("release") - manifest.getValue("path-palms").markers.getValue("offer"))
         assertEquals(240, manifest.getValue("path-sky").frames)
-        assertEquals(60, manifest.getValue("path-earth").frames)
+        assertEquals(44, manifest.getValue("path-earth").frames) // 733 ms, 164 steps/min (Agent 12)
         assertEquals(144, manifest.getValue("path-water").frames)
         // the breath loops from the start in the player of the training too
         val e = manifest.getValue("path-hold")

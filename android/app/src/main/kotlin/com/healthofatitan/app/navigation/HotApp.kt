@@ -87,7 +87,7 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
- * Bottom modules «Сегодня · Неделя · Путь · За плечами» (D-038). The mentor left the bar: Винс is
+ * Bottom modules «Сегодня · Неделя · Путь» (D-051; «За плечами» opens from «Путь»). The mentor left the bar: Винс is
  * the circle on the left of every header.
  */
 enum class HotTab(val route: String, val label: String, @param:DrawableRes val icon: Int) {
@@ -274,7 +274,7 @@ fun HotApp(
                     onAskMentor = { open(HotRoute.MENTOR) },
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
-                weekScreen()
+                weekScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
                 pathScreen(
                     stateful = stateful,
                     onOpenRitual = { open(HotRoute.PATH_RITUAL) },

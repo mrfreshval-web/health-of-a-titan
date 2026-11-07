@@ -26,5 +26,8 @@ data class TodayMarkEntity(
         const val KIND_MEAL = "meal"
         const val KIND_TASK_DONE = "task_done"
         const val KIND_TASK_TO_WEEK = "task_to_week"
+
+        /** «Эксперимент недели» (A53 §3.2): the action was done that day (ref = experiment id). */
+        const val KIND_EXPERIMENT = "experiment"
     }
 }

@@ -5,11 +5,13 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.entity.PathGoalComponentEntity
-import com.healthofatitan.app.core.database.entity.PathGoalVersionEntity
-import com.healthofatitan.app.core.database.entity.PathHorizonEntity
-import com.healthofatitan.app.core.database.entity.PathLetterEntity
-import com.healthofatitan.app.core.database.entity.PathMarkEntity
+import com.healthofatitan.app.core.database.entity.BodyInputEntity
+import com.healthofatitan.app.core.database.entity.TodayMarkEntity
+import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
+import com.healthofatitan.app.core.database.entity.WeekFrameEntity
+import com.healthofatitan.app.core.database.entity.WeekGoalEntity
+import com.healthofatitan.app.core.database.entity.WeekPlanEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -19,11 +21,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * «Путь» v1 (A54–A57, D-048) on the founder's phone: a version-4 database with the goals of the
- * 12-week path (A42) opens through every migration up to v11. The statuses follow the state model
- * of A56 §5 (REPLACED → RELEASED, DONE → TAKEN, ACTIVE stays), each old goal gets its sphere as a
- * leading component with a Water guard and a version 1 «MIGRATED»; the steps survive; the new
- * tables take components, versions, cards, the horizon, the letter and marks.
+ * «Неделя» (A52, D-044, D-045) on the founder's phone: a version-4 database (schema 1–4 frozen as
+ * raw SQL) opens through every migration up to the week tables (10 → 11). Room validates each new
+ * table against its entity; old data survive; a plan with its goals replaces itself in one
+ * transaction; scores, frames and body inputs are kept.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -72,18 +73,6 @@ class Migration10To11Test {
                 "CREATE INDEX IF NOT EXISTS `index_dawn_log_user_id_haiku_id` ON `dawn_log` (`user_id`, `haiku_id`)",
                 "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'titanium')",
-                // the v6 path tables with goals of the 12-week path (A42): MIGRATION_5_6 keeps them (IF NOT EXISTS)
-                "CREATE TABLE IF NOT EXISTS `path_goal` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
-                    "`sphere` TEXT NOT NULL, `start_day` TEXT NOT NULL, `baseline` INTEGER, `stage1` INTEGER NOT NULL, " +
-                    "`stage2` INTEGER NOT NULL, `stage3` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, " +
-                    "`ended_day` TEXT)",
-                "CREATE INDEX IF NOT EXISTS `index_path_goal_user_id_status` ON `path_goal` (`user_id`, `status`)",
-                "CREATE TABLE IF NOT EXISTS `path_step` (`user_id` TEXT NOT NULL, `goal_id` INTEGER NOT NULL, `day_key` TEXT NOT NULL, " +
-                    "`version` TEXT NOT NULL, `done_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `goal_id`, `day_key`))",
-                "INSERT INTO path_goal VALUES (1, 'local', 'body', '2026-09-01', 1, 2, 3, 3, 'REPLACED', 10, '2026-10-01')",
-                "INSERT INTO path_goal VALUES (2, 'local', 'sleep', '2026-08-01', 3, 4, 5, 5, 'DONE', 20, '2026-10-24')",
-                "INSERT INTO path_goal VALUES (3, 'local', 'sleep', '2026-10-02', 3, 4, 5, 5, 'ACTIVE', 30, NULL)",
-                "INSERT INTO path_step VALUES ('local', 3, '2026-10-05', 'NORMAL', 31)",
                 "INSERT INTO dawn_log VALUES ('local', '2026-11-10', 'hk-ravno-001', 'весло', 'oar', 'STEADY', 1)",
                 "INSERT INTO metric_daily VALUES ('local', '2026-11-10', 'SLP', 1, 7.2, 0.3, 0, 1.0, 7.0, 1)",
                 "INSERT INTO metric_daily VALUES ('local', '2026-11-11', 'SLP', 1, 6.1, -0.8, -1, 1.0, 6.9, 1)",
@@ -95,55 +84,56 @@ class Migration10To11Test {
     }
 
     @Test
-    fun `the goals of the 12-week path become practical goals with the new statuses`() = runTest {
-        val name = "migration-4-path-v1.db"
+    fun `version 4 upgrades to the week tables and keeps today and the dawn`() = runTest {
+        val name = "migration-4-week.db"
         createVersion4(name)
         val db = Room.databaseBuilder(context, HotDatabase::class.java, name)
             .addMigrations(*Migrations.ALL)
             .allowMainThreadQueries()
             .build()
         try {
-            db.openHelper.writableDatabase // runs and validates every migration up to 10 → 11
+            db.openHelper.writableDatabase // runs and validates every migration
+            // «Путь» v1 takes 11 → 12 on top of the week tables
+            assertEquals(12, db.openHelper.readableDatabase.version)
             assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
-            val path = db.pathDao()
-            val goals = path.goals("local").associateBy { it.id }
-            assertEquals("RELEASED", goals.getValue(1).status)
-            assertEquals("TAKEN", goals.getValue(2).status)
-            assertEquals("ACTIVE", goals.getValue(3).status)
-            assertEquals("Сон 7 часов", goals.getValue(3).title)
-            assertEquals("Тренировки", goals.getValue(1).title)
-            assertEquals("2026-12-25", goals.getValue(3).deadline)
-            assertEquals("sleep", goals.getValue(3).legacySphere)
-            assertEquals("legacy", goals.getValue(3).template)
-            assertEquals("ночи от 7 ч из 7|4.0|6.0||sleep_nights", goals.getValue(3).criteria)
-            assertEquals(false, goals.getValue(1).releaseToQueue)
-            assertEquals(listOf("sleep" to "LEAD", "rest" to "GUARD"), path.components(3).map { it.component to it.role })
-            assertEquals(listOf("cardio" to "LEAD", "sleep" to "GUARD"), path.components(1).map { it.component to it.role })
-            assertEquals(listOf(true, false), path.components(3).map { it.isLever })
-            assertEquals(listOf("MIGRATED"), path.versions(3).map { it.changeType })
-            assertEquals("NORMAL", path.step("local", 3, "2026-10-05")?.version)
+            db.todayDao().upsert(TodayMarkEntity("local", "2026-11-11", TodayMarkEntity.KIND_TASK_TO_WEEK, "wg:body-training", 1, goal = "body-training", at = 1L))
 
-            // the new tables
-            val id = path.saveGoal(
-                goals.getValue(3).copy(id = 0, title = "Силы на вечер", status = "DRAFT", legacySphere = null),
-                listOf(
-                    PathGoalComponentEntity("local", 0, "rest", "LEAD", null, null, null, false, 0),
-                    PathGoalComponentEntity("local", 0, "sleep", "GUARD", 3, 2, null, true, 1),
-                ),
-                PathGoalVersionEntity(userId = "local", goalId = 0, v = 1, snapshot = "title=Силы", changeType = "CREATE", initiator = "PERSON", reason = null, at = 1L),
+            val dao = db.weekDao()
+            fun goal(id: String, target: Int, order: Int) =
+                WeekGoalEntity("local", "2026-11-09", id, "BODY", "TRAINING", "TIMES", "Тренировки", target, "раз", "PATH", order)
+            dao.savePlan(WeekPlanEntity("local", "2026-11-09", "PROPOSED", assembledAt = 1L), listOf(goal("body-training", 3, 0), goal("work-focus", 4, 1)))
+            dao.savePlan(
+                WeekPlanEntity("local", "2026-11-09", "APPROVED", assembledAt = 2L, ritualDoneAt = 3L, pride = "первый подход", carry = null),
+                listOf(goal("body-training", 2, 0)),
             )
-            assertEquals(listOf("rest", "sleep"), path.components(id).map { it.component })
-            assertEquals(1, path.versions(id).size)
-            path.upsertHorizon(PathHorizonEntity(id, "local", "sleep", 0, 1L))
-            assertEquals("sleep", path.horizon(id)?.transferred)
-            path.upsertLetter(PathLetterEntity(id, "local", "Ты дошёл", "MILESTONE_8", "2026-11-11", null))
-            assertEquals("Ты дошёл", path.letter(id)?.text)
-            path.insertMark(PathMarkEntity("local", id, "sleep", 3, "2026-11-11", "SELF", 1L))
-            path.insertMark(PathMarkEntity("local", id, "sleep", 3, "2026-11-12", "SELF", 2L))
-            assertEquals(listOf("2026-11-11"), path.observeMarks("local").first().map { it.dayKey })
-            path.dropGoal(id)
-            assertNull(path.goal(id))
-            assertEquals(0, path.components(id).size)
+            assertEquals("APPROVED", dao.plan("local", "2026-11-09")?.status)
+            assertEquals(listOf(2), dao.goals("local", "2026-11-09").map { it.target })
+            assertEquals("первый подход", dao.observePlan("local", "2026-11-09").first()?.pride)
+            assertEquals("2026-11-09", dao.firstPlan("local")?.weekStart)
+
+            dao.upsertScores(listOf(WeekDayScoreEntity("local", "2026-11-09", true, 3, 1, "ROVNO", false, "0.8,0.7,0.9,0.2,0.1", 5L)))
+            assertEquals(true, dao.scores("local", "2026-11-09", "2026-11-15").single().inSupport)
+            assertEquals(0, dao.scores("local", "2026-11-16", "2026-11-22").size)
+
+            dao.upsertFrame(WeekFrameEntity("local", "2026-11-09", "HOLD", "ROVNO", 0.7f, "0.8,0.6,0.7,0.5,0.9", "CLEAR", null, 4, 42L, null, null, 6L))
+            assertEquals(4, dao.observeFrames("local").first().single().daysInSupport)
+            assertNull(dao.frame("local", "2026-11-09")?.fitnessAge)
+
+            dao.upsertInput(BodyInputEntity("local", BodyInputEntity.KIND_WAIST, "2026-11-01", 88.0, null, 7L))
+            dao.upsertInput(BodyInputEntity("local", BodyInputEntity.KIND_WAIST, "2026-11-09", 87.0, null, 8L))
+            assertEquals(87.0, dao.latestInput("local", BodyInputEntity.KIND_WAIST)?.value)
+            assertEquals(2, dao.observeInputs("local").first().size)
+            dao.upsertFrame(
+                WeekFrameEntity("local", "2026-11-30", "RISE", "ROVNO", 0.9f, "0.8,0.6,0.7,0.5,0.9", "CLEAR", null, 5, 43L, null, 41.0, 9L, 1, 44.2, 12.5, 87.0),
+            )
+            assertEquals(listOf(1), dao.lastMilestones("local").map { it.fitnessMilestone })
+            dao.upsertExperiment(
+                WeekExperimentEntity("local", "2026-11-16", "exp-screens_sleep", "Экран убран → сон лучше?", "Экран убран", "SLEEP", "PATTERN", false, "TAKEN", decidedAt = 10L),
+            )
+            dao.upsertExperiment(dao.experiment("local", "2026-11-16")!!.copy(outcome = "YES", resultText = "Похоже, да", points = 5))
+            assertEquals("YES", dao.experiment("local", "2026-11-16")?.outcome)
+            dao.deleteGoal("local", "2026-11-09", "body-training")
+            assertEquals(0, dao.goals("local", "2026-11-09").size)
         } finally {
             db.close()
         }

@@ -67,6 +67,9 @@ object PathFeatureFlags {
      */
     const val LIVING_SLICE: Boolean = false
 
+    // TODO(D-050, A57 §4.3): bind WeekPathBridge (the lever as the experiment of the week) and listen
+    //  to WeekRepository.revealed so the Titan of the horizon takes its Sunday step with the
+    //  Sculpture's lights. The seed texts need the review of Agents 10 and 3; the step is calendar-only now.
     /** D-051: the letter of Э7 comes later; the screen and the table are ready. */
     const val LETTER: Boolean = false
 }

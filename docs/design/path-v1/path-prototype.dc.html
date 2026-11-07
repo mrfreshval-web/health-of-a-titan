@@ -85,6 +85,26 @@ button{font-family:inherit;color:inherit}
         <path class="hot-halo" d="{{haloD}}" fill="none" stroke="#E8B86A" stroke-width="12" stroke-opacity="0.5" stroke-linecap="round"></path>
       </sc-if>
 
+      <line x1="0" y1="262" x2="388" y2="262" stroke="#F3D9A4" stroke-opacity="0.18" stroke-width="1"></line>
+      <defs><filter id="hotGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter></defs>
+      <g transform="{{hzTransform}}">
+        <sc-if value="{{hzStanding}}" hint-placeholder-val="{{ true }}">
+          <g fill="none" stroke="#F3D9A4" stroke-width="4" stroke-linecap="round" stroke-opacity="0.35" filter="url(#hotGlow)"><circle cx="0" cy="214" r="6"></circle><path d="M0 220 L0 244 M0 226 L-11 238 M0 226 L11 238 M0 244 L-7 262 M0 244 L7 262"></path></g>
+          <g fill="none" stroke="#F3D9A4" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.85"><circle cx="0" cy="214" r="6"></circle><path d="M0 220 L0 244 M0 226 L-11 238 M0 226 L11 238 M0 244 L-7 262 M0 244 L7 262"></path></g>
+          <circle cx="0" cy="230" r="2.6" fill="#D8C3A0"></circle>
+          <circle cx="-3" cy="238" r="2.6" fill="#D8C3A0"></circle>
+          <circle cx="3" cy="222" r="2.4" fill="#C9D3E6"></circle>
+          <circle cx="0" cy="250" r="2.6" fill="#7FB2F0"></circle>
+        </sc-if>
+        <sc-if value="{{hzSeated}}" hint-placeholder-val="{{ false }}">
+          <rect x="-9" y="252" width="18" height="10" rx="3" fill="#2F3652"></rect>
+          <g fill="none" stroke="#F3D9A4" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.75"><circle cx="0" cy="228" r="6"></circle><path d="M0 234 L0 252 M0 240 L-9 248 M0 240 L9 248 M0 252 L11 252 L11 262 M0 252 L-4 252 L-4 262"></path></g>
+          <circle cx="0" cy="242" r="2.4" fill="#D8C3A0"></circle>
+          <circle cx="3" cy="236" r="2.2" fill="#C9D3E6"></circle>
+        </sc-if>
+        <text x="0" y="200" text-anchor="middle" fill="#D9D4C4" font-size="12" font-style="italic" font-family="Cormorant Garamond, Georgia, serif">{{hzName}}</text>
+      </g>
+      <circle cx="194" cy="190" r="6" fill="#D8C3A0" opacity="0.35" filter="url(#hotGlow)"></circle>
       <g fill="none" stroke="#E6E2D6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="{{headX}}" cy="146" r="11" fill="#0F1220"></circle>
         <path d="M194 158 L194 222"></path>
@@ -93,6 +113,7 @@ button{font-family:inherit;color:inherit}
         <path d="M194 222 L178 260"></path>
         <path d="M194 222 L210 260"></path>
       </g>
+      <circle cx="194" cy="190" r="3" fill="#D8C3A0"></circle>
 
       <rect x="24" y="404" width="340" height="18" rx="4" fill="#1A1E2B"></rect>
       <text x="34" y="417" fill="#8A90A6" font-size="10" font-weight="700" font-family="Manrope, sans-serif" letter-spacing="2">ДАНО</text>
@@ -109,7 +130,7 @@ button{font-family:inherit;color:inherit}
     <div style="margin: 14px 16px 0 16px; display: flex; flex-direction: column; gap: 8px">
       <div style="display: flex; justify-content: space-between; align-items: baseline">
         <span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #9AA0B4">ЭТАП · 12 НЕДЕЛЬ</span>
-        <span style="font-size: 13px; color: #B7BCCC">неделя 5 из 12 · до вехи 17 дней</span>
+        <span style="font-size: 13px; color: #B7BCCC">неделя 5 из 12 · Встреча на вехе через 17 дней</span>
       </div>
       <svg width="380" height="34" viewBox="0 0 380 34" role="img" aria-label="Тропа этапа: неделя 5 из 12, вехи на 4, 8 и 12 неделе">
         <path d="M10 20 C 80 8, 140 30, 200 18 S 320 10, 370 20" fill="none" stroke="#2F3652" stroke-width="2"></path>
@@ -118,7 +139,7 @@ button{font-family:inherit;color:inherit}
           <circle cx="{{t.x}}" cy="{{t.y}}" r="{{t.r}}" fill="{{t.fill}}" stroke="{{t.stroke}}" stroke-width="1.5"></circle>
         </sc-for>
       </svg>
-      <span style="font-size: 13px; color: #9AA0B4">Шаги пути на этой неделе: 2 из 3</span>
+      <span style="font-size: 13px; color: #9AA0B4">{{hzLine}}</span>
     </div>
 
     <div style="margin: 14px 12px 16px 12px; display: flex; flex-direction: column; gap: 8px">
@@ -232,7 +253,12 @@ class Component extends DCLogic {
       headX: lever ? 197 : 194,
       rightArm: heavy ? 'M194 172 L214 206' : 'M194 172 L248 118',
       labelTitle: label.t, labelSub: label.s, labelAction: label.a, labelColor: label.c,
-      sliceLabel: 'Срез мира: Небо, Земля, Вода. ' + label.t
+      sliceLabel: 'Срез мира: Небо, Земля, Вода, Титан горизонта. ' + label.t,
+      hzTransform: 'translate(' + (heavy ? 318 : 318) + ' 0)',
+      hzStanding: !heavy,
+      hzSeated: heavy,
+      hzName: heavy ? 'ждёт' : 'та, у кого силы на лето',
+      hzLine: heavy ? 'Титан горизонта ждёт на камне · путь на паузе не сгорает' : 'Титан горизонта · шаг 5 из 12 · огонь «Сила» близко'
     };
   }
 }

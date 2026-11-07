@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HoT · Назови цель</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Cormorant+Garamond:ital,wght@1,500;1,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0E1A}
+a{color:#E8C47A}a:hover{color:#F3D9A4}
+button{font-family:inherit;color:inherit}
+@keyframes hotRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hot-in{animation:hotRise .5s ease-out both}
+@keyframes hotFly{0%{opacity:0;transform:translate(0,0) scale(.4)}20%{opacity:1}100%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(1)}}
+.hot-fly{animation:hotFly 1.2s cubic-bezier(.2,.7,.2,1) both}
+@keyframes hotForm{0%{opacity:0;filter:blur(6px)}100%{opacity:1;filter:blur(0)}}
+.hot-form{animation:hotForm 1.6s ease-out .6s both}
+@media (prefers-reduced-motion: reduce){.hot-in,.hot-fly,.hot-form{animation:none}}
+</style>
+</helmet>
+<div style="width: 412px; height: 915px; box-sizing: border-box; background: #0F1220; color: #EDEBE4; font-family: 'Manrope', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 4px 16px">
+    <button onClick="{{back}}" aria-label="Назад" style="min-width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9CCD8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </button>
+    <div style="display: flex; gap: 6px" aria-label="Шаг {{stepNo}} из 7">
+      <sc-for list="{{dots}}" as="d" hint-placeholder-count="7">
+        <span style="width: {{d.w}}px; height: 6px; border-radius: 3px; background: {{d.c}}"></span>
+      </sc-for>
+    </div>
+    <button onClick="{{next}}" style="min-width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; font-size: 14px; color: #9AA0B4">Пропустить</button>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-direction: column; padding: 0 20px">
+
+    <sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column">
+        <svg width="372" height="300" viewBox="0 0 372 300" aria-hidden="true" style="margin-top: 8px">
+          <path d="M66 210 A120 120 0 0 1 306 210" fill="none" stroke="#C9D3E6" stroke-opacity="0.15" stroke-width="5"></path>
+          <g fill="none" stroke="#E6E2D6" stroke-width="3" stroke-linecap="round"><circle cx="186" cy="150" r="11"></circle><path d="M186 162 L186 226 M186 176 L150 150 M186 176 L222 150 M186 226 L172 264 M186 226 L200 264"></path></g>
+          <ellipse cx="186" cy="146" rx="46" ry="10" fill="none" stroke="#F3D9A4" stroke-opacity="0.25" stroke-dasharray="2 4"></ellipse>
+        </svg>
+        <h1 style="margin: 0; font-size: 26px; font-weight: 800; line-height: 1.2">Назови цель</h1>
+        <p style="margin: 8px 0 0 0; font-size: 15px; color: #B7BCCC">Что важно для твоей жизни — к дате или к концу года?</p>
+        <div style="flex: 1"></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px">
+          <sc-for list="{{templates}}" as="t" hint-placeholder-count="6">
+            <button onClick="{{t.pick}}" style="min-height: 40px; padding: 8px 14px; border-radius: 20px; border: 1px solid {{t.border}}; background: {{t.bg}}; font-size: 14px; cursor: pointer">{{t.label}}</button>
+          </sc-for>
+        </div>
+        <label for="hot-goal" style="font-size: 12px; color: #9AA0B4; letter-spacing: 1px">СВОИМИ СЛОВАМИ</label>
+        <div style="display: flex; gap: 8px; margin: 6px 0 20px 0">
+          <input id="hot-goal" value="Фигура и фитнес мечты к 31.12" style="flex: 1; min-height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 1px solid #2F3652; background: #151A2C; color: #EDEBE4; font-size: 16px; font-family: inherit"/>
+          <button aria-label="Сказать голосом" style="width: 52px; height: 52px; border-radius: 16px; border: 1px solid #2F3652; background: #151A2C; cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8C47A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column">
+        <svg width="372" height="150" viewBox="0 0 372 150" aria-hidden="true">
+          <path d="M186 20 L190 32 L202 36 L190 40 L186 52 L182 40 L170 36 L182 32 Z" fill="#F3D9A4" opacity="{{starOp}}"></path>
+          <line x1="186" y1="56" x2="186" y2="150" stroke="#E8C47A" stroke-opacity="0.3" stroke-dasharray="2 4"></line>
+        </svg>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800">Что будет правдой к 31 декабря?</h1>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px">
+          <div style="padding: 12px 14px; border-radius: 14px; background: #151A2C; border: 1px solid #22283D; font-size: 15px">Талия −4…−6 см</div>
+          <div style="padding: 12px 14px; border-radius: 14px; background: #151A2C; border: 1px solid #22283D; font-size: 15px">3 силовые в неделю — привычно</div>
+          <div style="padding: 12px 14px; border-radius: 14px; background: #151A2C; border: 1px solid #22283D; font-size: 15px">Сила — рубеж «уверенно»</div>
+        </div>
+        <label for="hot-why" style="margin-top: 22px; font-size: 18px; font-weight: 700">Ради чего тебе это?</label>
+        <span style="font-size: 13px; color: #9AA0B4; margin-top: 2px">Одна строка — для себя. Можно пропустить.</span>
+        <input id="hot-why" value="ради лёгкости и сил на лето с детьми" style="margin-top: 8px; min-height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 1px solid #E8C47A; background: #151A2C; color: #EDEBE4; font-size: 17px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic"/>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column">
+        <svg width="372" height="300" viewBox="0 0 372 300" aria-hidden="true">
+          <line x1="0" y1="250" x2="372" y2="250" stroke="#F3D9A4" stroke-opacity="0.2"></line>
+          <g class="hot-form">
+            <g fill="none" stroke="#F3D9A4" stroke-width="5" stroke-opacity="0.3" stroke-linecap="round" style="filter: blur(3px)"><circle cx="186" cy="150" r="13"></circle><path d="M186 163 L186 212 M186 176 L162 198 M186 176 L210 198 M186 212 L172 250 M186 212 L200 250"></path></g>
+            <g fill="none" stroke="#F3D9A4" stroke-width="2" stroke-opacity="0.9" stroke-linecap="round"><circle cx="186" cy="150" r="13"></circle><path d="M186 163 L186 212 M186 176 L162 198 M186 176 L210 198 M186 212 L172 250 M186 212 L200 250"></path></g>
+          </g>
+        </svg>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800">Кем ты будешь к сроку?</h1>
+        <p style="margin: 6px 0 0 0; font-size: 15px; color: #B7BCCC">Назови себя одной фразой. Этот Титан встанет на горизонте и будет идти к тебе.</p>
+        <input aria-label="Кем ты будешь" value="Та, у кого есть силы на лето" style="margin-top: 16px; min-height: 52px; box-sizing: border-box; padding: 0 16px; border-radius: 16px; border: 1px solid #2F3652; background: #151A2C; color: #EDEBE4; font-size: 17px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic"/>
+        <span style="margin-top: 8px; font-size: 13px; color: #9AA0B4">Без фразы он будет просто «Ты к 31.12».</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s4}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column">
+        <svg width="372" height="330" viewBox="0 0 372 330" aria-hidden="true">
+          <path d="M66 190 A120 120 0 0 1 306 190" fill="none" stroke="#C9D3E6" stroke-opacity="0.2" stroke-width="5"></path>
+          <path d="M36 236 L336 236" stroke="#D8C3A0" stroke-opacity="0.25" stroke-width="8"></path>
+          <path d="M26 252 L346 252" stroke="#D8C3A0" stroke-opacity="0.25" stroke-width="8"></path>
+          <path d="M16 292 q 10 -5 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="#7FB2F0" stroke-opacity="0.35" stroke-width="3"></path>
+          <g fill="none" stroke="#E6E2D6" stroke-width="3" stroke-linecap="round"><circle cx="186" cy="140" r="10"></circle><path d="M186 151 L186 205 M186 164 L142 112 M186 164 L230 112 M186 205 L172 232 M186 205 L200 232"></path></g>
+          <sc-for list="{{sparks}}" as="p" hint-placeholder-count="6">
+            <circle class="hot-fly" cx="186" cy="104" r="5" fill="{{p.c}}" style="--dx: {{p.dx}}px; --dy: {{p.dy}}px; animation-delay: {{p.delay}}ms"></circle>
+          </sc-for>
+          <path d="M286 236 q 22 -24 0 -40" fill="none" stroke="#8A90A6" stroke-dasharray="2 3"></path>
+          <text x="294" y="212" fill="#8A90A6" font-size="10" font-family="Manrope, sans-serif">колено</text>
+        </svg>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800">Вот из чего сложится цель</h1>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px">
+          <sc-for list="{{decomp}}" as="r" hint-placeholder-count="6">
+            <button onClick="{{r.toggle}}" style="min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 12px; border: 1px solid #22283D; background: #151A2C; cursor: pointer; text-align: left">
+              <span style="width: 8px; height: 8px; border-radius: 4px; background: {{r.c}}"></span>
+              <span style="flex: 1; font-size: 15px">{{r.name}}</span>
+              <span style="font-size: 13px; color: {{r.c}}">{{r.role}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <span style="margin-top: 8px; font-size: 13px; color: #E8B86A">Рычаг сейчас — сон: 6,2 ч из 7. Колено бережём: без прыжков.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s5}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column; padding-top: 40px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800">Что внутри тебя скорее всего помешает?</h1>
+        <p style="margin: 6px 0 0 0; font-size: 15px; color: #B7BCCC">Из того, что ты несёшь:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px">
+          <button style="min-height: 40px; padding: 8px 14px; border-radius: 20px; border: 1px solid #E8C47A; background: #2A2418; font-size: 14px; cursor: pointer">вечером ем «на нервах»</button>
+          <button style="min-height: 40px; padding: 8px 14px; border-radius: 20px; border: 1px solid #2F3652; background: #151A2C; font-size: 14px; cursor: pointer">силовые срываются в недели переработок</button>
+          <button style="min-height: 40px; padding: 8px 14px; border-radius: 20px; border: 1px solid #2F3652; background: #151A2C; font-size: 14px; cursor: pointer">своё слово</button>
+        </div>
+        <div style="margin-top: 26px; padding: 16px; border-radius: 18px; background: #151A2C; border: 1px solid #22283D; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 13px; color: #9AA0B4; letter-spacing: 1px">ЕСЛИ — ТО</span>
+          <span style="font-size: 17px"><b>Если</b> в 21:00 тянет к холодильнику,</span>
+          <span style="font-size: 17px"><b>то</b> чай и минута Передышки.</span>
+        </div>
+        <span style="margin-top: 10px; font-size: 13px; color: #9AA0B4">Это станет первой целью недели.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s6}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column; padding-top: 40px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800">Как реально</h1>
+        <p style="margin: 6px 0 0 0; font-size: 15px; color: #B7BCCC">По твоему темпу с весны 2025 года. Это темп, а не потолок — на вехе сверим.</p>
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+          <button onClick="{{m.pick}}" style="margin-top: 14px; padding: 16px; border-radius: 18px; border: 1.5px solid {{m.border}}; background: #151A2C; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 13px; letter-spacing: 1px; color: #9AA0B4">{{m.tag}}</span>
+            <span style="font-size: 18px; font-weight: 700">{{m.title}}</span>
+            <span style="font-size: 14px; color: #B7BCCC">{{m.sub}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{s7}}" hint-placeholder-val="{{ false }}">
+      <div class="hot-in" style="flex: 1; display: flex; flex-direction: column">
+        <svg width="372" height="330" viewBox="0 0 372 330" aria-hidden="true">
+          <path d="M66 170 A120 120 0 0 1 306 170" fill="none" stroke="#C9D3E6" stroke-opacity="0.25" stroke-width="5"></path>
+          <line x1="0" y1="232" x2="372" y2="232" stroke="#F3D9A4" stroke-opacity="0.2"></line>
+          <path d="M120 300 C 180 270, 250 260, 330 232" fill="none" stroke="#D8C3A0" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="3 5"></path>
+          <g fill="none" stroke="#E6E2D6" stroke-width="3" stroke-linecap="round"><circle cx="110" cy="210" r="10"></circle><path d="M110 221 L110 268 M110 234 L80 186 M110 234 L140 186 M110 268 L98 300 M110 268 L122 300"></path></g>
+          <circle cx="110" cy="248" r="3.5" fill="#D8C3A0"></circle>
+          <g class="hot-form">
+            <g fill="none" stroke="#F3D9A4" stroke-width="5" stroke-opacity="0.3" stroke-linecap="round" style="filter: blur(3px)"><circle cx="330" cy="186" r="7"></circle><path d="M330 193 L330 214 M330 200 L320 210 M330 200 L340 210 M330 214 L324 232 M330 214 L336 232"></path></g>
+            <g fill="none" stroke="#F3D9A4" stroke-width="1.6" stroke-linecap="round"><circle cx="330" cy="186" r="7"></circle><path d="M330 193 L330 214 M330 200 L320 210 M330 200 L340 210 M330 214 L324 232 M330 214 L336 232"></path></g>
+            <circle cx="330" cy="204" r="2.4" fill="#D8C3A0"></circle><circle cx="327" cy="210" r="2.4" fill="#D8C3A0"></circle><circle cx="333" cy="198" r="2.2" fill="#C9D3E6"></circle><circle cx="330" cy="220" r="2.4" fill="#7FB2F0"></circle>
+            <text x="330" y="170" text-anchor="middle" fill="#D9D4C4" font-size="13" font-style="italic" font-family="Cormorant Garamond, Georgia, serif">та, у кого есть силы на лето</text>
+          </g>
+        </svg>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800">Она уже идёт к тебе</h1>
+        <p style="margin: 6px 0 0 0; font-size: 15px; color: #B7BCCC">Каждое воскресенье — шаг навстречу. Взятый рубеж — огонь с неё на тебя. Первый уже твой: силовые весной.</p>
+        <div style="margin-top: 12px; display: flex; gap: 8px; font-size: 13px; color: #9AA0B4">
+          <span>12 недель</span><span>·</span><span>Встреча на вехе: 5.12, 2.01</span><span>·</span><span>Встреча: 30.01</span>
+        </div>
+        <button style="margin-top: 12px; min-height: 44px; border-radius: 14px; border: 1px dashed #4A5272; background: transparent; font-size: 14px; color: #B7BCCC; cursor: pointer">Написать письмо с горизонта (вскроется на вехе)</button>
+      </div>
+    </sc-if>
+
+    <div style="padding: 12px 0 24px 0">
+      <button onClick="{{next}}" style="width: 100%; min-height: 56px; border-radius: 18px; border: 0; background: #E8C47A; color: #1A1508; font-size: 17px; font-weight: 800; cursor: pointer">{{cta}}</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":412,"height":915}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { step: 1, tpl: 0, mode: 0, guardOff: false }; }
+  renderVals() {
+    var self = this, s = this.state.step;
+    var go = function (n) { self.setState({ step: Math.max(1, Math.min(7, n)) }); };
+    var dots = [];
+    for (var i = 1; i <= 7; i++) dots.push({ w: i === s ? 22 : 8, c: i <= s ? '#E8C47A' : '#2F3652' });
+    var tl = ['Фигура к дате', 'Забег', 'Повышение', 'Силы на детей', 'Язык', 'Спокойнее в работе'];
+    var templates = tl.map(function (l, i) { var on = self.state.tpl === i; return { label: l, bg: on ? '#2A2418' : '#151A2C', border: on ? '#E8C47A' : '#2F3652', pick: function () { self.setState({ tpl: i }); } }; });
+    var sparks = [
+      { c: '#D8C3A0', dx: -60, dy: 132, delay: 0 }, { c: '#D8C3A0', dx: 70, dy: 148, delay: 120 },
+      { c: '#D8C3A0', dx: 120, dy: 132, delay: 240 }, { c: '#C9D3E6', dx: -90, dy: -20, delay: 360 },
+      { c: '#7FB2F0', dx: -40, dy: 188, delay: 480 }, { c: '#7FB2F0', dx: 90, dy: 188, delay: 600 }
+    ];
+    var decomp = [
+      { name: 'Сила', role: 'ведёт', c: '#D8C3A0' },
+      { name: 'Состав тела', role: 'ведёт', c: '#D8C3A0' },
+      { name: 'Топливо', role: 'подпирает', c: '#D8C3A0' },
+      { name: 'Ясность и решения', role: 'подпирает', c: '#C9D3E6' },
+      { name: 'Сон', role: 'бережёт · рычаг', c: '#7FB2F0' },
+      { name: 'Чувства', role: 'бережёт', c: '#7FB2F0' }
+    ].map(function (r) { return Object.assign({}, r, { toggle: function () {} }); });
+    var modes = [
+      { tag: 'К СРОКУ', title: 'К 31.12: талия −3…−4 см, сила «уверенно»', sub: 'Держим дату, планка по темпу' },
+      { tag: 'ЦЕЛИКОМ', title: 'Талия −6 см — к середине февраля', sub: 'Держим планку, срок расчётный' }
+    ].map(function (m, i) { return Object.assign({}, m, { border: self.state.mode === i ? '#E8C47A' : '#2F3652', pick: function () { self.setState({ mode: i }); } }); });
+    var ctas = ['Дальше', 'Дальше', 'Пусть идёт ко мне', 'Так и есть', 'Беру план', 'Выбираю', 'Беру путь'];
+    return {
+      s1: s === 1, s2: s === 2, s3: s === 3, s4: s === 4, s5: s === 5, s6: s === 6, s7: s === 7,
+      stepNo: s, dots: dots, templates: templates, sparks: sparks, decomp: decomp, modes: modes,
+      starOp: 1, cta: ctas[s - 1],
+      next: function () { go(s === 7 ? 1 : s + 1); },
+      back: function () { go(s - 1); }
+    };
+  }
+}
+</script>
+</body>
+</html>

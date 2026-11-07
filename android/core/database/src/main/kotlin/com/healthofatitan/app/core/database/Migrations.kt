@@ -122,5 +122,22 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+    /**
+     * Stream C «Еда»: the profile of specifics (S4, per category, shared with training) and the
+     * evening one-tap food mark (A41 §6.5, §10). Encrypted like everything else (SQLCipher).
+     */
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `nutrition_profile` (`user_id` TEXT NOT NULL, `category` TEXT NOT NULL, " +
+                    "`codes` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `category`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `nutrition_evening` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`mark` TEXT NOT NULL, `answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 }

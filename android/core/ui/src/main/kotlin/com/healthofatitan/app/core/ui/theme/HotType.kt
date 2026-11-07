@@ -4,6 +4,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -14,9 +15,23 @@ import com.healthofatitan.app.core.ui.R
  * Both SIL OFL 1.1 (Vercel, Basement Studio), static instances subset to Latin + Cyrillic by
  * brand/mark-v2/android/build_geist_fonts.py, licence in assets/licenses/OFL-Geist.txt.
  * Manrope stays bundled as the fallback (A37 §9.3) and for the crisis screen, which does not
- * change with the visual concept (D-029). Cormorant left the interface: only the store and the
- * splash wordmark keep it.
+ * change with the visual concept (D-029). Cormorant Garamond Italic 500 (D-049) is back in exactly
+ * three places of «Путь»: the «Зачем» line, the haiku and the name of the Titan of the horizon —
+ * [HotType.voice], [HotType.haiku], [HotType.horizonName]. Subset Latin + Cyrillic (≤ 120 KB),
+ * licence in assets/licenses/OFL-Cormorant.txt.
  */
+val CormorantItalic = FontFamily(
+    Font(R.font.cormorant_garamond_italic_medium, FontWeight.Medium, FontStyle.Italic),
+)
+
+private fun cormorant(size: Int, line: Int) = TextStyle(
+    fontFamily = CormorantItalic,
+    fontWeight = FontWeight.Medium,
+    fontStyle = FontStyle.Italic,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+)
+
 val Geist = FontFamily(
     Font(R.font.geist_extralight, FontWeight.ExtraLight),
     Font(R.font.geist_light, FontWeight.Light),
@@ -109,6 +124,17 @@ object HotType {
 
     /** In the app the wordmark is Geist Mono with wide tracking (A37 §3 «Логотип»). */
     val wordmark = mono(13, 16, 0.32)
+
+    /**
+     * D-049: Cormorant Garamond Italic 500 — only the «Зачем» line (19 / 24), the haiku of «Путь»
+     * (22 / 30 in a moment, 18 / 26 on a card) and the name of the Titan of the horizon (13 / 16 on
+     * the slice, 15 / 20 in the ritual). Nowhere else.
+     */
+    val voice = cormorant(19, 24)
+    val haiku = cormorant(22, 30)
+    val haikuCard = cormorant(18, 26)
+    val horizonName = cormorant(13, 16)
+    val horizonNameLarge = cormorant(15, 20)
 
     /** Crisis headline: sober Manrope, unchanged by the visual concept (A36 §11 rule 7, D-029). */
     val sosHeadline = TextStyle(

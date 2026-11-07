@@ -262,7 +262,7 @@ class DayViewModel @Inject constructor(
         viewModelScope.launch { runCatching { loop.welcomeShown() } }
     }
 
-    /** «вода»: one glass more or less. */
+    /** «питьё» (D-047, was «вода»): one glass more or less. */
     fun water(day: LocalDate, delta: Int) {
         viewModelScope.launch { runCatching { marks.water(day, delta) } }
     }

@@ -18,7 +18,13 @@ import com.healthofatitan.app.core.database.entity.EveningCheckEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.NutritionEveningEntity
 import com.healthofatitan.app.core.database.entity.NutritionProfileEntity
+import com.healthofatitan.app.core.database.entity.PathChangeProposalEntity
+import com.healthofatitan.app.core.database.entity.PathGoalComponentEntity
 import com.healthofatitan.app.core.database.entity.PathGoalEntity
+import com.healthofatitan.app.core.database.entity.PathGoalVersionEntity
+import com.healthofatitan.app.core.database.entity.PathHorizonEntity
+import com.healthofatitan.app.core.database.entity.PathLetterEntity
+import com.healthofatitan.app.core.database.entity.PathMarkEntity
 import com.healthofatitan.app.core.database.entity.PathStepEntity
 import com.healthofatitan.app.core.database.entity.PlanItemEntity
 import com.healthofatitan.app.core.database.entity.ReturnLogEntity
@@ -82,8 +88,14 @@ import kotlin.reflect.KClass
         WeekFrameEntity::class,
         BodyInputEntity::class,
         WeekExperimentEntity::class,
+        PathGoalComponentEntity::class,
+        PathGoalVersionEntity::class,
+        PathChangeProposalEntity::class,
+        PathHorizonEntity::class,
+        PathLetterEntity::class,
+        PathMarkEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -146,6 +158,12 @@ abstract class HotDatabase : RoomDatabase() {
             WeekFrameEntity::class,
             BodyInputEntity::class,
             WeekExperimentEntity::class,
+            PathGoalComponentEntity::class,
+            PathGoalVersionEntity::class,
+            PathChangeProposalEntity::class,
+            PathHorizonEntity::class,
+            PathLetterEntity::class,
+            PathMarkEntity::class,
         )
     }
 }

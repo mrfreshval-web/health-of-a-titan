@@ -23,17 +23,15 @@ import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.Regime
 import com.healthofatitan.app.domain.engine.RuleRef
-import com.healthofatitan.app.domain.path.PathEngine
-import com.healthofatitan.app.domain.path.PathEvidence
-import com.healthofatitan.app.domain.path.PathRegime
 import com.healthofatitan.app.feature.me.MeScreen
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopScreen
 import com.healthofatitan.app.feature.me.whoop.WhoopUiState
 import com.healthofatitan.app.feature.mentor.MentorScreen
 import com.healthofatitan.app.feature.path.PathActions
+import com.healthofatitan.app.feature.path.PathData
 import com.healthofatitan.app.feature.path.PathScreen
-import com.healthofatitan.app.feature.path.PathView
+import com.healthofatitan.app.feature.path.PathUi
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import com.healthofatitan.app.integration.whoop.SleepStages
@@ -196,7 +194,7 @@ class UxPolishScreenshots {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
                 Header(overline = "Путь")
-                PathScreen(PathView(PathEngine.state(today, emptyList(), emptyMap(), PathEvidence(today), PathRegime.STEADY), PathRegime.STEADY), PathActions())
+                PathScreen(PathUi(PathData.empty(today)), PathActions(), still = true)
             }
         }
     }

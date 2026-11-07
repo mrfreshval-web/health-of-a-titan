@@ -69,6 +69,7 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.pathRitualScreen
 import com.healthofatitan.app.feature.path.pathScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.CloseDayExtras
@@ -86,14 +87,13 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
- * Bottom modules «Сегодня · Неделя · Путь · За плечами» (D-038). The mentor left the bar: Винс is
+ * Bottom modules «Сегодня · Неделя · Путь» (D-051; «За плечами» opens from «Путь»). The mentor left the bar: Винс is
  * the circle on the left of every header.
  */
 enum class HotTab(val route: String, val label: String, @param:DrawableRes val icon: Int) {
     TODAY(HotRoute.TODAY, "Сегодня", R.drawable.core_ui_ic_today),
     WEEK(HotRoute.WEEK, "Неделя", R.drawable.core_ui_ic_week),
     PATH(HotRoute.PATH, "Путь", R.drawable.core_ui_ic_path),
-    BEHIND(HotRoute.BEHIND, "За плечами", R.drawable.core_ui_ic_behind),
     ;
 
     val testTag: String get() = "tab_$route"
@@ -144,7 +144,7 @@ fun HotApp(
     val currentRoute = backStackEntry?.destination?.route
     val inSos = currentRoute == HotRoute.SOS
     val fullScreen = inSos || currentRoute == HotRoute.DAWN || currentRoute == HotRoute.TRAINING_PLAYER ||
-        currentRoute == HotRoute.BREATHER || currentRoute in CHECKIN_FULL_SCREEN
+        currentRoute == HotRoute.BREATHER || currentRoute == HotRoute.PATH_RITUAL || currentRoute in CHECKIN_FULL_SCREEN
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
 
@@ -153,7 +153,7 @@ fun HotApp(
             navController.currentBackStackEntryFlow.first() // wait until NavHost has set the graph
             when (pendingRoute) {
                 HotRoute.SOS -> navController.openSos()
-                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR ->
+                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR, HotRoute.BEHIND ->
                     navController.navigate(pendingRoute) { launchSingleTop = true }
                 else -> navController.openTab(pendingRoute)
             }
@@ -275,7 +275,13 @@ fun HotApp(
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
-                pathScreen(stateful = stateful)
+                pathScreen(
+                    stateful = stateful,
+                    onOpenRitual = { open(HotRoute.PATH_RITUAL) },
+                    onLookBack = { open(HotRoute.BEHIND) },
+                    onHelp = { navController.openSos() },
+                )
+                pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
                 behindScreen()
                 meScreen(
                     onOpenWhoop = { open(HotRoute.WHOOP) },
@@ -358,6 +364,8 @@ private class NestedScreen(val tab: HotTab, val title: String, val backLabel: St
 
 private val NESTED = mapOf(
     HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
+    // D-051: «За плечами» is the reverse plan of the Path, not a tab.
+    HotRoute.BEHIND to NestedScreen(HotTab.PATH, "За плечами", "Путь"),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
     HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),

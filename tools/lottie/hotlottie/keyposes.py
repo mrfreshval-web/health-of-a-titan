@@ -237,5 +237,158 @@ def problems(p):
     return out
 
 
+# --- v4: Agent 12's review of v3 (R-2026-11-07) -------------------------------------------------------
+
+FRONT_LEGS = dict(thN=176.0, shN=180.0, ftN=135.0, thF=184.0, shF=180.0, ftF=225.0)
+# pull-up grip, front view: hands ±13 from the midline — 1.3× the rendered deltoid width (±10.3),
+# the width Agent 12 measures in the render; elbows end up under the hands at mid (forearms vertical)
+PULLUP_GRIP = 13.0
+PULLUP_BAR = 8.0
+# band dislocate, front view: the band holds the hands ±16 from the midline (≈ 2 shoulder widths)
+BAND_GRIP = 16.0
+
+
+def _hip_from_ankle(ankle, shin, thigh):
+    import math
+    knee = (ankle[0] - 21.0 * math.sin(math.radians(shin)), ankle[1] + 21.0 * math.cos(math.radians(shin)))
+    return (knee[0] - 21.0 * math.sin(math.radians(thigh)), knee[1] + 21.0 * math.cos(math.radians(thigh))), knee
+
+
+def _chest_point(p, fwd, down):
+    """A point on the chest: `fwd` in front of the spine line, `down` below the shoulder joint."""
+    import math
+    j = rig.joints(p)
+    a = math.radians(p["torso"])
+    sh = j["shoulder"]
+    return (sh[0] + fwd * math.cos(a) - down * math.sin(a), sh[1] + fwd * math.sin(a) + down * math.cos(a))
+
+
+def goblet_v4():
+    """Strict profile. Heels down, feet flat in every frame; the bell centred on the sternum, elbows
+    down; at the bottom the hips are level with the knees, the shins lean ~32°, the torso 34°, and
+    the elbows come to the inside of the knees."""
+    stand = P(rx=50.0, ry=48.8, torso=0.0, head=0.0, thN=180.0, shN=180.0, ftN=90.0, thF=182.0, shF=178.0, ftF=90.0)
+    j = rig.joints(stand)
+    ank_n, ank_f = j["ankleN"], j["ankleF"]
+    hip, knee = _hip_from_ankle(ank_n, 212.0, 88.0)
+    bottom = P(rx=hip[0], ry=hip[1], torso=34.0, head=22.0, thN=88.0, shN=212.0, ftN=90.0, ftF=90.0)
+    jb = rig.joints(bottom)
+    solve_leg(bottom, "F", ank_f, (jb["kneeN"][0] - 0.5, jb["kneeN"][1] - 0.5))
+    for p, hint in ((stand, None), (bottom, knee)):
+        for side, dx in (("N", 0.0), ("F", 0.4)):
+            h = _chest_point(p, 7.2 + dx, 5.0)
+            jj = rig.joints(p)
+            eh = (hint[0] - 1.2, hint[1] - 2.0) if hint else (jj["shoulder"][0] + 2.0, jj["shoulder"][1] + 13.0)
+            solve_arm(p, side, h, eh)
+    return {"stand": stand, "bottom": bottom}
+
+
+def pullup_v4():
+    """Front view (Agent 12: the grip must read; arms never cross the face). Active hang: arms in a
+    V, the head clear between them; the elbows go down and out; top: chin over the bar."""
+    out = {}
+    for name, ys, hint in (("hang", 34.0, (66.0, 22.0)), ("mid", 24.0, (64.0, 21.0)), ("top", 9.5, (68.0, 22.0))):
+        p = P(rx=50.0, ry=ys + 26.0, torso=0.0, head=0.0, **FRONT_LEGS)
+        for side, sgn in (("N", 1), ("F", -1)):
+            solve_arm(p, side, (50.0 + sgn * PULLUP_GRIP, PULLUP_BAR), (50.0 + sgn * (hint[0] - 50.0), hint[1]), front=True)
+        out[name] = p
+    return out
+
+
+def band_angles(theta, side):
+    """Front-view arm angle and projected length for a straight arm at `theta` (degrees, 0 = down in
+    front of the thighs, 180 = overhead, 340 = down behind) holding the band BAND_GRIP wide."""
+    import math
+    reach = rig.L["ua"] + rig.L["fa"]
+    a = (BAND_GRIP - rig.FRONT_SHOULDER) / reach
+    s_ = math.sqrt(1 - a * a)
+    dx = a * (1 if side == "N" else -1)
+    dy = s_ * math.cos(math.radians(theta))            # + = down
+    ang = math.degrees(math.atan2(dx, -dy)) % 360
+    return ang, math.hypot(dx, dy)
+
+
+def band_v4():
+    out = {}
+    for name, th in (("front", 20.0), ("overhead", 180.0), ("behind", 340.0)):
+        p = P(rx=50.0, ry=48.8, **FRONT_LEGS)
+        for side in "NF":
+            ang, _ = band_angles(th, side)
+            p["ua" + side] = p["fa" + side] = ang
+        out[name] = p
+    return out
+
+
+def leg_swings_v4(ls):
+    """Side-on to the wall (Agent 12: «встань боком к стене»): the wall is behind the figure, the far
+    hand holds a rail on it, the near hand is on the hip; the leg swings parallel to the wall."""
+    out = {}
+    for k in ("front", "back"):
+        p = dict(ls[k], torso=0.0, head=0.0, uaF=160.0, faF=140.0)
+        j = rig.joints(p)
+        solve_arm(p, "N", (j["hip"][0] + 2.6, j["hip"][1] - 7.5), (j["hip"][0] - 7.0, j["hip"][1] - 15.0))
+        out[k] = p
+    return out
+
+
+def hip_flexor_v4(hf):
+    """Hands on the hips (Agent 12: arms overhead invite an arched lower back)."""
+    out = {}
+    for k, p in hf.items():
+        q = dict(p)
+        j = rig.joints(q)
+        for side, dx in (("N", 0.0), ("F", -0.5)):
+            solve_arm(q, side, (j["hip"][0] + 2.6 + dx, j["hip"][1] - 7.5), (j["hip"][0] - 7.0, j["hip"][1] - 15.0))
+        out[k] = q
+    return out
+
+
+def cat_cow_v4(cc):
+    """Cow: the arch runs through the whole spine (pelvis tips forward, the chest goes forward and
+    up), the head continues the line of the chest — no longer a neck-only movement."""
+    import math
+    cow = dict(cc["cow"], spine=-0.38)
+    chest = cow["torso"] + math.degrees(math.atan(cow["spine"]))
+    cow["head"] = chest - 4.0
+    return dict(cc, cow=cow)
+
+
+def breath_v4(br):
+    """Inhale: the palms ride the belly up ~2.6 units (the belly rises in titan.py), the chest stays."""
+    ex = dict(br["exhale"])
+    inh = dict(br["inhale"], uaN=ex["uaN"], faN=ex["faN"], uaF=ex["uaF"], faF=ex["faF"])
+    j = rig.joints(ex)
+    for side in "NF":
+        h = j["hand" + side]
+        e = j["elbow" + side]
+        solve_arm(inh, side, (h[0], h[1] - 2.6), e)
+    return {"inhale": inh, "exhale": ex}
+
+
+def hamstring_v4(hs):
+    """The working leg at ~75° to the floor («до первого ощущения»), not 90°."""
+    st = dict(hs["stretch"], thN=15.0, shN=15.0, ftN=103.0)
+    return dict(hs, stretch=st)
+
+
+def main_v4():
+    lib = load_poses()
+    up = {
+        "ex-goblet-squat": goblet_v4(),
+        "ex-leg-swings": leg_swings_v4(lib["ex-leg-swings"]),
+        "ex-stretch-hip-flexor": hip_flexor_v4(lib["ex-stretch-hip-flexor"]),
+        "ex-cat-cow": cat_cow_v4(lib["ex-cat-cow"]),
+        "ex-breath-long-exhale": breath_v4(lib["ex-breath-long-exhale"]),
+        "ex-stretch-hamstring": hamstring_v4(lib["ex-stretch-hamstring"]),
+    }
+    for ex, frames in up.items():
+        for k, p in frames.items():
+            pr = problems(p)
+            if pr:
+                print("PROBLEM", ex, k, pr)
+    write_poses(up)
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    main_v4() if sys.argv[1:] == ["v4"] else main()

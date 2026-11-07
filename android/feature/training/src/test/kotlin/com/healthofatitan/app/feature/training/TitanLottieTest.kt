@@ -68,7 +68,7 @@ class TitanLottieTest {
     fun `the limbs of both sides share one drawing`() {
         // v2: a limb piece is a precomp asset used by the near and the far side (the size budget);
         // v3: in the front and 3/4 views one side is the other's drawing mirrored in a wrapper precomp
-        listOf("ex-goblet-squat", "ex-pullup", "ex-stretch-quad", "ex-arm-circles").forEach { id ->
+        listOf("ex-pullup", "ex-band-dislocate", "ex-arm-circles", "ex-stretch-chest-doorway").forEach { id ->
             val doc = JSONObject(File(dir, "$id.json").readText())
             val layers = doc.getJSONArray("layers")
             val refs = (0 until layers.length()).mapNotNull { layers.getJSONObject(it).optString("refId").ifEmpty { null } }
@@ -83,6 +83,35 @@ class TitanLottieTest {
             refs.forEach { assertTrue(it in assets, "$id: $it") }
             val drawings = refs.map { drawing(it) }
             assertTrue(drawings.size > drawings.toSet().size, "$id: no piece is shared")
+        }
+    }
+
+    @Test
+    fun `far limbs of the side view dim their line and keep the glass opaque`() {
+        // v4 (Agent 12): a veiled far leg stacked two veils into a dark disc at the knee
+        listOf("ex-goblet-squat", "ex-stretch-hip-flexor", "ex-stretch-calf").forEach { id ->
+            val doc = JSONObject(File(dir, "$id.json").readText())
+            val assets = doc.getJSONArray("assets").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+            val far = assets.filter { it.getString("id").endsWith("_far") }
+            assertTrue(far.size >= 5, "$id: ${far.size} far pieces")
+            val layers = doc.getJSONArray("layers")
+            (0 until layers.length()).map { layers.getJSONObject(it) }.filter { it.optString("refId").endsWith("_far") }.forEach {
+                assertEquals(100.0, it.getJSONObject("ks").getJSONObject("o").getDouble("k"), 1e-6, "$id: ${it.getString("nm")} is veiled")
+            }
+            far.forEach { a ->
+                val items = mutableListOf<JSONObject>()
+                fun walk(o: Any?) {
+                    when (o) {
+                        is JSONObject -> { if (o.has("ty")) items += o; o.keys().forEach { walk(o.get(it)) } }
+                        is org.json.JSONArray -> (0 until o.length()).forEach { walk(o.get(it)) }
+                    }
+                }
+                walk(a.getJSONArray("layers"))
+                val line = items.filter { it.optString("ty") == "gf" }.map { it.getJSONObject("o").getDouble("k") }
+                val glass = items.filter { it.optString("ty") == "fl" }.map { it.getJSONObject("o").getDouble("k") }
+                assertTrue(line.isNotEmpty() && line.all { it < 100.0 }, "$id ${a.getString("id")}: line $line")
+                assertTrue(glass.isNotEmpty() && glass.all { it == 100.0 }, "$id ${a.getString("id")}: glass $glass")
+            }
         }
     }
 

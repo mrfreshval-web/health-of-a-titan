@@ -58,11 +58,12 @@ def bone_values(p, front):
     for side in "NF":
         sw, hw = rig.side_offsets(front, side)
         ln = p.get("armLen" + side, 1.0)
+        ul = ln * p.get("uaLen" + side, 1.0)
         # the shoulder offset of the front and 3/4 views is along the chest's local x
         so = (sh[0] + sw * math.cos(math.radians(chest_abs)), sh[1] + sw * math.sin(math.radians(chest_abs)))
-        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sw, -h), abs=p["ua" + side], o=so, sy=ln)
-        el = rig.step(so, p["ua" + side], rig.L["ua"] * ln)
-        v["fa" + side] = dict(r=p["fa" + side] - p["ua" + side], p=(0.0, -rig.L["ua"] * ln), abs=p["fa" + side], o=el, sy=ln)
+        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sw, -h), abs=p["ua" + side], o=so, sy=ul)
+        el = rig.step(so, p["ua" + side], rig.L["ua"] * ul)
+        v["fa" + side] = dict(r=p["fa" + side] - p["ua" + side], p=(0.0, -rig.L["ua"] * ul), abs=p["fa" + side], o=el, sy=ln)
         ho = (hip[0] + hw, hip[1])
         v["th" + side] = dict(r=p["th" + side], p=(hw, 0.0), abs=p["th" + side], o=ho)
         kn = rig.step(ho, p["th" + side], rig.L["th"])

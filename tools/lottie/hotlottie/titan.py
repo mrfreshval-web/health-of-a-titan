@@ -22,7 +22,10 @@ from . import lottie as lt
 from . import rig
 from .figure import GRAD_BOTTOM, GRAD_TOP, KNOCKOUT, NEUTRAL_STOPS, bone_values, to_local
 
-FAR_OPACITY = 45         # far limbs (side view), as in v1
+FAR_LINE = 55            # far limbs (side view): the light line dimmed, the glass stays opaque (v4).
+# v1–v3 veiled the whole layer at 45 %: where the far thigh's and shin's glass overlap at the knee the
+# two veils stacked into a dark disc (Agent 12: «читается как дырка»), and lottie-android applies a
+# layer's opacity per shape anyway. Now only the line is dim, so the knee keeps its drawn outline.
 SHARED = ("ua", "fa", "hd", "th", "sh", "ft")
 # rig y of each piece's joint in a standing figure: the light of the shared pieces is fixed to it
 STAND_Y = {"ua": 22.0, "fa": 36.0, "ha": 47.0, "th": 50.0, "sh": 71.0, "ft": 90.0}
@@ -33,11 +36,11 @@ PARENT = {"pelvis": "root", "chest": "pelvis", "head": "chest", "uaN": "chest", 
           "skirt": "pelvis", "belt": "pelvis", "flap": "pelvis"}
 
 
-def gradient_fill(stops, start, end, nm="light"):
+def gradient_fill(stops, start, end, nm="light", opacity=100):
     k = []
     for off, c in stops:
         k += [off] + list(c)
-    return {"ty": "gf", "nm": nm, "o": lt.static(100), "r": 1, "g": {"p": len(stops), "k": lt.static(k)}, "s": start, "e": end, "t": 1}
+    return {"ty": "gf", "nm": nm, "o": lt.static(opacity), "r": 1, "g": {"p": len(stops), "k": lt.static(k)}, "s": start, "e": end, "t": 1}
 
 
 def _paths(items, nm):
@@ -80,9 +83,12 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
             v["hd" + side] = dict(r=r, p=(0.0, -cutout.FOREARM), abs=fa["abs"] + r, o=rig.step(fa["o"], fa["abs"], cutout.FOREARM * fa.get("sy", 1.0)),
                                   kind=kind)
 
+    for v, f in zip(vals, frames):
+        v["_belly"] = f.get("belly", 0.0)
+
     # --- cloth: the skirt follows the thighs halfway, the flap hangs and swings (secondary motion)
     if cloth and not front:
-        _cloth(vals, frames, b)
+        _cloth(vals, frames, b, belly_scale)
 
     def rot(name, tol=0.3):
         return b.scalar([v[name]["r"] for v in vals], tol=tol)
@@ -101,7 +107,7 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
     def group_scale(name):
         if name == "chest":
             vs, first = [100 * (1 + breath_scale * f.get("breath", 0.0)) for f in frames], True
-        elif name == "pelvis":
+        elif name in ("pelvis", "belt"):
             vs, first = [100 * (1 + belly_scale * f.get("belly", 0.0)) for f in frames], True
         elif name[:2] in ("ua", "fa"):
             vs, first = [100 * v[name]["sy"] for v in vals], False
@@ -113,7 +119,7 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
         from .figure import _pair_keys
         return _pair_keys(fx, 100, first)
 
-    anchor_for = {"chest": (0.0, -6.5), "pelvis": (0.0, -6.0)}
+    anchor_for = {"chest": (0.0, -6.5), "pelvis": (BELLY_BACK, -6.0), "belt": (BELLY_BACK, -6.0)}
     b.assets = getattr(b, "assets", [])
     b.anchor = getattr(b, "anchor", {})
     made_assets = {}
@@ -123,9 +129,15 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
         ox, oy = b.anchor.get(PARENT[name], (0.0, 0.0))
         return b.split_pos([v[name]["p"][0] + ox for v in vals], [v[name]["p"][1] + oy for v in vals], tol=0.01)
 
-    def shared(key, pc):
+    def shared(key, pc, far=False):
         """A limb piece used by both sides: one precomp asset, gradient fixed in the piece (the light
-        of a standing figure), so near and far share every path."""
+        of a standing figure), so near and far share every path. A far piece of the side view is
+        its own asset with the dimmed line."""
+        if far:
+            fkey = key + "_far"
+            if fkey not in made_assets:
+                made_assets[fkey] = _piece_asset(fkey, key, pc, FAR_LINE)
+            return made_assets[fkey]
         if key in made_assets:
             return made_assets[key]
         if key in P.get("_same", {}):
@@ -143,23 +155,28 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
             b.assets.append({"id": aid, "nm": key, "fr": 60, "layers": [inner]})
             made_assets[key] = (aid, half, size)
             return made_assets[key]
+        made_assets[key] = _piece_asset(key, key, pc, 100)
+        return made_assets[key]
+
+    def _piece_asset(aname, key, pc, line_o):
         xs = [x for p in pc.line + pc.knock for x, _ in p["v"]]
         ys = [y for p in pc.line + pc.knock for _, y in p["v"]]
         half = math.ceil(max(max(map(abs, xs)), max(map(abs, ys))) + 2)
         size = 2 * half
         y0 = STAND_Y.get(key[:2], 50.0)
         gs, ge = lt.static([0, y0 - GRAD_TOP]), lt.static([0, y0 - GRAD_BOTTOM])
-        shapes_ = [lt.group("titan_line", _paths(pc.line, "line") + [gradient_fill(stops, gs, ge)]),
+        shapes_ = [lt.group("titan_line", _paths(pc.line, "line") + [gradient_fill(stops, gs, ge, opacity=line_o)]),
                    lt.group("titan_knockout", _paths(pc.knock, "glass") + [lt.fill(KNOCKOUT, "glass")])]
         if pc.ring:
             r = pc.ring
+            ring_light = lt.gradient_stroke(stops, LINE_W, gs, ge, nm="joint_light")
+            ring_light["o"] = lt.static(line_o)
             shapes_.append(lt.group("titan_line", [{"ty": "el", "nm": "joint", "p": lt.static([0, 0]), "s": lt.static([2 * r, 2 * r]), "d": 1},
-                                                   lt.gradient_stroke(stops, LINE_W, gs, ge, nm="joint_light")]))
-        inner = lt.layer(1, key, 4, n, lt.transform(p=lt.static([half, half, 0])), shapes_)
-        aid = "piece_" + key
-        b.assets.append({"id": aid, "nm": key, "fr": 60, "layers": [inner]})
-        made_assets[key] = (aid, half, size)
-        return made_assets[key]
+                                                   ring_light]))
+        inner = lt.layer(1, aname, 4, n, lt.transform(p=lt.static([half, half, 0])), shapes_)
+        aid = "piece_" + aname
+        b.assets.append({"id": aid, "nm": aname, "fr": 60, "layers": [inner]})
+        return (aid, half, size)
 
     def piece_layer(name, piece_key=None, far=False):
         key = piece_key or name
@@ -173,17 +190,27 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
                 akey = key
             if name == "shN" and "N" in fold:
                 akey, pc = "sh_fold", cutout.Piece(pc.line, pc.knock, None)
-            aid, half, size = shared(akey, pc)
+            aid, half, size = shared(akey, pc, far)
             sc = None
-            if name[:2] == "ua":
-                # a foreshortened arm (front view circles): the forearm and the hand inherit it
+            if name[:2] in ("ua", "fa"):
+                # a foreshortened arm (arm circles, a pull-up seen from the front): the piece is
+                # scaled along its bone
                 fy = b.scalar([100 * v[name]["sy"] for v in vals], 0.1)
                 if fy["a"]:
                     from .figure import _pair_keys
                     sc = _pair_keys(fy, 100, False)
                     for k in sc["k"]:
                         k["s"] = k["s"] + [100]
-            ks = lt.transform(p=ppos(name), r=rot(name), a=lt.static([half, half, 0]), o=lt.static(FAR_OPACITY if far else 100), s=sc)
+            if sc is not None and name[:2] == "ua":
+                # v4: the upper arm's scale must not reach the forearm (a bent forearm would skew,
+                # and its position would be scaled twice): an unscaled bone carries the hierarchy,
+                # the drawing hangs on it with the scale
+                ind = b.add(name, 3, lt.transform(p=ppos(name), r=rot(name)), None, parent=parent, key=name)
+                b.add(name + "_piece", 0, lt.transform(a=lt.static([half, half, 0]), s=sc), None, parent=ind, key=name + "_piece")
+                b.layers[-1].update({"refId": aid, "w": size, "h": size})
+                b.anchor[name] = (0.0, 0.0)
+                return ind
+            ks = lt.transform(p=ppos(name), r=rot(name), a=lt.static([half, half, 0]), s=sc)
             ind = b.add(name, 0, ks, None, parent=parent, key=name)
             lay = b.layers[-1]
             lay.update({"refId": aid, "w": size, "h": size})
@@ -305,7 +332,10 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
     return vals
 
 
-def _cloth(vals, frames, b):
+BELLY_BACK = -5.8        # pelvis-local x of the back: the belly rises from it (v4), the back stays on the mat
+
+
+def _cloth(vals, frames, b, belly_scale=0.0):
     """Skirt: turns round the hip by half the mean thigh flexion (it drapes over the thighs).
     Flap: a pendulum hanging from the knot — it lags behind the hips and settles (follow-through)."""
     from .motion import FPS
@@ -354,7 +384,11 @@ def _cloth(vals, frames, b):
         res[-1] = res[0]
     for v, skr, th in zip(vals, sk, res):
         pel = v["pelvis"]
-        v["skirt"] = dict(r=skr, p=drawn.SKIRT_PIVOT, abs=pel["abs"] + skr, o=pel["o"])
+        # the belly stretches the pelvis from its back line: the cloth on the front rides with it
+        kx = belly_scale * v.get("_belly", 0.0)
+        sp = (drawn.SKIRT_PIVOT[0] + kx * (drawn.SKIRT_PIVOT[0] - BELLY_BACK), drawn.SKIRT_PIVOT[1])
+        v["skirt"] = dict(r=skr, p=sp, abs=pel["abs"] + skr, o=pel["o"])
         v["belt"] = dict(r=0.0, p=(0.0, 0.0), abs=pel["abs"], o=pel["o"])
         rel = rig.shortest(0.0, th - (pel["abs"] + 180.0))
-        v["flap"] = dict(r=rel, p=knot_local, abs=pel["abs"] + rel, o=pel["o"])
+        kp_ = (knot_local[0] + kx * (knot_local[0] - BELLY_BACK), knot_local[1])
+        v["flap"] = dict(r=rel, p=kp_, abs=pel["abs"] + rel, o=pel["o"])

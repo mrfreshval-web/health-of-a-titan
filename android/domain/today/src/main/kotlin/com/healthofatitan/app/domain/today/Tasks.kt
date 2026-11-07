@@ -39,6 +39,9 @@ enum class TaskKind {
     ASSEMBLE_WEEK,
 }
 
+/** How a week goal is counted (A52 §2.2): times, minutes (zones), nights (sleep), days (reminders). */
+enum class GoalMeasure { TIMES, MINUTES, NIGHTS, DAYS }
+
 /** One process goal of the week (A52 §2.2): «Силовые 2 из 3». */
 data class WeekGoal(
     val id: String,
@@ -49,6 +52,7 @@ data class WeekGoal(
     val unit: String,
     val progress: Int,
     val source: GoalSource,
+    val measure: GoalMeasure = GoalMeasure.TIMES,
 ) {
     val open: Boolean get() = progress < target
 }

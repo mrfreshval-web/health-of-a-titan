@@ -6,6 +6,7 @@ import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.ReturnWatchWorker
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
+import com.healthofatitan.app.integration.whoop.week.WeekPushWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,8 @@ class HotApplication : Application() {
         // nudge after a pause is checked a few times a day (A18 И4.3, И4.4).
         appScope.launch { runCatching { dailyLoop.get().warmUp() } }
         runCatching { ReturnWatchWorker.ensure(this) }
+        // «Неделя» (A52 §2.7): the one Sunday push «Твой Титан недели готов».
+        runCatching { WeekPushWorker.ensure(this) }
     }
 
     private companion object {

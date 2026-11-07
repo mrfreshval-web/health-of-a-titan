@@ -2,20 +2,25 @@ package com.healthofatitan.app.screenshots
 
 import android.app.Application
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.datastore.MentorPrefs
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotTopBar
+import com.healthofatitan.app.core.ui.component.ModeWord
 import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.domain.engine.FiredRule
@@ -179,6 +184,31 @@ class TitaniumScreenshotsPath {
 
     @Test
     fun todayStepGentle() = shootToday(Regime.GENTLE)
+
+    /** «Шаг дня» as «Сегодня» shows it, by mode: Разгон (done), Ровно, Бережно (minimal), no goal. */
+    @Test
+    fun todayStepStates() = shoot("26-today-step-by-mode") {
+        val body = GoalRecord(3, GoalPlan(Sphere.BODY, 1, listOf(2, 3, 3)), start)
+        val boost = PathView(PathEngine.state(today, listOf(body), mapOf(3L to setOf(today)), evidence, PathRegime.BOOST), PathRegime.BOOST)
+        val steady = pathView(PathRegime.STEADY).copy(bedtimeMin = 23 * 60)
+        val gentle = PathView(PathEngine.state(today, listOf(body), emptyMap(), PathEvidence(today), PathRegime.GENTLE), PathRegime.GENTLE)
+        val none = pathView(PathRegime.STEADY, goals = emptyList())
+        HotBackground {
+            Column(Modifier.fillMaxSize()) {
+                HotTopBar(title = null, rings = rings, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
+                Column(
+                    Modifier.padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    listOf(HotMode.RAZGON to boost, HotMode.ROVNO to steady, HotMode.BEREZHNO to gentle).forEach { (mode, view) ->
+                        ModeWord(mode, style = MaterialTheme.typography.titleMedium, glyphSize = 20.dp, gap = 8.dp)
+                        PathTodayStepContent(view, onToggle = {}, onOpenPath = {})
+                    }
+                    PathTodayStepContent(none, onToggle = {}, onOpenPath = {})
+                }
+            }
+        }
+    }
 
     @Test
     fun personaChoice() = shoot("23-mentor-persona") {

@@ -20,7 +20,7 @@ enum class Regime(val order: Int, val ru: String) {
 }
 
 /** A09 §2 `DayState.flags` (the subset this engine can raise from WHOOP data and the evening deck). */
-enum class DayFlag { SICK, TRAVEL, LIGHT_WEEK, CALIBRATION, PRELIMINARY_NORM, DATA_LIMITED }
+enum class DayFlag { SICK, TRAVEL, LIGHT_WEEK, CALIBRATION, PRELIMINARY_NORM, DATA_LIMITED, MANUAL }
 
 /** Signals of A09 §2.1 (points of strain). Ids are stored with the day for REG-04 exit thresholds. */
 object Signals {
@@ -75,7 +75,12 @@ data class SelfReport(
  *
  * @param orsZ ORS@1 of the night (z units, before EWMA)
  * @param orsEwma7 7-day EWMA of ORS@1 (SG-ORS-TREND)
- * @param recoveryPct WHOOP Recovery %, **in memory only** and only while calibrating (REG-05)
+ * @param rhrZ RHRZ@1: z of last night's resting heart rate against the 28-day norm (SAF-04)
+ * @param rrZ RRZ@1: z of last night's respiratory rate (SAF-04)
+ * @param rhrZStreakGe2 nights in a row, up to last night, with [rhrZ] ≥ +2 (SAF-03 see_doctor)
+ *
+ * WHOOP Recovery % is not read at all (A25 P7, day@2 REG-05): during calibration the engine
+ * does not use a physiology signal and does not give Разгон.
  */
 data class NightFacts(
     val orsZ: Double? = null,
@@ -87,7 +92,9 @@ data class NightFacts(
     val lrbDaysAbove1: Int = 0,
     val trlZYesterday: Double? = null,
     val chargeLevel: Int? = null,
-    val recoveryPct: Double? = null,
+    val rhrZ: Double? = null,
+    val rrZ: Double? = null,
+    val rhrZStreakGe2: Int = 0,
 )
 
 /** A09 REG-05 inputs. [historyDays] = days since the first WHOOP night HoT knows (norm younger than 28 days → preliminary). */
@@ -103,16 +110,22 @@ data class DataFacts(
  *
  * @param gentleStreak GENTLE days in a row right before today
  * @param lightWeekDay day of an active «лёгкая неделя» yesterday (1…7), 0 if none
+ * @param sickStreak SICK days in a row right before today (SAF-03 see_doctor)
  */
 data class YesterdayFacts(
     val regime: Regime? = null,
     val signals: Set<String> = emptySet(),
     val gentleStreak: Int = 0,
     val lightWeekDay: Int = 0,
+    val sickStreak: Int = 0,
 )
 
-/** CTX-04: signed shift of the phone's time zone against the home zone, hours (+ = east). */
-data class ContextFacts(val tzShiftHours: Double = 0.0)
+/**
+ * CTX-04: signed shift of the phone's time zone against the home zone, hours (+ = east), and
+ * how many nights were already slept in the new zone (0 = arrived today, 1 = first morning
+ * there). Null = unknown, treated as the first day (the safer reading).
+ */
+data class ContextFacts(val tzShiftHours: Double = 0.0, val daysSinceShift: Int? = null)
 
 /** Training kinds of A19 §1.2 step 1 plus the GENTLE walk (ACT-01) and rest. */
 enum class TrainingType(val ru: String) {

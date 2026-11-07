@@ -29,6 +29,9 @@ internal object WhoopRoutineMapper {
     /** WHOOP's Strength Trainer sport (A35 §1). */
     private const val STRENGTH_TRAINER_ID = 123
 
+    /** [Оценка] below this share of recorded heart rate the zones are not trusted. */
+    const val MIN_PERCENT_RECORDED = 50.0
+
     fun map(window: WhoopWindow, fallbackZone: ZoneId): Routine {
         data class Night(val point: NightPoint, val wake: Instant, val hours: Double)
 
@@ -73,7 +76,7 @@ internal object WhoopRoutineMapper {
             val zone = zoneOf(w.timezoneOffset, fallbackZone)
             val day = dayOf(start, zone)
             val startMin = Duration.between(day.atStartOfDay(zone).toInstant(), start).toMinutes().toInt()
-            Session(w.id, day, startMin, minutes, kindOf(w), intensityOf(w.score?.zones))
+            Session(w.id, day, startMin, minutes, kindOf(w), intensityOf(w.score?.zones, w.score?.percentRecorded))
         }
         return Routine(nights.map { it.point }, sessions)
     }
@@ -84,9 +87,14 @@ internal object WhoopRoutineMapper {
         return if (strength) SessionKind.STRENGTH else SessionKind.CARDIO
     }
 
-    /** A35 §4 classes, see [Intensity]. Thresholds [Оценка], reviewed on day 30 (Agent 12). */
-    fun intensityOf(z: WhoopWorkout.Zones?): Intensity {
+    /**
+     * A35 §4 classes, see [Intensity]. Thresholds [Оценка], reviewed on day 30 (Agent 12). With
+     * less than half of the session recorded the zones do not describe it: MIXED, so the plan
+     * item is «изменено», never «подтверждено WHOOP» (A39, Agent 9).
+     */
+    fun intensityOf(z: WhoopWorkout.Zones?, percentRecorded: Double? = null): Intensity {
         if (z == null) return Intensity.MIXED
+        if (percentRecorded != null && percentRecorded < MIN_PERCENT_RECORDED) return Intensity.MIXED
         val total = (z.zero + z.one + z.two + z.three + z.four + z.five).toDouble()
         if (total <= 0.0) return Intensity.MIXED
         return when {

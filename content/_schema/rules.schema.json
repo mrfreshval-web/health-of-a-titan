@@ -47,7 +47,7 @@
       "required": ["id", "version", "title_ru", "domain", "stage", "priority", "when", "then", "why_ru", "evidence", "review"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "pattern": "^(SAF|REG|CTX|SLP|MNT|NUT|ACT|WRK|GRW|RET|STK)-[0-9]{2}$" },
+        "id": { "type": "string", "pattern": "^(SAF|REG|CTX|EVE|SLP|MNT|NUT|ACT|WRK|GRW|RET|STK)-[0-9]{2}$" },
         "version": { "type": "integer", "minimum": 1 },
         "title_ru": { "type": "string" },
         "domain": { "enum": ["safety", "regime", "context", "sleep", "mental", "nutrition", "activity", "work", "growth", "return", "stack"] },

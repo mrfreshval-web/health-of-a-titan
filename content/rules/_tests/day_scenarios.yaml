@@ -4,7 +4,7 @@
 # Defaults for all scenarios unless overridden: wake 07:00, bedtime_target 23:00,
 # data.baseline_n 60, data.coverage 1.0, data.whoop_today true, data.manual_mode false,
 # data.atypical_physiology false, screening.status clear, safety.crisis_level 0, regime.yesterday STEADY.
-version: 1
+version: 2
 reviewedBy: []
 status: draft
 ruleSet: day
@@ -92,22 +92,26 @@ scenarios:
       nudge_exclude: [doctor]
 
   - id: D07
-    title_ru: "5 ночей истории WHOOP, восстановление 72 %"
-    facts: {data.baseline_n: 5, whoop.recovery_pct: 72, sleep.hours: 7.2, sleep.prev_hours: 7.0, card.U1: 4, card.U2: 7, regime.yesterday: null}
+    title_ru: "5 ночей истории WHOOP → изучаю норму, без Разгона (day@2)"
+    # day@2 (A39): Recovery % WHOOP не читается (A25 P7), на калибровке потолок Ровно. Было: BOOST.
+    facts: {data.baseline_n: 5, data.history_days: 5, sleep.hours: 7.2, sleep.prev_hours: 7.0, card.U1: 4, card.U2: 7, regime.yesterday: null}
     expect:
-      regime: BOOST
+      regime: STEADY
       flags_include: [CALIBRATION, DATA_LIMITED]
       fired_include: [REG-05]
       text_include: ["изучаю твою норму"]
 
   - id: D08
-    title_ru: "WHOOP молчит к 09:30 → ручной режим"
-    facts: {data.whoop_today: false, data.manual_mode: true, sleep.hours: 7.0, card.U1: 4, card.U2: 6}
+    title_ru: "WHOOP молчит к 09:30 → день по умолчанию"
+    # Срез 2 без карточек (D-027): ответов нет → Ровно, пуш не отправляется, план пересобирается,
+    # когда WHOOP посчитает ночь.
+    facts: {data.whoop_today: false, data.manual_mode: true, sleep.prev_hours: 7.4}
     expect:
       regime: STEADY
       flags_include: [MANUAL, DATA_LIMITED]
       fired_include: [REG-05]
-      fired_exclude: [SAF-04, CTX-03]
+      fired_exclude: [REG-02, SAF-04, CTX-03]
+      push: none
 
   - id: D09
     title_ru: "Вчера Бережно, сегодня всё отлично → только Ровно"
@@ -151,3 +155,41 @@ scenarios:
       push_variant: RETURN
       fired_include: [RET-01, GRW-01]
       why_must_not_contain: ["пропустил", "серия", "прервал"]
+
+  # --- day@2 (A39 expert review) -------------------------------------------------------------
+  - id: D13
+    title_ru: "Пульс покоя и дыхание выше нормы без причины → SAF-04"
+    facts: {ors.z_day: 0.6, ors.ewma7: 0.2, rhr.z_day: 2.3, rr.z_day: 1.8, sleep.hours: 7.6, sleep.prev_hours: 7.4}
+    expect:
+      regime: STEADY
+      forbid_include: [intervals]
+      fired_include: [SAF-04]
+      fired_first: SAF-04
+      variant_note_ru: "С 2+ порциями накануне (known_cause) SAF-04 молчит."
+
+  - id: D14
+    title_ru: "Вечером «тело забито» → тренировка легче, режим тот же (EVE-01)"
+    facts: {eve.body: sore, ors.z_day: 0.8, ors.ewma7: 0.3, sleep.hours: 7.6, sleep.prev_hours: 7.2, card.U2: 8}
+    expect:
+      regime: BOOST
+      training_level: L1
+      forbid_include: [intervals]
+      fired_include: [EVE-01]
+
+  - id: D15
+    title_ru: "Перелёт +3 ч, второй и четвёртый день"
+    facts: {ctx.tz_shift_h: 3, ctx.days_since_tz_shift: 2, ors.z_day: 0.8, ors.ewma7: 0.3, sleep.hours: 7.6, sleep.prev_hours: 7.2, card.U2: 8}
+    expect:
+      regime: BOOST
+      flags_include: [TRAVEL]
+      note_ru: "Потолок Ровно и запрет интервалов — только в первый день. На 4-й день (ctx.days_since_tz_shift: 4) TRAVEL снят, SLP-03 снова работает; сдвиг 2 ч даёт 2 дня TRAVEL."
+
+  - id: D16
+    title_ru: "Третий день простуды → мягко к врачу"
+    facts: {eve.body: sick, streak.sick: 2, ors.z_day: -0.4, sleep.hours: 7.5, regime.yesterday: GENTLE}
+    expect:
+      regime: GENTLE
+      flags_include: [SICK]
+      fired_include: [SAF-03]
+      nudge_include: [doctor]
+      push_headline: "Бережно · день тишины"

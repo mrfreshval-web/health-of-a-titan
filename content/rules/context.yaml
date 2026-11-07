@@ -1,7 +1,7 @@
 # A09 §3 — context of yesterday and today: alcohol, late evening, hard training, travel, important day.
 # Context rules never loosen the map; they explain a "known cause" (A04 §3 step 3) and tighten slots.
 # Alcohol and intimacy wording: no shame, no morals (Drink Less model, A10 S7) — Agent 10 review.
-version: 1
+version: 2
 reviewedBy: []
 status: draft
 ruleSet: day
@@ -175,3 +175,24 @@ rules:
     contraindications_ru: ["Дыхательная практика усиливает тревогу → П5 или П8 (A07 §3.4)"]
     red_flags_ru: []
     review: [agent-3, agent-10]
+
+  - id: EVE-01
+    version: 1
+    title_ru: "Тело забито (вечерняя колода)"
+    domain: context
+    stage: context
+    priority: 655
+    when: {fact: eve.body, op: eq, value: sore}
+    then:
+      - {do: training_level, value: L1, forbid: [intervals]}
+      - {do: explain, key: body_sore}
+    user_override: down_only
+    why_ru: "Тело забито — тренировка легче, без интервалов."
+    evidence:
+      level: C/D
+      kind: estimate
+      sources: ["Saw 2016, BJSM 50(5):281-291 — субъективные шкалы (включая мышечную болезненность) чувствительнее объективных к нагрузке (A04 #20, ур. A для чувствительности)", "A19 §1.2 шаг 3 (модификаторы), TR-09 (боль в суставе)"]
+      note_ru: "Сам приём «забито → L1 без интервалов» — практика тренеров (D), консервативный и обратимый. Режим не меняет: это про мышцы, а не про восстановление. Добавлено ревью A39 (Агенты 12 и 3), day@2."
+    contraindications_ru: []
+    red_flags_ru: ["Острая или односторонняя боль в суставе, отёк, боль, которая усиливается в покое → A19 TR-09 / F6, без тренировки этой зоны и к врачу", "Тёмная моча и сильная мышечная боль после тяжёлой нагрузки → срочно к врачу (SAF-01)"]
+    review: [agent-12, agent-3, agent-10]

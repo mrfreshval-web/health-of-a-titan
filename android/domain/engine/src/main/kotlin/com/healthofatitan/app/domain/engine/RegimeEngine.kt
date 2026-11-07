@@ -1,6 +1,7 @@
 package com.healthofatitan.app.domain.engine
 
 import kotlin.math.abs
+import kotlin.math.ceil
 
 /**
  * Result of the first four stages of A09 §1 (safety → data → regime → context). The map and
@@ -25,8 +26,9 @@ data class RegimeDecision(
 
 /**
  * A09 §2 as pure functions over [DayInput]: signals → points → regime, then caps (REG-01),
- * conflicts (REG-03), the one-step-up rule (REG-04), the light week (REG-06) and context (CTX).
- * «Самое строгое побеждает»: every later step can only lower the regime or add a ban.
+ * conflicts (REG-03), the one-step-up rule (REG-04), the light week (REG-06), safety (SAF-03/04)
+ * and context (CTX, EVE-01). «Самое строгое побеждает»: every later step can only lower the
+ * regime or add a ban.
  */
 object RegimeEngine {
 
@@ -45,24 +47,47 @@ object RegimeEngine {
         var lighter = false
         var volumeFactor = 1.0
 
-        // Stage 0 · safety. SAF-03: a cold reported in the evening deck.
+        // Facts of context the safety stage needs too (A09 predicate `known_cause`).
+        val alcohol = input.evening?.alcohol ?: 0
+        val tz = input.context.tzShiftHours
+        val tzDays = input.context.daysSinceShift ?: 1
+        val heavyLoadYesterday = (n.trlZYesterday ?: 0.0) >= 1.5
+        val knownCause = alcohol >= 2 || (abs(tz) >= 2.0 && tzDays <= 2) || heavyLoadYesterday
+
+        // Stage 1 · data quality (REG-05@2). WHOOP Recovery % is never read (A25 P7): while the
+        // norm is calibrating there is no physiology signal and no Разгон. No scored night by
+        // 09:30 → MANUAL: the day is built by default, Ровно at most.
+        val calibration = d.baselineNights < MIN_BASELINE
+        val manual = !d.whoopToday
+        val physioUsable = !calibration && !manual && d.coverage >= MIN_COVERAGE && n.orsZ != null
+        val preliminary = !calibration && d.historyDays < FULL_NORM_DAYS
+        if (!physioUsable) flags += DayFlag.DATA_LIMITED
+        if (manual) flags += DayFlag.MANUAL
+        if (calibration) flags += DayFlag.CALIBRATION
+        if (preliminary) flags += DayFlag.PRELIMINARY_NORM
+        val dataWhy = when {
+            manual -> DayTexts.MANUAL
+            calibration -> DayTexts.CALIBRATION
+            !physioUsable -> DayTexts.LOW_COVERAGE
+            preliminary -> DayTexts.preliminary(d.historyDays)
+            else -> null
+        }
+
+        // Stage 0 · safety (listed first in «Почему так»). SAF-03: a cold from the evening deck.
         val sick = input.evening?.body == Body.SICK
         if (sick) {
             flags += DayFlag.SICK
             fired += FiredRule(RuleSet.SAF_03, DayTexts.SICK)
+            if (y.sickStreak >= 2 || n.rhrZStreakGe2 >= 3) fired += FiredRule(RuleSet.SAF_03, DayTexts.SICK_SEE_DOCTOR)
         }
-
-        // Stage 1 · data quality (REG-05).
-        val calibration = d.baselineNights < MIN_BASELINE
-        val physioUsable = !calibration && d.coverage >= MIN_COVERAGE && d.whoopToday && n.orsZ != null
-        val preliminary = !calibration && d.historyDays < FULL_NORM_DAYS
-        if (!physioUsable) flags += DayFlag.DATA_LIMITED
-        val dataWhy = when {
-            calibration -> DayTexts.CALIBRATION.also { flags += DayFlag.CALIBRATION }
-            !physioUsable -> DayTexts.LOW_COVERAGE
-            else -> null
-        } ?: if (preliminary) DayTexts.preliminary(d.historyDays) else null
-        if (preliminary) flags += DayFlag.PRELIMINARY_NORM
+        // SAF-04: resting HR and breathing well above the norm without a known cause → Ровно at
+        // most, no intervals and a soft «прислушайся» (no illness names, Agent 7).
+        val physioShift = physioUsable && !sick && !knownCause &&
+            (n.rhrZ ?: 0.0) >= 2.0 && (n.rrZ ?: 0.0) >= 1.5
+        if (physioShift) {
+            forbidIntervals = true
+            fired += FiredRule(RuleSet.SAF_04, DayTexts.PHYSIO_SHIFT)
+        }
         if (dataWhy != null) fired += FiredRule(RuleSet.REG_05, dataWhy)
 
         // Stage 2 · regime (REG-02): points of strain, A09 §2.1.
@@ -86,9 +111,6 @@ object RegimeEngine {
                 points += 1
                 signals += Signals.ORS_TREND
             }
-        } else if (calibration && n.recoveryPct != null && n.recoveryPct <= 33.0) {
-            points += 1
-            signals += Signals.ORS_DAY
         }
 
         val h = n.sleepHours
@@ -118,7 +140,8 @@ object RegimeEngine {
         val selfGood = ((s.energy != null && s.energy >= 7) || (s.energyZ != null && s.energyZ >= 1.0)) &&
             !(s.sleepQuality != null && s.sleepQuality <= 2)
 
-        val boostPhysio = if (calibration) (n.recoveryPct ?: -1.0) >= 67.0 else (ors != null && ors >= 0.0)
+        // Разгон needs the physiology of the night: never while calibrating or without data.
+        val boostPhysio = ors != null && ors >= 0.0
         val energyOk = if (s.energy != null) {
             s.energy >= 6
         } else {
@@ -131,12 +154,12 @@ object RegimeEngine {
             else -> Regime.STEADY
         }
         var regime = computed
-        fired += FiredRule(RuleSet.REG_02, DayTexts.signalsWhy(signals, n, computed))
-
-        // REG-05 low coverage: no physiology → at most Ровно unless energy ≥ 7 and sleep ≥ 7 h.
-        if (!physioUsable && !calibration && !((s.energy ?: 0) >= 7 && (h ?: 0.0) >= 7.0)) {
-            regime = regime.atMost(Regime.STEADY)
+        if (h != null || s.energy != null || physioUsable) {
+            fired += FiredRule(RuleSet.REG_02, DayTexts.signalsWhy(signals, n, computed))
         }
+
+        // REG-05: without usable physiology the day is Ровно at most.
+        if (!physioUsable) regime = regime.atMost(Regime.STEADY)
 
         // REG-01: hard caps — sleep < 5 h or illness. Self-report never lifts them.
         val hardCap = (h != null && h < 5.0) || sick
@@ -145,13 +168,14 @@ object RegimeEngine {
             fired += FiredRule(RuleSet.REG_01, if (h != null && h < 5.0) DayTexts.hardCapSleep(h) else DayTexts.HARD_CAP_SICK)
         }
 
-        // REG-03: GENTLE only from data + a good morning → STEADY without intervals.
-        val dataOnlyGentle = computed == Regime.GENTLE && !selfLow && !hardCap
+        // REG-03: GENTLE only from data + a good morning → STEADY without intervals (never with SAF).
+        val dataOnlyGentle = computed == Regime.GENTLE && !selfLow && !hardCap && !physioShift
         if (dataOnlyGentle && selfGood) {
             regime = Regime.STEADY
             forbidIntervals = true
             fired += FiredRule(RuleSet.REG_03, DayTexts.SELF_VS_DATA)
         }
+        if (physioShift) regime = regime.atMost(Regime.STEADY)
 
         // REG-04: down at once, up by one step a day; the exit thresholds kept a signal on.
         val yr = y.regime
@@ -180,25 +204,32 @@ object RegimeEngine {
         }
 
         // Stage 3 · context. Explains and makes the plan stricter, never looser.
-        val alcohol = input.evening?.alcohol ?: 0
         if (alcohol >= 2) {
-            val noIntervals = (n.orsZ ?: 0.0) <= -0.5
-            val lighterTraining = alcohol >= 3 // CTX-01 variant = A19 TR-06
-            if (noIntervals || lighterTraining) forbidIntervals = true
+            val lowRecovery = (ors ?: 0.0) <= -0.5
+            val lighterTraining = alcohol >= 3 // CTX-01 heavy_or_late = A19 TR-06
+            if (lowRecovery || lighterTraining) forbidIntervals = true
             if (lighterTraining) lighter = true
-            fired += FiredRule(RuleSet.CTX_01, DayTexts.alcohol(alcohol, noIntervals, lighterTraining))
+            fired += FiredRule(RuleSet.CTX_01, DayTexts.alcohol(alcohol, lowRecovery, lighterTraining))
         }
-        if ((n.trlZYesterday ?: 0.0) >= 1.5 && (n.orsZ ?: 0.0) <= -0.5) {
+        // CTX-03: a hard session yesterday (high TRL or WHOOP intervals) + recovery below the norm.
+        val yesterdayDay = input.dayKey.minusDays(1)
+        val intervalsYesterday = input.history.any { it.dayKey == yesterdayDay && it.intensity == Intensity.HIGH }
+        if ((heavyLoadYesterday || intervalsYesterday) && (ors ?: 0.0) <= -0.5) {
             forbidIntervals = true
             fired += FiredRule(RuleSet.CTX_03, DayTexts.HEAVY_YESTERDAY)
         }
-        val tz = input.context.tzShiftHours
-        if (abs(tz) >= 2.0) {
+        // CTX-04: one TRAVEL day per hour of shift, at most 3; the first day is Ровно, no intervals.
+        val travelDays = minOf(3, ceil(abs(tz)).toInt())
+        if (abs(tz) >= 2.0 && tzDays <= travelDays) {
             flags += DayFlag.TRAVEL
-            regime = regime.atMost(Regime.STEADY)
-            forbidIntervals = true
-            fired += FiredRule(RuleSet.CTX_04, DayTexts.travel(tz))
+            val firstDay = tzDays <= 1
+            if (firstDay) {
+                regime = regime.atMost(Regime.STEADY)
+                forbidIntervals = true
+            }
+            fired += FiredRule(RuleSet.CTX_04, DayTexts.travel(tz, firstDay))
         }
+        // EVE-01 (day@2): «тело забито» in the evening deck → lighter training, no intervals.
         if (input.evening?.body == Body.SORE) {
             lighter = true
             forbidIntervals = true

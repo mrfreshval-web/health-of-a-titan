@@ -40,6 +40,9 @@ data class RoutineAnchors(
     val homeTzOffsetMin: Int? = null,
     val lastWakeDay: LocalDate? = null,
     val lastWakeMin: Int? = null,
+    /** UTC offset of the latest night and how many latest nights in a row had it (CTX-04 day count). */
+    val lastTzOffsetMin: Int? = null,
+    val lastTzRunNights: Int = 0,
 )
 
 object Anchors {
@@ -77,6 +80,7 @@ object Anchors {
 
         val home = ns.filter { it.dayKey <= today.minusDays(2) && it.dayKey > today.minusDays(16) }.ifEmpty { ns }
         val last = ns.maxByOrNull { it.dayKey }
+        val run = ns.sortedByDescending { it.dayKey }.takeWhile { it.tzOffsetMin == last?.tzOffsetMin }.size
         return RoutineAnchors(
             wakeWeekdayMin = median5(weekday.map { it.wakeMin }, MIN_NIGHTS),
             wakeWeekendMin = median5(weekend.map { it.wakeMin }, MIN_NIGHTS),
@@ -91,6 +95,8 @@ object Anchors {
             homeTzOffsetMin = median5(home.map { it.tzOffsetMin }),
             lastWakeDay = last?.dayKey,
             lastWakeMin = last?.wakeMin,
+            lastTzOffsetMin = last?.tzOffsetMin,
+            lastTzRunNights = run,
         )
     }
 
@@ -99,6 +105,15 @@ object Anchors {
      * wake is the phone alarm if one is set for tomorrow morning, else the median for that kind of
      * day. Target bedtime = tomorrow's wake − sleep need − 15 min to fall asleep (default − 8 h).
      */
+    /**
+     * CTX-04: nights already slept in the phone's current zone. 0 = the phone moved but no night
+     * there yet (arrival day), 1 = the first morning there. Null without any night.
+     */
+    fun daysSinceShift(a: RoutineAnchors, phoneOffsetMin: Int): Int? {
+        val last = a.lastTzOffsetMin ?: return null
+        return if (last == phoneOffsetMin) a.lastTzRunNights else 0
+    }
+
     fun resolve(a: RoutineAnchors, dayKey: LocalDate, nextAlarm: LocalDateTime?): ScheduleFacts {
         fun usualWake(day: LocalDate): Int? =
             if (isWeekend(day)) a.wakeWeekendMin ?: a.wakeWeekdayMin else a.wakeWeekdayMin ?: a.wakeWeekendMin

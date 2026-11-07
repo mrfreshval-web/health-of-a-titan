@@ -57,6 +57,8 @@ object MetricEngine {
         val slp = ArrayList<Pair<Double?, Double?>>() // hours, z
         val trl = ArrayList<Pair<Double?, Double?>>() // trimp, z
         val debt = ArrayList<Pair<Double?, Double>>()
+        val rhrZ = ArrayList<Double?>() // A09 SAF-04: z of resting HR, derived only
+        val rrZ = ArrayList<Double?>() // A09 SAF-04: z of respiratory rate, derived only
 
         sorted.forEach { d ->
             val windows = inputs.mapValues { (_, pick) -> window(d.dayKey, pick) }
@@ -68,6 +70,8 @@ object MetricEngine {
             // ORS: 0.5·z(lnRMSSD) − 0.3·z(RHR) − 0.2·z(RR)
             ors += weighted(listOf(0.5 to z(BaselineInput.LN_RMSSD, d.lnRmssd), 0.3 to z(BaselineInput.RHR, d.rhr)?.unaryMinus(), 0.2 to z(BaselineInput.RR, d.rr)?.unaryMinus()), total = 1.0)
             slp += d.sleepHours to z(BaselineInput.SLEEP_HOURS, d.sleepHours)
+            rhrZ += z(BaselineInput.RHR, d.rhr)
+            rrZ += z(BaselineInput.RR, d.rr)
             trl += d.trimp to z(BaselineInput.TRL, d.trimp)
 
             val week = sorted.filter { it.dayKey > d.dayKey.minusDays(7) && it.dayKey <= d.dayKey }.mapNotNull { it.sleepHours }
@@ -108,6 +112,9 @@ object MetricEngine {
         emit(Metrics.TRL, trl.map { it.first }, trl.map { it.second }, trl.map { if (it.first != null) 1.0 else 0.0 }, ::levelOf)
         emit(Metrics.ECAP, ecap.map { it.first?.let(::facetScale) }, ecap.map { it.first }, ecap.map { it.second }, ::levelOf)
         emit(Metrics.LRB, lrb.map { it.first }, lrb.map { it.first }, lrb.map { it.second }, ::balanceLevel)
+        // RHRZ / RRZ: the night's z only (no bpm, no breaths/min are stored — R-11, D-009).
+        emit(Metrics.RHR_Z, rhrZ, rhrZ, rhrZ.map { if (it != null) 1.0 else 0.0 }, ::levelOf)
+        emit(Metrics.RR_Z, rrZ, rrZ, rrZ.map { if (it != null) 1.0 else 0.0 }, ::levelOf)
 
         val latest = sorted.last().dayKey
         val nights = baselines.firstOrNull { it.dayKey == latest && it.input == BaselineInput.LN_RMSSD }?.n ?: 0

@@ -6,22 +6,27 @@ package com.healthofatitan.app.domain.engine
  * the `ruleId@ver` they were built with and are never recomputed.
  */
 object RuleSet {
-    /** `DayState.ruleSet@ver`: manifest of `content/rules` (regime.yaml `ruleSet: day`, version 1). */
-    const val VERSION = "day@1"
+    /**
+     * `DayState.ruleSet@ver`: manifest of `content/rules` (regime.yaml `ruleSet: day`, version 2).
+     * day@2 (A39 expert review): SAF-04 and EVE-01 added, REG-05@2 (no WHOOP Recovery %, manual
+     * fallback), SAF-03@2 (see a doctor on the third day of a cold), RHRZ@1 and RRZ@1 read.
+     */
+    const val VERSION = "day@2"
 
     /**
      * A25 metric versions the thresholds were tuned on (regime.yaml `metrics_required`, the subset
      * slice 2 reads). A new metric version needs a review of the thresholds (A09 §6 p. 3).
      */
-    val METRICS_REQUIRED = listOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1")
+    val METRICS_REQUIRED = listOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1", "RHRZ@1", "RRZ@1")
 
     // Safety, regime, context (A09 §3)
-    val SAF_03 = RuleRef("SAF-03", 1)
+    val SAF_03 = RuleRef("SAF-03", 2)
+    val SAF_04 = RuleRef("SAF-04", 1)
     val REG_01 = RuleRef("REG-01", 1)
     val REG_02 = RuleRef("REG-02", 1)
     val REG_03 = RuleRef("REG-03", 1)
     val REG_04 = RuleRef("REG-04", 1)
-    val REG_05 = RuleRef("REG-05", 1)
+    val REG_05 = RuleRef("REG-05", 2)
     val REG_06 = RuleRef("REG-06", 1)
     val CTX_01 = RuleRef("CTX-01", 1)
     val CTX_03 = RuleRef("CTX-03", 1)
@@ -43,9 +48,6 @@ object RuleSet {
     val TR_05 = RuleRef("TR-05", 1)
     val TR_07 = RuleRef("TR-07", 1)
 
-    /**
-     * Evening deck → next morning (D-027): «тело забито» lightens the training. New id, to be added
-     * to A09 `context.yaml` by Agents 3 and 12 (⚑3, ⚑12).
-     */
+    /** Evening deck → next morning (D-027): «тело забито» lightens the training (context.yaml, A39). */
     val EVE_01 = RuleRef("EVE-01", 1)
 }

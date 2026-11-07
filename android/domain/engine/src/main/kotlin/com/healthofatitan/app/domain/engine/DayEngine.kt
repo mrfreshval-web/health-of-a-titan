@@ -33,8 +33,9 @@ object DayEngine {
         val shortNight = n.sleepHours != null && n.sleepHours < 6.0
         val travel = DayFlag.TRAVEL in r.flags
 
-        // SLP-01: −30 min on a GENTLE day or after a night < 6 h (min, not sum; never below −60).
-        val shifted = r.regime == Regime.GENTLE || shortNight
+        // SLP-01: −30 min on a GENTLE day (computed or final, YAML `regime.computed`) or after a
+        // night < 6 h (min, not sum; never below −60).
+        val shifted = r.regime == Regime.GENTLE || r.computed == Regime.GENTLE || shortNight
         val bedtime = sc.bedtimeMin + if (shifted) -30 else 0
         fired += FiredRule(RuleSet.SLP_01, DayTexts.bedtime(bedtime, sc.wakeTomorrowMin, sc.wakeTomorrowSource, sc.sleepNeedMin, shifted))
         // SLP-02: caffeine line = bedtime − 9 h; moves with the bedtime.
@@ -81,8 +82,10 @@ object DayEngine {
         }
 
         if (shortNight && !r.sick) {
-            val napAt = max(13 * 60 + 15, wake + 6 * 60).coerceAtMost(14 * 60 + 40)
-            items += PlanItem(Ids.NAP, RuleSet.SLP_05, ItemKind.NAP, napAt, napAt + 20, DayTexts.ITEM_NAP, priority = 4)
+            // Ends by 15:00 and ≥ 7 h before bedtime (SLP-05 slot). Optional: the first to go
+            // when the plan is over budget (schedule.yaml `drop_first: optional`).
+            val napAt = max(13 * 60 + 15, wake + 6 * 60).coerceAtMost(minOf(14 * 60 + 40, bedtime - 7 * 60 - 20))
+            items += PlanItem(Ids.NAP, RuleSet.SLP_05, ItemKind.NAP, napAt, napAt + 20, DayTexts.ITEM_NAP, priority = 9)
             fired += FiredRule(RuleSet.SLP_05, DayTexts.nap(n.sleepHours!!))
         }
 
@@ -132,7 +135,7 @@ object DayEngine {
             bedtimeMin = bedtime,
             caffeineCutoffMin = cutoff,
             windDownMin = windDown,
-            headline = DayTexts.headline(r.regime),
+            headline = DayTexts.headline(r.regime, r.flags),
             summary = DayTexts.summary(n, training, bedtime),
         )
     }

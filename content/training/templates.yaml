@@ -206,8 +206,8 @@ templates:
     method: strength_periodized
     goal: [strength]
     place: [gym]
-    equipment: [barbell, trap_bar, kettlebell, dumbbells, bar, parallel_bars, band, box, mat, wall]
-    duration_min: 55
+    equipment: [barbell, trap_bar, rack, kettlebell, dumbbells, bar, parallel_bars, machine_cable, band, box, mat, wall]
+    duration_min: 50
     intensity: {rpe: "7-8", note_ru: "волна 3+1: недели 1–3 растём, неделя 4 — разгрузка −40 %"}
     modes:
       BOOST: {use: full}
@@ -225,11 +225,11 @@ templates:
           - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
           - {ex: ex-goblet-squat, sets: 2, reps: "5", note_ru: "лёгкая гиря, подводка"}
       - type: main
-        min: 30
+        min: 16
         format: emom
-        minutes: 10
+        minutes: 12
         items:
-          - {ex: ex-back-squat, reps: "3", rpe: "7-8", alt: [ex-trap-bar-deadlift, ex-goblet-squat], note_ru: "каждую минуту 3 повтора, 10 минут"}
+          - {ex: ex-back-squat, reps: "3", rpe: "7-8", alt: [ex-trap-bar-deadlift, ex-goblet-squat], note_ru: "4 мин подводки к рабочему весу, затем каждую минуту 3 повтора, 12 минут"}
       - type: main
         min: 14
         format: superset
@@ -522,7 +522,7 @@ templates:
         items:
           - {ex: ex-brisk-walk, time_s: 300}
           - {ex: ex-leg-swings, reps: "12", per_side: true}
-          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-deep-squat-hold, time_s: 30}
           - {ex: ex-worlds-greatest, reps: "3", per_side: true}
           - {ex: ex-high-march, sets: 2, time_s: 20, rest_s: 20}
       - type: main
@@ -537,7 +537,7 @@ templates:
           - {ex: ex-brisk-walk, time_s: 240, note_ru: "легко"}
           - {ex: ex-stretch-calf, time_s: 30, per_side: true}
           - {ex: ex-stretch-quad, time_s: 30, per_side: true}
-          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
           - {ex: ex-breath-long-exhale, time_s: 60}
     why_ru: "Спринт в гору даёт максимальную мощность при меньшей ударной нагрузке, чем по ровному."
     contraindications: [screening_not_cleared, extreme_not_consented, heart_condition, chest_pain_exertion]
@@ -550,7 +550,7 @@ templates:
     goal: [endurance, general]
     place: [gym]
     equipment: [bar, dumbbells, kettlebell, box, rower, bike, jump_rope, mat, wall, none]
-    duration_min: 55
+    duration_min: 50
     intensity: {rpe: "8-9", time_cap_min: 25, note_ru: "лимит 25 минут; дробить подходы заранее, а не до отказа"}
     modes:
       BOOST: {use: full}
@@ -612,26 +612,27 @@ templates:
     lighter: {duration_pct: -50}
     blocks:
       - type: warmup
-        min: 1
+        min: 3
         format: flow
         items:
           - {ex: ex-breath-long-exhale, time_s: 60}
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-arm-circles, reps: "10"}
       - type: main
-        min: 7
+        min: 4
         format: flow
         items:
-          - {ex: ex-cat-cow, reps: "8"}
           - {ex: ex-worlds-greatest, reps: "3", per_side: true}
           - {ex: ex-hip-90-90, time_s: 30, per_side: true}
-          - {ex: ex-open-book, reps: "6", per_side: true}
+          - {ex: ex-open-book, reps: "5", per_side: true}
           - {ex: ex-ankle-knee-wall, reps: "8", per_side: true}
-          - {ex: ex-arm-circles, reps: "10"}
       - type: cooldown
-        min: 2
+        min: 3
         format: flow
         items:
-          - {ex: ex-stretch-child, time_s: 60}
-          - {ex: ex-breath-long-exhale, time_s: 60}
+          - {ex: ex-stretch-calf, time_s: 30, per_side: true}
+          - {ex: ex-stretch-child, time_s: 45}
+          - {ex: ex-breath-long-exhale, time_s: 45}
     why_ru: "Десять минут, чтобы тело проснулось: позвоночник, таз, плечи, голеностоп."
     contraindications: []
 
@@ -649,13 +650,14 @@ templates:
       BOOST: {use: full}
       STEADY: {use: full}
       GENTLE: {use: full}
-    lighter: {drop_blocks: [warmup]}
+    lighter: {duration_pct: -40}
     blocks:
       - type: warmup
         min: 10
         format: steady
         items:
-          - {ex: ex-brisk-walk, time_s: 600, zone: Z1, note_ru: "спокойная прогулка, лучше на улице"}
+          - {ex: ex-brisk-walk, time_s: 480, zone: Z1, note_ru: "спокойная прогулка, лучше на улице"}
+          - {ex: ex-leg-swings, reps: "10", per_side: true}
       - type: main
         min: 9
         format: flow

@@ -1468,7 +1468,7 @@ exercises:
     pattern: locomotion
     muscles: {primary: [cardio, hip_flexors], secondary: [core, calves]}
     equipment: [none]
-    place: [home, hotel]
+    place: [home, hotel, outdoor, gym]
     measure: time
     impact: low
     risk_tags: []
@@ -2170,7 +2170,7 @@ exercises:
     mistakes_ru: ["Согнутые руки", "Таз ниже плеч"]
     cues_ru: ["Перекладину — к бёдрам", "Спина — горизонт"]
     breathing_ru: "Короткие ровные вдохи, без длинной задержки."
-    contraindications: [shoulder_pain, shoulder_injury, elbow_pain, hypertension, screening_not_cleared]
+    contraindications: [shoulder_pain, shoulder_injury, elbow_pain, hypertension, eye_pressure, screening_not_cleared]
     regressions: [ex-pullup, ex-hollow-hold]
     progressions: []
     swaps: [ex-pullup]

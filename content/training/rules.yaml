@@ -1,0 +1,327 @@
+# Rules of the training configurator (A40 §4–§9, content/training/SCHEMA.md).
+# One file holds every closed vocabulary and every rule the engine and Claude generation may use.
+# The engine is deterministic: same inputs → same session. Claude only fills gaps inside these rules,
+# and every generated session passes check_training.py --candidate before the user sees it (A40 §4.4).
+# Rules can only make a session lighter or safer, never heavier (A19 §1.2 step 3).
+# Medical and safety wording: Agent 3 (veto). Psychological wording (shame, guilt, ED): Agent 10.
+# Validate: python3 content/training/scripts/check_training.py
+version: 1
+reviewedBy: []   # draft: Agent 12 with in-session review of Agent 3 (A40 §11); final review pending
+status: draft
+
+# =====================================================================
+# 1. Closed vocabularies (validator rejects anything outside them)
+# =====================================================================
+vocab:
+  level: [classic, advanced, extreme]
+  template_level: [classic, advanced, extreme, all]     # all = mobility templates, open to every level
+  category: [mobility, stretch, breathing, strength, core, cardio, power, conditioning, skill]
+  pattern: [mobility_spine, mobility_hip, mobility_ankle, mobility_shoulder, mobility_wrist,
+            stretch_lower, stretch_upper, breathing,
+            squat, lunge, hinge, push_h, push_v, pull_h, pull_v,
+            core_anti_ext, core_anti_rot, core_flex, carry, locomotion, olympic, full_body, jump, inversion]
+  measure: [reps, reps_per_side, time, time_per_side, distance]
+  impact: [low, medium, high]
+  equipment: [none, mat, wall, chair, band, stick, dumbbells, kettlebell, barbell, trap_bar, rack, box, bar,
+              parallel_bars, rings, machine_cable, treadmill, bike, rower, jump_rope]
+  place: [home, gym, outdoor, hotel]
+  muscles: [spine, core, obliques, lower_back, glutes, hip_flexors, adductors, quads, hamstrings, calves,
+            chest, front_delts, side_delts, rear_delts, rotator_cuff, triceps, biceps, forearms,
+            upper_back, lats, traps, cardio, full_body]
+  view: [side, front, three_quarter, top]
+  props: [mat, wall, chair, band, stick, dumbbells, kettlebell, barbell, trap_bar, rack, box, bar,
+          parallel_bars, rings, machine_cable, treadmill, bike, rower, jump_rope, slope]
+  goal: [general, strength, endurance, power, skill, mobility, recovery]
+  block_type: [warmup, main, finisher, cooldown]
+  block_format: [flow, straight_sets, superset, circuit, emom, amrap, for_time, intervals, steady, skill_practice]
+  zone: [Z1, Z2, Z3, Z4, Z5]          # WHOOP zones by % of max HR (A19 §2; boundaries — Agent 9)
+  regime: [BOOST, STEADY, GENTLE]     # A09 §2: Разгон / Ровно / Бережно
+
+# Movement properties. Profile codes and day flags forbid tags, not exercise ids,
+# so a new exercise is safe the moment it is tagged.
+risk_tags:
+  deep_knee_flexion: "Глубокое сгибание колена под нагрузкой"
+  wrist_load:        "Опора на кисти с разгибом запястья"
+  overhead_load:     "Вес или опора над головой"
+  grip_hang:         "Вис на руках"
+  heavy_load:        "Тяжёлый вес, RPE ≥ 8 на 1–5 повторов"
+  valsalva:          "Натуживание с задержкой дыхания"
+  max_speed:         "Максимальная скорость или мощность"
+  high_impact:       "Прыжки и ударная нагрузка"
+  fall_risk:         "Риск падения или срыва"
+  inversion:         "Голова ниже сердца, вверх ногами"
+  eccentric_heavy:   "Тяжёлая уступающая работа (сильная крепатура)"
+
+# =====================================================================
+# 2. Levels — the experts' split (A40 §2). Level = cost of effort and skill, not a sport.
+# =====================================================================
+levels:
+  - id: classic
+    ru: "Классика"
+    promise_ru: "Сильное тело на каждый день: функционалка, фитнес, оздоровительная гимнастика, кардио Zone 2."
+    methods: [functional, fitness_strength, fitness_circuit, general_gymnastics, zone2]
+    intensity: {rpe_max: 8, failure: never, intervals: none}
+    weekly: {sessions: "2-4", strength_min: 2, mobility_min: 2}
+    entry: {screening: any, tests: []}        # screening «yes» → safe mode inside Classic (§6)
+  - id: advanced
+    ru: "Продвинутый"
+    promise_ru: "Мощность и выносливость: силовая периодизация, кроссфит-подход, ВИИТ, база калистеники."
+    methods: [strength_periodized, crossfit_style, hiit, calisthenics]
+    intensity: {rpe_max: 9, failure: "last set of accessories only", intervals: "≤ 2 per week, BOOST only"}
+    weekly: {sessions: "3-5", strength_min: 2, mobility_min: 2, hard_max: 2}
+    entry:
+      screening: cleared
+      weeks_on_previous: 6
+      adherence: "≥ 2 sessions/week in 5 of the last 6 weeks"
+      tests: {all_of: [ft-pushups, ft-squat-60, ft-plank], any_of_level: advanced}
+  - id: extreme
+    ru: "Экстрим"
+    promise_ru: "Максимальное усердие: калистеника-навыки, гимнастическая сила, спринты, «чипперы»."
+    methods: [street_skill, gymnastics_strength, sprint, metcon]
+    intensity: {rpe_max: 10, failure: "skill work never; conditioning — capped by time", intervals: "≤ 2 per week, BOOST only"}
+    weekly: {sessions: "4-6", strength_min: 2, mobility_min: 3, hard_max: 3}
+    entry:
+      screening: cleared
+      consent: extreme_consent                 # explicit tap: «понимаю риски, слушаю стоп-сигналы»
+      weeks_on_previous: 8
+      adherence: "≥ 3 sessions/week in 6 of the last 8 weeks"
+      tests: {all_of: [ft-pushups, ft-pullups, ft-squat-60, ft-plank, ft-sit-reach], any_of_level: extreme}
+
+# Methods: one id per technique family. Templates reference them; Claude may only use these.
+methods:
+  - {id: functional,          level: classic,  ru: "Функциональный тренинг", note_ru: "Шесть базовых движений человека: присед, наклон, выпад, толчок, тяга, перенос"}
+  - {id: fitness_strength,    level: classic,  ru: "Фитнес: силовая с гантелями", note_ru: "Подходы 8–15 повторов, 2–3 в запасе, суперсеты антагонистов"}
+  - {id: fitness_circuit,     level: classic,  ru: "Фитнес: круговая в зале", note_ru: "Станции на тренажёрах и свободных весах, ровный темп"}
+  - {id: general_gymnastics,  level: classic,  ru: "Оздоровительная гимнастика", note_ru: "Суставная гимнастика и упражнения с весом тела в медленном темпе; шаблоны мобильности + функциональная база"}
+  - {id: zone2,               level: classic,  ru: "Кардио Zone 2", note_ru: "Разговорный темп, 30–60 мин"}
+  - {id: strength_periodized, level: advanced, ru: "Силовая с периодизацией", note_ru: "Волна 3+1, RPE 7–9, EMOM для качества повторов"}
+  - {id: crossfit_style,      level: advanced, ru: "Кроссфит-подход (AMRAP, EMOM, на время)", note_ru: "Смешанная функциональная нагрузка с ограничением по времени; без названий бренда в продукте"}
+  - {id: hiit,                level: advanced, ru: "ВИИТ", note_ru: "Интервалы 4×4 мин Z4 или 30/90 с; только Разгон"}
+  - {id: calisthenics,        level: advanced, ru: "Калистеника: база", note_ru: "Подтягивания, брусья, пайк, лодочка — фундамент навыков"}
+  - {id: street_skill,        level: extreme,  ru: "Стрит-воркаут: навыки", note_ru: "Выход силой, передний вис, уголок; навык — свежим"}
+  - {id: gymnastics_strength, level: extreme,  ru: "Гимнастическая сила", note_ru: "Стойка на руках, отжимания в стойке, пистолет, нордические"}
+  - {id: sprint,              level: extreme,  ru: "Спринты", note_ru: "8–15 с максимальной скорости, полный отдых"}
+  - {id: metcon,              level: extreme,  ru: "Чиппер «Титан»", note_ru: "Длинная работа на время с потолком по времени"}
+  - {id: mobility,            level: all,      ru: "Мобильность", note_ru: "Подвижность суставов, в каждой тренировке и отдельной сессией"}
+  - {id: stretching,          level: all,      ru: "Растяжка", note_ru: "Статика 30–60 с после нагрузки или вечером"}
+
+# =====================================================================
+# 3. Fitness tests (A40 §3). Retest every 6 weeks or by button. Result → suggested level, never forced.
+#    Thresholds are [Оценка] after ACSM/NSCA norms; Agent 3 reviews. A test is skipped on its contraindications.
+# =====================================================================
+fitness_tests:
+  - id: ft-pushups
+    ru: "Отжимания подряд с правильной техникой"
+    exercise: ex-pushup
+    measure: reps
+    stop_ru: "Остановись, когда тело перестаёт быть прямой линией или техника ломается."
+    thresholds: {advanced: 15, extreme: 30}
+    contraindications: [shoulder_injury, wrist_injury]
+  - id: ft-pullups
+    ru: "Подтягивания подряд из полного виса"
+    exercise: ex-pullup
+    measure: reps
+    stop_ru: "Только чистые повторы: подбородок над перекладиной, без раскачки."
+    thresholds: {advanced: 3, extreme: 10}
+    contraindications: [shoulder_injury, elbow_pain]
+  - id: ft-squat-60
+    ru: "Приседания за 60 секунд"
+    exercise: ex-squat-bw
+    measure: reps
+    stop_ru: "Колени по линии носков, пятки на полу; боль в колене — стоп теста."
+    thresholds: {advanced: 35, extreme: 45}
+    contraindications: [knee_injury]
+  - id: ft-plank
+    ru: "Планка на предплечьях"
+    exercise: ex-plank
+    measure: time_s
+    stop_ru: "Стоп, когда таз провисает или задирается."
+    thresholds: {advanced: 60, extreme: 120}
+    contraindications: [lower_back_injury, hypertension]
+  - id: ft-sit-reach
+    ru: "Наклон сидя: тянемся к стопам"
+    exercise: ex-stretch-hamstring
+    measure: reach                      # below_knee | shin | toes | past_toes
+    stop_ru: "Без рывков, тянемся на выдохе, держим 2 секунды."
+    thresholds: {advanced: shin, extreme: toes}
+    contraindications: [lower_back_injury]
+  - id: ft-step-3min
+    ru: "Степ-тест 3 минуты"
+    exercise: ex-step-up
+    measure: hr_recovery_60s            # HR drop 60 s after the test, from BLE HR (A40 §7.4) or WHOOP workout
+    stop_ru: "Ступенька 30 см, темп метронома 96 ударов. Головокружение или одышка — стоп."
+    thresholds: {advanced: 20, extreme: 30}
+    contraindications: [heart_condition, chest_pain_exertion, fainting_dizziness, screening_not_cleared, knee_injury]
+    optional: true                      # needs live HR; without it the level is set by the other tests
+
+level_transition:
+  up:
+    suggest_when: "all required tests ≥ threshold of the next level AND weeks_on_previous AND adherence"
+    user_confirms: true                 # never automatic: a card «Готов к Продвинутому?»
+    first_two_weeks: lighter            # first 2 weeks on a new level — L1 versions
+  down:
+    suggest_when: "3 RETURN flags in 8 weeks OR median session RPE ≥ 9 for 3 weeks OR user asks"
+    user_confirms: true
+    wording_ru: "Сменим ритм на пару недель: это шаг для силы, а не назад."
+  any_time: "user may pick a lower level any time; a higher one only through the tests"
+
+# =====================================================================
+# 4. Gates and regime caps (applied in this order; the first hit wins)
+# =====================================================================
+gates:
+  - id: TG-01
+    when: {flag: EMERGENCY}
+    then: {hide_training: true, show: crisis_or_emergency_card}
+  - id: TG-02
+    when: {flag: SICK}
+    then: {only_templates: [tpl-mob-recovery], max_minutes: 20, zone_max: Z1}
+  - id: TG-03
+    when: {flag: SEE_SPECIALIST}
+    then: {only_templates: [tpl-mob-morning, tpl-mob-recovery, tpl-mob-deep-stretch], note_ru: "До консультации — только мобильность и прогулка."}
+  - id: TG-04
+    when: {profile: screening_not_cleared}
+    then: {max_level: classic, forbid_methods: [hiit, sprint, metcon, strength_periodized], rpe_max: 6, forbid_tags: [heavy_load, valsalva, max_speed, inversion]}
+  - id: TG-05
+    when: {profile: pregnancy}
+    then: {program: none, only_templates: [], note_ru: "Программы для беременности в продукте нет. Обсуди нагрузки с врачом."}
+  - id: TG-06
+    when: {flag: ED_CARE}
+    then: {no_extra_sessions: true, hide_calorie_burn: true, forbid_methods: [metcon], wording: agent10}
+  - id: TG-07
+    when: {stop_signal: [F1, F2, F3, F4, F5]}
+    then: {hide_training: true, until: doctor_cleared}
+
+regime_caps:
+  BOOST:
+    allow_methods: all_of_level
+    rpe_max: {classic: 8, advanced: 9, extreme: 10}
+    intervals: true
+  STEADY:
+    allow_methods: [functional, fitness_strength, fitness_circuit, general_gymnastics, zone2, strength_periodized, calisthenics, street_skill, gymnastics_strength, mobility, stretching]
+    rpe_max: {classic: 7, advanced: 7, extreme: 7}
+    intervals: false
+    forbid_tags: [max_speed]
+  GENTLE:
+    allow_methods: [zone2, mobility, stretching]
+    rpe_max: {classic: 4, advanced: 4, extreme: 4}
+    intervals: false
+    zone_max: Z2
+    forbid_tags: [heavy_load, max_speed, high_impact, valsalva, eccentric_heavy]
+
+# =====================================================================
+# 5. Profile codes (A40 §8 «Профиль»). Each training code is DERIVED from the shared profile
+#    content/profile/constraints.yaml (A41, branch claude/nutrition-system); the user never sees these ids.
+#    effect: forbid_tags — drop any exercise with these tags; forbid_patterns — drop by pattern;
+#    the exercise's own `contraindications` list is checked too. Swap → regression → same pattern → skip.
+# =====================================================================
+profile_codes:
+  neck_pain:            {from: {injury: neck, status: [recovering, chronic_stable]},       forbid_tags: [inversion, overhead_load]}
+  shoulder_pain:        {from: {injury: shoulder, status: [recovering, chronic_stable]},   forbid_tags: [overhead_load]}
+  shoulder_injury:      {from: {injury: shoulder, status: [acute]},                        forbid_tags: [overhead_load, grip_hang, wrist_load], route: physio}
+  elbow_pain:           {from: {injury: elbow, status: [recovering, chronic_stable, acute]}, forbid_tags: [grip_hang]}
+  wrist_pain:           {from: {injury: wrist_hand, status: [recovering, chronic_stable]}, forbid_tags: [wrist_load]}
+  wrist_injury:         {from: {injury: wrist_hand, status: [acute]},                      forbid_tags: [wrist_load, grip_hang], route: physio}
+  lower_back_pain:      {from: {injury: lower_back, status: [recovering, chronic_stable]}, forbid_tags: [heavy_load], forbid_patterns: [olympic]}
+  lower_back_injury:    {from: {injury: lower_back, status: [acute]},                      forbid_tags: [heavy_load, high_impact, valsalva], forbid_patterns: [olympic, hinge], route: physio}
+  hip_pain:             {from: {injury: hip, status: [recovering, chronic_stable, acute]}, forbid_tags: [deep_knee_flexion]}
+  knee_pain:            {from: {injury: knee, status: [recovering, chronic_stable]},       forbid_tags: [deep_knee_flexion, high_impact]}
+  knee_injury:          {from: {injury: knee, status: [acute]},                            forbid_tags: [deep_knee_flexion, high_impact, max_speed], forbid_patterns: [jump, lunge], route: physio}
+  ankle_pain:           {from: {injury: ankle_foot, status: [recovering, chronic_stable]}, forbid_tags: [high_impact]}
+  ankle_injury:         {from: {injury: ankle_foot, status: [acute]},                      forbid_tags: [high_impact, max_speed], forbid_patterns: [jump, locomotion], route: physio}
+  no_impact:            {from: {movement_limit: no_impact},                forbid_tags: [high_impact]}
+  no_overhead:          {from: {movement_limit: no_overhead},              forbid_tags: [overhead_load]}
+  no_deep_knee_flexion: {from: {movement_limit: no_deep_knee_flexion},     forbid_tags: [deep_knee_flexion]}
+  no_floor_work:        {from: {movement_limit: no_floor_work},            forbid_categories: [], note_ru: "Упражнения лёжа заменяются стоячими версиями по swaps; список — в animation.props: mat"}
+  no_high_intensity:    {from: {movement_limit: no_high_intensity},        forbid_methods: [hiit, sprint, metcon], rpe_max: 7}
+  no_breath_hold:       {from: {movement_limit: no_breath_hold},           forbid_tags: [valsalva, heavy_load]}
+  hypertension:         {from: {medical_flag: heart_bp_meds, screening: S1}, forbid_tags: [valsalva, heavy_load, inversion], rpe_max: 7, route: doctor_before_intensity}
+  heart_condition:      {from: {medical_flag: heart_bp_meds, screening: S1}, forbid_methods: [hiit, sprint, metcon], forbid_tags: [max_speed, valsalva], rpe_max: 6, route: doctor_before_intensity}
+  chest_pain_exertion:  {from: {screening: S2},                            hide_training: true, route: doctor}
+  fainting_dizziness:   {from: {screening: S3},                            forbid_tags: [inversion, max_speed, fall_risk], route: doctor}
+  eye_pressure:         {from: {self_report: "глаукома или давление в глазах"}, forbid_tags: [inversion, valsalva]}
+  hernia:               {from: {self_report: "грыжа живота или паховая"},   forbid_tags: [valsalva, heavy_load], forbid_patterns: [core_flex]}
+  pregnancy:            {from: {life_stage: [pregnancy, postpartum_6m]},     program: none, route: doctor}
+  screening_not_cleared: {from: {screening: "any yes without «врач разрешил нагрузки»"}, gate: TG-04}
+  extreme_not_consented: {from: {consent: "no extreme_consent tap"},        max_level: advanced}
+
+# =====================================================================
+# 6. Day modifiers (A19 TR-01…TR-09, extended). Only lighter, never heavier.
+# =====================================================================
+modifiers:
+  - {id: TM-01, ref: TR-01, when: {flag: LIGHT_WEEK},                     then: {regime_cap: STEADY, volume_pct: -40, forbid_methods: [hiit, sprint, metcon]}}
+  - {id: TM-02, ref: TR-02, when: {fact: load.acute_chronic, op: gt, value: 1.5}, then: {regime_cap: STEADY, days: 1}, note_ru: "Нагрузка за неделю выше обычной — сегодня ровнее. Это тренд, а не прогноз травмы."}
+  - {id: TM-03, ref: TR-03, when: {fact: days_since_last_session, op: gte, value: 7}, then: {use: lighter, sessions: 2}}
+  - {id: TM-04, ref: TR-04, when: {flag: RETURN},                          then: {ladder: [tpl-mob-recovery, tpl-cl-zone2, lighter, full], intervals_after_days: 7}}
+  - {id: TM-05, ref: TR-05, when: {fact: sleep.hours, op: lt, value: 6.0}, then: {intervals_to: tpl-cl-zone2, strength: lighter, forbid_tags: [max_speed, fall_risk]}}
+  - {id: TM-06, ref: TR-06, when: {fact: alcohol.yesterday_units, op: gte, value: 3}, then: {intervals_to: tpl-cl-zone2, strength: lighter}}
+  - {id: TM-07, ref: TR-07, when: {fact: minutes_to_bedtime, op: lt, value: 60}, then: {rpe_max: 7, suggest: [tpl-cl-zone2, tpl-mob-deep-stretch]}}
+  - {id: TM-08, ref: TR-08, when: {fact: weather.heat, op: eq, value: true}, then: {place_prefer: [gym, home], volume_pct: -20}}
+  - {id: TM-09, ref: TR-09, when: {fact: checkin.pain_region, op: present},  then: {add_profile_code_for_day: "<region>_pain"}}
+  - {id: TM-10, when: {fact: whoop.strain_today, op: gte, value: "ceiling_of_regime"}, then: {suggest: [tpl-mob-deep-stretch], note_ru: "Потолок дня уже набран — остаётся растяжка."}}
+  - {id: TM-11, when: {flag: TRAVEL},                                      then: {regime_cap: STEADY, place: hotel, forbid_methods: [hiit, sprint]}}
+  - {id: TM-12, when: {fact: checkin.feel, op: eq, value: tired},          then: {regime_down: 1}}
+
+# =====================================================================
+# 7. Mobility everywhere (rule M-ALL, A40 §2.4) — enforced by the validator on every template
+#    and every generated session.
+# =====================================================================
+mobility_everywhere:
+  warmup: {required: true, first_block: true, min_minutes: 3, min_items_category: {mobility: 1}}
+  cooldown: {required: true, last_block: true, min_minutes: 3, min_items_category: {stretch: 1}, end_with: [breathing, stretch]}
+  lighter_may_not_drop: [warmup, cooldown]
+  weekly_mobility_sessions: {classic: 2, advanced: 2, extreme: 3}
+  standalone_templates: [tpl-mob-morning, tpl-mob-recovery, tpl-mob-deep-stretch, tpl-mob-calisthenics-prep]
+
+# =====================================================================
+# 8. Progression and deload (A40 §5)
+# =====================================================================
+progression:
+  double_progression:
+    applies_to: [strength, core, power]
+    rule_ru: "Все подходы на верхней границе повторов с RPE ≤ цели → в следующий раз +1 ступень веса (гантели +1–2 кг, штанга +2,5 кг) или следующая прогрессия упражнения."
+  rpe_autoregulation:
+    rule_ru: "RPE подхода выше цели на 2 → следующий подход −10 % веса или −2 повтора; ниже на 2 → +1 повтор."
+  skills:
+    rule_ru: "Навык (category: skill) переходит к progressions, когда 3 тренировки подряд выполнен целевой объём без потери техники."
+  cardio:
+    rule_ru: "Zone 2: +5 мин в неделю до 60; интервалы: сначала время работы, потом число повторов."
+  max_weekly_volume_increase_pct: 10
+deload:
+  scheduled: {every_weeks: {classic: 6, advanced: 4, extreme: 4}, volume_pct: -40, rpe_max: 7}
+  by_signals: [LIGHT_WEEK, "3 GENTLE days in 7", "median RPE ≥ 9 for 2 weeks"]
+  wording_ru: "Неделя разгрузки: тело растёт, когда отдыхает."
+
+# =====================================================================
+# 9. Player defaults (A40 §7): rests and timing when a template does not set them
+# =====================================================================
+player:
+  rest_s: {strength: 90, core: 45, power: 120, conditioning: 60, skill: 150, cardio: 0, mobility: 0, stretch: 0, breathing: 0}
+  rest_heavy_s: 180                     # heavy_load tag
+  per_side_switch_s: 5
+  countdown_s: 3
+  extend_rest_step_s: 15
+  rpe_ask: {after: [last_set_of_exercise], scale: "1-10", one_tap: true}
+  haptics: {set_start: tick, last_3s: [tick, tick, tick], rest_end: double, record: heavy_click}
+  voice: {lang: ru, events: [block_start, set_start, halfway, last_10s, rest_end, stop_signal_hint], off_by_default: false}
+  stop_button: always_visible          # «Мне плохо» → A19 §6.2 F1–F8
+
+# =====================================================================
+# 10. Claude generation (A40 §4.4) — the only things Claude may change
+# =====================================================================
+generation:
+  may:
+    - "choose exercises from exercises.yaml for an existing block, same pattern and allowed tags"
+    - "set sets/reps/time/rest inside default ranges ±1 step"
+    - "write why_ru and note_ru (≤ 140 chars, «ты», no numbers about body or calories)"
+    - "compose a new session from blocks when no template fits (place × time × equipment)"
+  may_not:
+    - "invent exercises or ids"
+    - "raise rpe above regime_caps or level"
+    - "remove warmup or cooldown, or the mobility/stretch items in them"
+    - "use methods outside the user's level or regime"
+    - "mention diagnosis, treatment, weight loss or «burning» food"
+  output: candidate_session         # schema: SCHEMA.md §4; checked by check_training.py --candidate
+  fallback: "if the candidate fails validation twice → deterministic template from the matrix"
+
+# Red-line words for every *_ru text (stems, matched at word start). Errors, not warnings.
+stopwords_ru: [диагноз, лечени, лечит, вылеч, сжечь, сжига, сжёг, отработа, похуде, жиросжиг, калори, до рвоты, терпи боль, no pain no gain, слабак, лентя, стыд]

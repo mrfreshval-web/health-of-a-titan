@@ -34,6 +34,8 @@ import com.healthofatitan.app.core.database.entity.CheckinDayEntity
 import com.healthofatitan.app.core.database.entity.CheckinDiscoveryEntity
 import com.healthofatitan.app.core.database.entity.CheckinEventEntity
 import com.healthofatitan.app.core.database.dao.CheckinDao
+import com.healthofatitan.app.core.database.dao.TodayDao
+import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import kotlin.reflect.KClass
 
 /**
@@ -66,8 +68,9 @@ import kotlin.reflect.KClass
         CheckinDayEntity::class,
         CheckinDiscoveryEntity::class,
         CheckinEventEntity::class,
+        TodayMarkEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -87,6 +90,8 @@ abstract class HotDatabase : RoomDatabase() {
 
     abstract fun trainingLogDao(): TrainingLogDao
     abstract fun checkinDao(): CheckinDao
+
+    abstract fun todayDao(): TodayDao
 
     companion object {
         const val FILE_NAME = "hot.db"
@@ -119,6 +124,7 @@ abstract class HotDatabase : RoomDatabase() {
             CheckinDayEntity::class,
             CheckinDiscoveryEntity::class,
             CheckinEventEntity::class,
+            TodayMarkEntity::class,
         )
     }
 }

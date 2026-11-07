@@ -14,7 +14,8 @@ sealed interface TokenOutcome {
 
     data object NotAllowed : TokenOutcome
 
-    data object Unavailable : TokenOutcome
+    /** Worker or WHOOP is down; [code] is the Worker's HTTP status, for the sync log. */
+    data class Unavailable(val code: Int? = null) : TokenOutcome
 }
 
 /**
@@ -66,7 +67,7 @@ class WhoopAccessTokens(
                 TokenOutcome.ReauthRequired
             }
             AccessResult.NotAllowed -> TokenOutcome.NotAllowed
-            AccessResult.Unavailable -> TokenOutcome.Unavailable
+            is AccessResult.Unavailable -> TokenOutcome.Unavailable(r.code)
         }
     }
 

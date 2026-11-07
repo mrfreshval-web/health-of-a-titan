@@ -19,8 +19,9 @@ const val MENTOR_SCREEN_TAG = "screen_mentor"
 @Composable
 fun MentorScreen(modifier: Modifier = Modifier) {
     StubScreen(
-        lead = "Я ИИ-наставник, не врач и не терапевт. Разговор текстом и голосом появится в срезе 5.",
-        blocks = listOf("Разговор", "Работа", "Что я записал"),
+        lead = "Я ИИ-наставник, не врач и не терапевт.",
+        blocks = listOf("Разговор", "Работа", "Записи"),
+        columns = 3,
         testTag = MENTOR_SCREEN_TAG,
         modifier = modifier,
     )

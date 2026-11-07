@@ -1,0 +1,961 @@
+# Morning haiku library for the «Рассвет» screen (Agent 16, content/haiku/STYLE.md).
+# Modes map to DayState.regime (A09 §2): razgon = BOOST, ravno = STEADY, berezhno = GENTLE.
+# ids are stable forever: never renumber, never reuse; to retire a haiku set `retired: true`.
+# Selection and rotation rules: STYLE.md §7. Validate: python3 scripts/check_haiku.py
+# Psychological wording: review by Agent 10; anything about health: Agent 3 (CLAUDE.md).
+version: 1
+reviewedBy: []   # draft: self-review by Agent 16 on behalf of 10 and 3, see REVIEW.md
+status: draft
+
+images:   # closed list of key images; rotation: one image at most once in 7 days
+  anchor: якорь
+  anvil: кузня и наковальня
+  bell: колокол
+  bird: птица
+  bow: тетива и лук
+  bread: хлеб и тесто
+  breath: дыхание
+  bridge: мост
+  column: колонна
+  dawn: рассвет
+  dew: роса
+  field: поле
+  fog: туман
+  garden: сад
+  harbor: гавань и маяк
+  hearth: очаг и печь
+  horizon: горизонт
+  horse: конь
+  ice: иней и лёд
+  lamp: лампа и свеча
+  laurel: лавр
+  light: свет
+  moon: луна и месяц
+  mountain: гора
+  nest: гнездо
+  oar: вёсла и лодка
+  path: тропа
+  rain: дождь
+  river: река
+  root: корни
+  sail: парус
+  sea: море
+  seed: семя и росток
+  sky: небо
+  snow: снег
+  star: звезда
+  stone: камень
+  tea: чай
+  titan: Титан
+  tree: дерево
+  well: колодец
+  wind: ветер
+  window: окно
+
+haiku:
+
+  # --- razgon ---
+  - id: hk-razgon-001
+    mode: razgon
+    tags: [sleep_good]
+    image: dawn
+    text: "Сон был глубоким.\nСвет идёт по ступеням —\nиди с ним рядом."
+  - id: hk-razgon-002
+    mode: razgon
+    tags: [recovery_high]
+    image: column
+    text: "Колонны прямы,\nна капителях утро.\nПодними свой день."
+  - id: hk-razgon-003
+    mode: razgon
+    tags: [any]
+    image: titan
+    text: "Небо на плечах —\nа шаг Титана лёгок.\nПуть открыт с утра."
+  - id: hk-razgon-004
+    mode: razgon
+    tags: [sleep_good]
+    image: sail
+    text: "Ночь дала ветер.\nПарус полон до краёв —\nотдай швартовы."
+  - id: hk-razgon-005
+    mode: razgon
+    tags: [recovery_high]
+    image: horse
+    text: "Конь бьёт копытом,\nпар над утренним лугом.\nДай ему простор."
+  - id: hk-razgon-006
+    mode: razgon
+    tags: [any]
+    image: bow
+    text: "Тетива звенит,\nстрела ещё в колчане.\nВыбери цель дня."
+  - id: hk-razgon-007
+    mode: razgon
+    tags: [season_spring]
+    image: river
+    text: "Река проснулась —\nи вода несёт весну.\nПлыви с ней вместе."
+  - id: hk-razgon-008
+    mode: razgon
+    tags: [sleep_good]
+    image: well
+    text: "Колодец полон.\nВедро до самого дна —\nи вверх, со светом."
+  - id: hk-razgon-009
+    mode: razgon
+    tags: [workday]
+    image: anvil
+    text: "Горн раздут с утра,\nнаковальня ждёт тебя.\nГлавное — первым."
+  - id: hk-razgon-010
+    mode: razgon
+    tags: [any]
+    image: bell
+    text: "Колокол ясен —\nзвук летит над долиной.\nСкажи, что важно."
+  - id: hk-razgon-011
+    mode: razgon
+    tags: [weekend]
+    image: path
+    text: "Тропа за холмом\nуводит за горизонт.\nСегодня — туда."
+  - id: hk-razgon-012
+    mode: razgon
+    tags: [season_summer]
+    image: field
+    text: "Рожь по пояс, звон\nкузнечиков над полем.\nШирокий шаг дня."
+  - id: hk-razgon-013
+    mode: razgon
+    tags: [season_winter]
+    image: snow
+    text: "Наст хрустит звонко,\nвоздух ясен, как стекло.\nПроложи свой след."
+  - id: hk-razgon-014
+    mode: razgon
+    tags: [season_autumn]
+    image: sky
+    text: "Осень. Высь чиста,\nвиден каждый лист насквозь.\nЯсно, что делать."
+  - id: hk-razgon-015
+    mode: razgon
+    tags: [recovery_high]
+    image: mountain
+    text: "Вершина в солнце,\nтропа видна до верха.\nНачинай подъём."
+  - id: hk-razgon-016
+    mode: razgon
+    tags: [any]
+    image: bird
+    text: "Сокол на скале\nрасправил оба крыла.\nТвой ветер пришёл."
+  - id: hk-razgon-017
+    mode: razgon
+    tags: [sleep_good]
+    image: bread
+    text: "Тесто поднялось\nза ночь в тёплой тишине.\nПора в печь — и в день."
+  - id: hk-razgon-018
+    mode: razgon
+    tags: [strain_high]
+    image: stone
+    text: "Вчера был подъём,\nа камень нынче лёгок.\nНеси его вверх."
+  - id: hk-razgon-019
+    mode: razgon
+    tags: [any]
+    image: laurel
+    text: "Лавр под росою\nне ждёт победы — просто\nзелен. Будь и ты."
+  - id: hk-razgon-020
+    mode: razgon
+    tags: [workday]
+    image: window
+    text: "Окно на восток.\nСтол залит ранним светом.\nНачни с трудного."
+  - id: hk-razgon-021
+    mode: razgon
+    tags: [recovery_high]
+    image: sea
+    text: "Прилив до камней,\nморе дышит во всю ширь.\nВыходи в простор."
+  - id: hk-razgon-022
+    mode: razgon
+    tags: [season_spring]
+    image: seed
+    text: "Росток сквозь землю\nпробил прошлогодний лист.\nВремя расти вверх."
+  - id: hk-razgon-023
+    mode: razgon
+    tags: [workday]
+    image: bridge
+    text: "Мост над туманом.\nДело на том берегу\nждёт твоих шагов."
+  - id: hk-razgon-024
+    mode: razgon
+    tags: [sleep_good]
+    image: star
+    text: "Звезда бледнеет,\nотдав небу весь свой свет.\nВозьми его в день."
+  - id: hk-razgon-025
+    mode: razgon
+    tags: [any]
+    image: breath
+    text: "Вдох — и он шире\nгоризонта за окном.\nВыдох. Начинай."
+  - id: hk-razgon-026
+    mode: razgon
+    tags: [season_winter]
+    image: hearth
+    text: "Мороз за окном,\nа в печи гудит огонь.\nНеси тепло в день."
+  - id: hk-razgon-027
+    mode: razgon
+    tags: [season_summer]
+    image: garden
+    text: "Сад в росе с утра,\nяблоки полны света.\nСобирай свой день."
+  - id: hk-razgon-028
+    mode: razgon
+    tags: [weekend]
+    image: oar
+    text: "Вёсла на воде,\nозеро гладко до дна.\nГреби далеко."
+  - id: hk-razgon-029
+    mode: razgon
+    tags: [recovery_high]
+    image: tree
+    text: "Дуб после дождя\nдержит небо всей кроной.\nРасправь плечи — день."
+  - id: hk-razgon-030
+    mode: razgon
+    tags: [workday]
+    image: titan
+    text: "Город ещё спит,\nТитан уже у окна.\nТихий сильный час."
+  - id: hk-razgon-031
+    mode: razgon
+    tags: [any]
+    image: wind
+    text: "Ветер с моря свеж,\nфлаги на башнях поют.\nПодними свой флаг."
+  - id: hk-razgon-032
+    mode: razgon
+    tags: [weekend]
+    image: dawn
+    text: "Суббота, рассвет.\nНикто не ждёт — и всё же\nзовёт дальний холм."
+  - id: hk-razgon-033
+    mode: razgon
+    tags: [sleep_good]
+    image: moon
+    text: "Луна ушла спать\nи унесла с собой сны.\nУтро чистое."
+  - id: hk-razgon-034
+    mode: razgon
+    tags: [season_spring]
+    image: bird
+    text: "Ласточка в небе\nчертит первую дугу.\nТвой день — набросок."
+  - id: hk-razgon-035
+    mode: razgon
+    tags: [workday]
+    image: harbor
+    text: "Корабль загружен,\nв гавани пахнет солью.\nКурс — на главное."
+  - id: hk-razgon-036
+    mode: razgon
+    tags: [weekend]
+    image: mountain
+    text: "Над облаками\nвершина в первом свете.\nВыше — лишь небо."
+  - id: hk-razgon-037
+    mode: razgon
+    tags: [season_winter]
+    image: snow
+    text: "Снег выпал за ночь,\nровный, как чистый листок.\nНапиши свой день."
+  - id: hk-razgon-038
+    mode: razgon
+    tags: [season_winter]
+    image: ice
+    text: "Иней на стекле —\nузор, как карта пути.\nВыбери свой ход."
+  - id: hk-razgon-039
+    mode: razgon
+    tags: [season_autumn]
+    image: rain
+    text: "Дождь отшумел. Высь\nпромыта до синевы.\nДыши широко."
+  - id: hk-razgon-040
+    mode: razgon
+    tags: [any]
+    image: sky
+    text: "Небо открыто,\nни облачка до края.\nДелай первый ход."
+  - id: hk-razgon-041
+    mode: razgon
+    tags: [any]
+    image: stone
+    text: "Каменщик кладёт\nпервый камень в стену дня.\nСтрой, пока светло."
+  - id: hk-razgon-042
+    mode: razgon
+    tags: [workday]
+    image: lamp
+    text: "Лампа погасла —\nза окном уже светло.\nВремя для дела."
+  - id: hk-razgon-043
+    mode: razgon
+    tags: [season_summer]
+    image: sail
+    text: "Южный ветерок,\nпарус выгнут, как крыло.\nКурс открыт весь день."
+  - id: hk-razgon-044
+    mode: razgon
+    tags: [season_autumn]
+    image: field
+    text: "Скошено поле,\nдо горизонта простор.\nИди налегке."
+  - id: hk-razgon-045
+    mode: razgon
+    tags: [recovery_high]
+    image: path
+    text: "Роса на тропе,\nследы ведут к вершине.\nПусть будет и твой."
+  - id: hk-razgon-046
+    mode: razgon
+    tags: [any]
+    image: root
+    text: "Корни глубоки —\nоттого крона смело\nтянется к свету."
+  - id: hk-razgon-047
+    mode: razgon
+    tags: [sleep_good]
+    image: breath
+    text: "Ночь была щедрой —\nвдох долог, как первый луч.\nС ним и выходи."
+  - id: hk-razgon-048
+    mode: razgon
+    tags: [workday]
+    image: column
+    text: "Восемь колонн в ряд\nдержат фронтон без труда.\nТак и неси день."
+  - id: hk-razgon-049
+    mode: razgon
+    tags: [weekend]
+    image: horse
+    text: "Кони с ночного\nвозвращаются с росой.\nСедлай — и в поле."
+  - id: hk-razgon-050
+    mode: razgon
+    tags: [recovery_high]
+    image: titan
+    text: "Титан расправил\nплечи — и небо выше.\nТвой день просторен."
+  - id: hk-razgon-051
+    mode: razgon
+    tags: [season_summer]
+    image: sea
+    text: "Солнце над морем,\nвода по колено — и\nдальше, в синеву."
+  - id: hk-razgon-052
+    mode: razgon
+    tags: [strain_high]
+    image: bow
+    text: "Вчера тетива\nзвенела до вечера.\nНатянута вновь."
+  - id: hk-razgon-053
+    mode: razgon
+    tags: [workday]
+    image: tea
+    text: "Крепкий чай с утра,\nпар над чашкой, как туман.\nСквозь него — к делу."
+  - id: hk-razgon-054
+    mode: razgon
+    tags: [season_autumn]
+    image: garden
+    text: "Яблоко в траве —\nупало ночью, само.\nПора собирать."
+  - id: hk-razgon-055
+    mode: razgon
+    tags: [season_summer]
+    image: dew
+    text: "Роса на траве\nвспыхивает от солнца.\nКаждая — твоя."
+  - id: hk-razgon-056
+    mode: razgon
+    tags: [any]
+    image: fog
+    text: "Туман поднялся,\nи вся долина видна.\nЯсный путь вперёд."
+  - id: hk-razgon-057
+    mode: razgon
+    tags: [season_spring]
+    image: wind
+    text: "Апрельский ветер\nраспахнул окна в доме.\nВпусти его в день."
+  - id: hk-razgon-058
+    mode: razgon
+    tags: [weekend]
+    image: star
+    text: "Звезда над лесом,\nлес под ней ещё дремлет.\nДорога — твоя."
+  - id: hk-razgon-059
+    mode: razgon
+    tags: [any]
+    image: light
+    text: "Луч сквозь колонны\nлёг на мрамор дорожкой.\nПройди по нему."
+  - id: hk-razgon-060
+    mode: razgon
+    tags: [recovery_high, season_spring]
+    image: river
+    text: "Полая вода\nнесёт и ветки, и свет.\nВливайся в поток."
+
+  # --- ravno ---
+  - id: hk-ravno-001
+    mode: ravno
+    tags: [any]
+    image: oar
+    text: "Весло за веслом —\nлодка тихо, но плывёт.\nДержи этот ритм."
+  - id: hk-ravno-002
+    mode: ravno
+    tags: [any]
+    image: column
+    text: "Колонна в тени\nдержит свод так же верно,\nкак и на свету."
+  - id: hk-ravno-003
+    mode: ravno
+    tags: [sleep_short]
+    image: dawn
+    text: "Короткая ночь.\nРассвет всё равно пришёл —\nвстреть его тихо."
+  - id: hk-ravno-004
+    mode: ravno
+    tags: [any]
+    image: horizon
+    text: "Горизонт прямой,\nи солнце стоит на нём.\nРовно — тоже путь."
+  - id: hk-ravno-005
+    mode: ravno
+    tags: [any]
+    image: breath
+    text: "Вдох — волна пришла.\nВыдох — медленно ушла.\nДыши вместе с ней."
+  - id: hk-ravno-006
+    mode: ravno
+    tags: [workday]
+    image: tea
+    text: "Чай остывает\nровно к первому письму.\nОдно за другим."
+  - id: hk-ravno-007
+    mode: ravno
+    tags: [season_autumn]
+    image: tree
+    text: "Лист кружит — и лёг\nточно на своё место.\nТак и дела дня."
+  - id: hk-ravno-008
+    mode: ravno
+    tags: [season_winter]
+    image: snow
+    text: "Снег идёт весь день,\nровно и не торопясь.\nДвигайся с ним в лад."
+  - id: hk-ravno-009
+    mode: ravno
+    tags: [any]
+    image: stone
+    text: "Камень средь ручья.\nВода спешит, он стоит.\nТвой ритм — только твой."
+  - id: hk-ravno-010
+    mode: ravno
+    tags: [strain_high]
+    image: path
+    text: "Вчера — крутой склон.\nНынче тропа ровнее.\nПусть ведёт она."
+  - id: hk-ravno-011
+    mode: ravno
+    tags: [weekend]
+    image: garden
+    text: "Полить все грядки,\nподвязать розы к шесту.\nСуббота в саду."
+  - id: hk-ravno-012
+    mode: ravno
+    tags: [sleep_short]
+    image: lamp
+    text: "Фитиль короче,\nно пламя горит ровно.\nСвети вполсилы."
+  - id: hk-ravno-013
+    mode: ravno
+    tags: [any]
+    image: bridge
+    text: "Мост через реку\nни длинный, ни короткий.\nКак раз по шагу."
+  - id: hk-ravno-014
+    mode: ravno
+    tags: [any]
+    image: sea
+    text: "Штиль после ветра.\nМоре дышит медленно.\nПодстрой к нему вдох."
+  - id: hk-ravno-015
+    mode: ravno
+    tags: [workday]
+    image: bell
+    text: "Колокол бьёт час —\nне раньше и не позже.\nДелам — свой черёд."
+  - id: hk-ravno-016
+    mode: ravno
+    tags: [season_spring]
+    image: wind
+    text: "Ветерок в лицо,\nне сильный — ровно такой,\nчтоб идти вперёд."
+  - id: hk-ravno-017
+    mode: ravno
+    tags: [any]
+    image: hearth
+    text: "Угли без огня\nгреют дольше, чем костёр.\nНеси тепло так."
+  - id: hk-ravno-018
+    mode: ravno
+    tags: [any]
+    image: moon
+    text: "Утренний месяц\nсветит лишь вполовину.\nЭтого хватит."
+  - id: hk-ravno-019
+    mode: ravno
+    tags: [season_autumn]
+    image: rain
+    text: "Мелкий дождь с утра,\nровный, как дыхание.\nВ этом темпе — день."
+  - id: hk-ravno-020
+    mode: ravno
+    tags: [season_spring]
+    image: field
+    text: "Пахарь ведёт плуг\nборозда за бороздой.\nПоле — к вечеру."
+  - id: hk-ravno-021
+    mode: ravno
+    tags: [any]
+    image: bird
+    text: "Цапля в тумане\nна одной ноге — и ждёт.\nРавновесие."
+  - id: hk-ravno-022
+    mode: ravno
+    tags: [any]
+    image: titan
+    text: "Титан не бежит.\nШаг за шагом — и хребет\nуже за спиной."
+  - id: hk-ravno-023
+    mode: ravno
+    tags: [season_winter]
+    image: tree
+    text: "Сосна под снегом\nне гнётся — держит его.\nОпора — внутри."
+  - id: hk-ravno-024
+    mode: ravno
+    tags: [workday]
+    image: window
+    text: "Окно в серый день.\nСвет без единой тени.\nСамый рабочий."
+  - id: hk-ravno-025
+    mode: ravno
+    tags: [any]
+    image: path
+    text: "Тропа вдоль реки\nбез подъёмов и спусков.\nИди и смотри."
+  - id: hk-ravno-026
+    mode: ravno
+    tags: [any]
+    image: seed
+    text: "Семена в земле\nрастут себе не спеша.\nДелай свою часть."
+  - id: hk-ravno-027
+    mode: ravno
+    tags: [any]
+    image: sail
+    text: "Риф на парусе,\nи лодка ровно идёт.\nКурс — к своей цели."
+  - id: hk-ravno-028
+    mode: ravno
+    tags: [any]
+    image: well
+    text: "Ведро в колодце\nне до края налито.\nТак легче нести."
+  - id: hk-ravno-029
+    mode: ravno
+    tags: [any]
+    image: bread
+    text: "Хлеб в печи растёт\nна ровном тихом огне.\nНе торопи жар."
+  - id: hk-ravno-030
+    mode: ravno
+    tags: [season_autumn]
+    image: fog
+    text: "Туман над прудом.\nВидно на десять шагов.\nШагни — и ещё."
+  - id: hk-ravno-031
+    mode: ravno
+    tags: [season_winter]
+    image: ice
+    text: "Лёд под ногами —\nшаг короче, чем вчера,\nно путь всё тот же."
+  - id: hk-ravno-032
+    mode: ravno
+    tags: [workday]
+    image: anvil
+    text: "Молот кузнеца —\nразмеренно, без спешки.\nМеталл слышит такт."
+  - id: hk-ravno-033
+    mode: ravno
+    tags: [any]
+    image: river
+    text: "Река не спешит —\nи всё равно у моря.\nДоверься темпу."
+  - id: hk-ravno-034
+    mode: ravno
+    tags: [season_spring]
+    image: garden
+    text: "Садовник с утра\nобходит грядки кругом.\nСперва — ближняя."
+  - id: hk-ravno-035
+    mode: ravno
+    tags: [season_summer]
+    image: sky
+    text: "Облака плывут\nвсе в одну и ту же даль.\nИ ты — туда же."
+  - id: hk-ravno-036
+    mode: ravno
+    tags: [weekend]
+    image: horse
+    text: "Конь идёт шагом,\nне срываясь на галоп.\nУйдёт далеко."
+  - id: hk-ravno-037
+    mode: ravno
+    tags: [strain_high]
+    image: column
+    text: "Вчерашний груз — с плеч.\nКолонна стоит прямо.\nСегодня — ровно."
+  - id: hk-ravno-038
+    mode: ravno
+    tags: [season_winter]
+    image: tea
+    text: "Метель за окном.\nЧай заварен в третий раз.\nСпешить некуда."
+  - id: hk-ravno-039
+    mode: ravno
+    tags: [workday]
+    image: harbor
+    text: "Паром каждый час\nходит по той же воде.\nСила — в повторе."
+  - id: hk-ravno-040
+    mode: ravno
+    tags: [recovery_low]
+    image: river
+    text: "Ручей обмелел,\nно течёт. По камушкам\nпереходи вброд."
+  - id: hk-ravno-041
+    mode: ravno
+    tags: [workday]
+    image: dawn
+    text: "Будничный рассвет.\nВсё как вчера — и это\nдобрая новость."
+  - id: hk-ravno-042
+    mode: ravno
+    tags: [any]
+    image: sea
+    text: "Волна за волной —\nни одна не главная.\nБери по одной."
+  - id: hk-ravno-043
+    mode: ravno
+    tags: [season_autumn]
+    image: hearth
+    text: "Печь натоплена.\nДождь стучит в окно ровно.\nВсё — в своё время."
+  - id: hk-ravno-044
+    mode: ravno
+    tags: [season_spring]
+    image: bird
+    text: "Скворец на ветке\nпоёт одну и ту же\nпесню. В ней весь день."
+  - id: hk-ravno-045
+    mode: ravno
+    tags: [sleep_good]
+    image: wind
+    text: "Сон был долгим. Но\nветер сегодня встречный.\nИди, не споря."
+  - id: hk-ravno-046
+    mode: ravno
+    tags: [any]
+    image: light
+    text: "Свет сквозь облака\nровный, мягкий, без бликов.\nВидно главное."
+  - id: hk-ravno-047
+    mode: ravno
+    tags: [workday]
+    image: titan
+    text: "Титан за столом.\nПеред ним одно дело,\nне десять. Начни."
+  - id: hk-ravno-048
+    mode: ravno
+    tags: [season_summer]
+    image: moon
+    text: "Белые ночи.\nЛуна и солнце вместе.\nВ середине — ты."
+  - id: hk-ravno-049
+    mode: ravno
+    tags: [weekend]
+    image: snow
+    text: "Лыжня через лес.\nСкольжение без счёта.\nТак — и далеко."
+  - id: hk-ravno-050
+    mode: ravno
+    tags: [any]
+    image: wind
+    text: "Ветер без рывков\nполощет флаг на башне.\nТакой день хорош."
+  - id: hk-ravno-051
+    mode: ravno
+    tags: [season_autumn]
+    image: bridge
+    text: "Листья на мосту.\nПерехожу не спеша\nна ту сторону."
+  - id: hk-ravno-052
+    mode: ravno
+    tags: [strain_high]
+    image: root
+    text: "Корни пьют воду\nмедленно после жары.\nПей день глотками."
+  - id: hk-ravno-053
+    mode: ravno
+    tags: [weekend]
+    image: bell
+    text: "Звон воскресенья\nплывёт над крышами вдаль.\nИди в его такт."
+  - id: hk-ravno-054
+    mode: ravno
+    tags: [season_summer]
+    image: dew
+    text: "Росинка в тени\nдержится до полудня.\nХрани прохладу."
+  - id: hk-ravno-055
+    mode: ravno
+    tags: [sleep_short]
+    image: oar
+    text: "Сна было мало.\nВесло входит без всплеска.\nПлыви не спеша."
+  - id: hk-ravno-056
+    mode: ravno
+    tags: [recovery_low]
+    image: mountain
+    text: "Вершина в тучах.\nПусть подождёт. Сегодня —\nтропинка внизу."
+  - id: hk-ravno-057
+    mode: ravno
+    tags: [season_spring]
+    image: rain
+    text: "Весенний дождик\nморосит и моросит.\nТак растёт трава."
+  - id: hk-ravno-058
+    mode: ravno
+    tags: [workday]
+    image: lamp
+    text: "Лампа на столе.\nОдин круг света — и в нём\nодно лишь дело."
+  - id: hk-ravno-059
+    mode: ravno
+    tags: [recovery_high]
+    image: sky
+    text: "Небо высоко,\nа день расписан плотно.\nЛишнее — потом."
+  - id: hk-ravno-060
+    mode: ravno
+    tags: [season_winter]
+    image: bird
+    text: "Снегирь на ветке.\nМороз, а он не спешит.\nКлюй по зёрнышку."
+
+  # --- berezhno ---
+  - id: hk-berezhno-001
+    mode: berezhno
+    tags: [any]
+    image: titan
+    text: "И даже Титан\nсадится на берегу.\nПосиди и ты."
+  - id: hk-berezhno-002
+    mode: berezhno
+    tags: [sleep_short]
+    image: dawn
+    text: "Ночь прошла быстро,\nа утро не торопит.\nНачни медленно."
+  - id: hk-berezhno-003
+    mode: berezhno
+    tags: [recovery_low]
+    image: harbor
+    text: "Корабль в гавани.\nПаруса сушатся днём.\nДень — у берега."
+  - id: hk-berezhno-004
+    mode: berezhno
+    tags: [any]
+    image: bow
+    text: "Тетиву сняли —\nлук отдыхает в чехле.\nТак хранят силу."
+  - id: hk-berezhno-005
+    mode: berezhno
+    tags: [any]
+    image: bread
+    text: "Тесто подходит\nпод полотенцем. И ты\nдай себе время."
+  - id: hk-berezhno-006
+    mode: berezhno
+    tags: [season_winter]
+    image: field
+    text: "Поле под снегом\nспит — и в этом его труд.\nДень — тихий, как снег."
+  - id: hk-berezhno-007
+    mode: berezhno
+    tags: [season_autumn]
+    image: tree
+    text: "Клён сбросил листья,\nстоит теперь налегке.\nОставь лишнее."
+  - id: hk-berezhno-008
+    mode: berezhno
+    tags: [any]
+    image: nest
+    text: "Птица на гнезде\nголову прячет в крыло.\nУкройся и ты."
+  - id: hk-berezhno-009
+    mode: berezhno
+    tags: [any]
+    image: tea
+    text: "Чашка в ладонях.\nПар идёт медленно вверх.\nНе спеши за ним."
+  - id: hk-berezhno-010
+    mode: berezhno
+    tags: [sleep_short]
+    image: moon
+    text: "Луна ещё здесь,\nночь ушла раньше срока.\nБудь к себе мягче."
+  - id: hk-berezhno-011
+    mode: berezhno
+    tags: [any]
+    image: fog
+    text: "Туман на реке.\nВиден лишь ближний берег.\nЕго и хватит."
+  - id: hk-berezhno-012
+    mode: berezhno
+    tags: [strain_high]
+    image: oar
+    text: "Вёсла сложены.\nВчера был путь неблизкий.\nПусть несёт река."
+  - id: hk-berezhno-013
+    mode: berezhno
+    tags: [any]
+    image: breath
+    text: "Выдох. И ещё.\nПлечи опускаются.\nДень начнётся сам."
+  - id: hk-berezhno-014
+    mode: berezhno
+    tags: [recovery_low]
+    image: hearth
+    text: "Огонь в очаге\nнебольшой — но греет дом.\nБереги его."
+  - id: hk-berezhno-015
+    mode: berezhno
+    tags: [any]
+    image: stone
+    text: "Камень у реки\nвесь вчерашний день копил\nтепло. Грейся в нём."
+  - id: hk-berezhno-016
+    mode: berezhno
+    tags: [season_spring]
+    image: seed
+    text: "Семя под землёй\nне торопится к свету.\nСначала — корни."
+  - id: hk-berezhno-017
+    mode: berezhno
+    tags: [any]
+    image: column
+    text: "Колонны в дымке.\nНе видно капителей —\nа свод всё стоит."
+  - id: hk-berezhno-018
+    mode: berezhno
+    tags: [weekend]
+    image: window
+    text: "Дождь в выходной день.\nМожно остаться дома.\nСлушай, как стучит."
+  - id: hk-berezhno-019
+    mode: berezhno
+    tags: [any]
+    image: anchor
+    text: "Якорь надёжен.\nВолны качают лодку,\nно не уносят."
+  - id: hk-berezhno-020
+    mode: berezhno
+    tags: [season_winter]
+    image: snow
+    text: "Снег всю ночь падал\nи укрыл все дороги.\nДом — твоя гавань."
+  - id: hk-berezhno-021
+    mode: berezhno
+    tags: [any]
+    image: sea
+    text: "Отлив. Море — вдаль.\nОно вернётся само.\nНе зови его."
+  - id: hk-berezhno-022
+    mode: berezhno
+    tags: [recovery_low]
+    image: lamp
+    text: "Фитиль прикручен.\nСвет поменьше — и масла\nхватит до ночи."
+  - id: hk-berezhno-023
+    mode: berezhno
+    tags: [any]
+    image: garden
+    text: "Садовник с чашкой\nпросто смотрит на свой сад.\nА сад всё растёт."
+  - id: hk-berezhno-024
+    mode: berezhno
+    tags: [sleep_short]
+    image: window
+    text: "Мало сна. В окне\nутро — серый мягкий свет.\nОдно — главное."
+  - id: hk-berezhno-025
+    mode: berezhno
+    tags: [season_winter]
+    image: river
+    text: "Река подо льдом\nтечёт — тихо, но течёт.\nТы тоже в пути."
+  - id: hk-berezhno-026
+    mode: berezhno
+    tags: [season_summer]
+    image: tree
+    text: "В тени у липы\nдаже пчёлы не спешат.\nОтдохни с ними."
+  - id: hk-berezhno-027
+    mode: berezhno
+    tags: [any]
+    image: horse
+    text: "Конь в тёплом стойле\nжуёт сено, слышит дождь.\nДень для отдыха."
+  - id: hk-berezhno-028
+    mode: berezhno
+    tags: [workday]
+    image: path
+    text: "Путь до работы\nпройди чуть медленнее.\nСмотри на небо."
+  - id: hk-berezhno-029
+    mode: berezhno
+    tags: [any]
+    image: titan
+    text: "Титан опустил\nнебо на плечи горы —\nпереводит дух."
+  - id: hk-berezhno-030
+    mode: berezhno
+    tags: [season_autumn]
+    image: rain
+    text: "Осень. Дождь с утра.\nПлед, горячий чай, окно.\nСегодня — вот так."
+  - id: hk-berezhno-031
+    mode: berezhno
+    tags: [any]
+    image: sea
+    text: "Ракушку к уху.\nВ ней шумит море — тихо.\nСлушай, не спеша."
+  - id: hk-berezhno-032
+    mode: berezhno
+    tags: [any]
+    image: bell
+    text: "Колокол молчит,\nи тишина — тоже звук.\nПослушай её."
+  - id: hk-berezhno-033
+    mode: berezhno
+    tags: [any]
+    image: dew
+    text: "Росинка в траве\nнесёт в себе всё небо.\nМалого хватит."
+  - id: hk-berezhno-034
+    mode: berezhno
+    tags: [recovery_low]
+    image: well
+    text: "Колодец мелок\nпосле сухого лета.\nЧерпай по чуть-чуть."
+  - id: hk-berezhno-035
+    mode: berezhno
+    tags: [season_winter]
+    image: hearth
+    text: "Вьюга за стеной.\nПечь трещит, кот на окне.\nСиди у огня."
+  - id: hk-berezhno-036
+    mode: berezhno
+    tags: [weekend]
+    image: sea
+    text: "Утро у моря.\nВолна приходит сама.\nТы просто смотри."
+  - id: hk-berezhno-037
+    mode: berezhno
+    tags: [any]
+    image: sail
+    text: "Парус опущен.\nЛодка спит у причала,\nслушает воду."
+  - id: hk-berezhno-038
+    mode: berezhno
+    tags: [strain_high]
+    image: mountain
+    text: "С горы спустились,\nи ноги помнят подъём.\nДень — по равнине."
+  - id: hk-berezhno-039
+    mode: berezhno
+    tags: [any]
+    image: light
+    text: "Свет сквозь занавесь\nмягок, не слепит глаза.\nТак и ты с собой."
+  - id: hk-berezhno-040
+    mode: berezhno
+    tags: [any]
+    image: root
+    text: "Дерево зимой\nживёт — под снегом, в корнях.\nПобудь в глубине."
+  - id: hk-berezhno-041
+    mode: berezhno
+    tags: [season_spring]
+    image: bird
+    text: "Первая птица\nпоёт негромко, робко.\nНачинай так же."
+  - id: hk-berezhno-042
+    mode: berezhno
+    tags: [workday]
+    image: bridge
+    text: "Узенький мостик.\nПо нему — по одному.\nИ дела — так же."
+  - id: hk-berezhno-043
+    mode: berezhno
+    tags: [any]
+    image: snow
+    text: "Падает снежок\nмедленно и без звука.\nТак и ты — мягко."
+  - id: hk-berezhno-044
+    mode: berezhno
+    tags: [recovery_low]
+    image: field
+    text: "Поле под паром:\nземля копит силы впрок.\nИ ты — сегодня."
+  - id: hk-berezhno-045
+    mode: berezhno
+    tags: [any]
+    image: moon
+    text: "Тоненький месяц\nсветит в тихую воду.\nСвети и ты так."
+  - id: hk-berezhno-046
+    mode: berezhno
+    tags: [season_summer]
+    image: sea
+    text: "Тёплая вода\nдержит тебя на спине.\nПусть и день несёт."
+  - id: hk-berezhno-047
+    mode: berezhno
+    tags: [any]
+    image: harbor
+    text: "Маяк на мысу\nсветил всю ночь напролёт.\nУтром и он спит."
+  - id: hk-berezhno-048
+    mode: berezhno
+    tags: [sleep_short]
+    image: tea
+    text: "Короткий был сон.\nЧашка погорячее.\nДела подождут."
+  - id: hk-berezhno-049
+    mode: berezhno
+    tags: [weekend]
+    image: garden
+    text: "Скамейка в саду.\nСолнце дошло до неё.\nПрисядь рядом с ним."
+  - id: hk-berezhno-050
+    mode: berezhno
+    tags: [season_autumn]
+    image: path
+    text: "Тихий лес. Грибник\nидёт медленно — вот так\nвсё и находит."
+  - id: hk-berezhno-051
+    mode: berezhno
+    tags: [any]
+    image: breath
+    text: "Тихий вдох. Потом\nвыдох — как будто ветер\nсдул пыль с дороги."
+  - id: hk-berezhno-052
+    mode: berezhno
+    tags: [recovery_low]
+    image: river
+    text: "У поворота\nрека замедляет ход.\nИ ты замедлись."
+  - id: hk-berezhno-053
+    mode: berezhno
+    tags: [any]
+    image: lamp
+    text: "Свеча на столе.\nЗакрой окно от ветра —\nпусть горит ровно."
+  - id: hk-berezhno-054
+    mode: berezhno
+    tags: [season_winter]
+    image: tree
+    text: "Ель под снегом спит,\nветви чуть опустила.\nТак легче держать."
+  - id: hk-berezhno-055
+    mode: berezhno
+    tags: [any]
+    image: titan
+    text: "Титан у ручья.\nУмывается водой.\nУтро без часов."
+  - id: hk-berezhno-056
+    mode: berezhno
+    tags: [sleep_short]
+    image: bird
+    text: "Сова за окном\nпод утро. Сон короткий.\nВставай не сразу."
+  - id: hk-berezhno-057
+    mode: berezhno
+    tags: [season_spring]
+    image: rain
+    text: "Тёплый дождь весной.\nЗемля пьёт не торопясь.\nПей свою воду."
+  - id: hk-berezhno-058
+    mode: berezhno
+    tags: [any]
+    image: path
+    text: "Тропинка вокруг\nдома — короткий кружок.\nЕё и пройди."
+  - id: hk-berezhno-059
+    mode: berezhno
+    tags: [any]
+    image: window
+    text: "Окно на рассвет.\nМожно просто посмотреть.\nЭто — тоже шаг."
+  - id: hk-berezhno-060
+    mode: berezhno
+    tags: [strain_high]
+    image: anvil
+    text: "Наковальня спит.\nМолот висит на стене.\nНынче — без ковки."

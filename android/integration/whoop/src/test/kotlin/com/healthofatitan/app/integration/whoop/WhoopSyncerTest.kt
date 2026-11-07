@@ -3,7 +3,9 @@ package com.healthofatitan.app.integration.whoop
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.entity.BaselineSnapshotEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
+import com.healthofatitan.app.core.database.entity.RoutineAnchorEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
+import com.healthofatitan.app.core.database.entity.TrainingSessionEntity
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.network.HotJson
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +35,27 @@ class FakeMetricDao : MetricDao() {
     val daily = mutableListOf<MetricDailyEntity>()
     val baselines = mutableListOf<BaselineSnapshotEntity>()
     val sync = MutableStateFlow<SyncStateEntity?>(null)
+    val sessions = mutableListOf<TrainingSessionEntity>()
+    val anchors = mutableListOf<RoutineAnchorEntity>()
+
+    override suspend fun upsertSessions(rows: List<TrainingSessionEntity>) {
+        sessions.removeAll { old -> rows.any { it.sourceId == old.sourceId } }
+        sessions += rows
+    }
+
+    override suspend fun deleteSessionsFrom(userId: String, fromDay: String) {
+        sessions.removeAll { it.dayKey >= fromDay }
+    }
+
+    override suspend fun upsertAnchors(rows: List<RoutineAnchorEntity>) {
+        anchors.removeAll { old -> rows.any { it.anchorId == old.anchorId } }
+        anchors += rows
+    }
+
+    override suspend fun metricsForDays(userId: String, days: List<String>) = daily.filter { it.dayKey in days }
+
+    override suspend fun firstDay(userId: String, metricId: String) =
+        daily.filter { it.metricId == metricId && it.value != null }.minOfOrNull { it.dayKey }
 
     override suspend fun upsertDaily(rows: List<MetricDailyEntity>) {
         daily.removeAll { old -> rows.any { it.dayKey == old.dayKey && it.metricId == old.metricId && it.metricVersion == old.metricVersion } }
@@ -73,6 +96,8 @@ class WhoopSyncerTest {
     private val now = Instant.parse("2026-11-06T13:00:00Z")
     private val clock = Clock.fixed(now, ZoneOffset.UTC)
     private var unauthorizedOnce = false
+    private var sleepCode = 200
+    private var workouts = "[]"
 
     /** 30 nights, 07:00 UTC wake-ups, HRV around 60 ms; the last night is short and low. */
     private fun sleepsJson(): String = (0 until 30).joinToString(",", "[", "]") { i ->
@@ -80,7 +105,8 @@ class WhoopSyncerTest {
         val light = if (i == 0) 9_000_000 else 14_400_000 + (i % 3) * 600_000
         """{"id":"s$i","start":"${wake.minusDays(1)}T23:00:00Z","end":"${wake}T07:00:00Z","timezone_offset":"+00:00","nap":false,
            "score_state":"SCORED","score":{"stage_summary":{"total_light_sleep_time_milli":$light,"total_slow_wave_sleep_time_milli":5400000,
-           "total_rem_sleep_time_milli":5400000},"respiratory_rate":${14.0 + (i % 2) * 0.4},"sleep_performance_percentage":90}}"""
+           "total_rem_sleep_time_milli":5400000},"respiratory_rate":${14.0 + (i % 2) * 0.4},"sleep_performance_percentage":90,
+           "sleep_needed":{"baseline_milli":27000000,"need_from_sleep_debt_milli":1800000,"need_from_recent_strain_milli":300000,"need_from_recent_nap_milli":0}}}"""
     }
 
     private fun recoveriesJson(range: IntRange): String = range.joinToString(",", "[", "]") { i ->
@@ -101,14 +127,16 @@ class WhoopSyncerTest {
                 if (unauthorizedOnce && request.headers["Authorization"] == "Bearer at-old") return json("{}", 401)
                 return when (url.encodedPath) {
                     "/whoop/access" -> json("""{"access_token":"at-new","expires_at":${now.toEpochMilli() + 3_600_000}}""")
-                    "/developer/v2/activity/sleep" -> json("""{"records":${sleepsJson()},"next_token":null}""")
+                    "/developer/v2/activity/sleep" ->
+                        if (sleepCode == 200) json("""{"records":${sleepsJson()},"next_token":null}""") else json("{}", sleepCode)
                     // Two pages: WHOOP returns at most 25 records.
                     "/developer/v2/recovery" -> if (url.queryParameter("nextToken") == null) {
                         json("""{"records":${recoveriesJson(0..24)},"next_token":"p2"}""")
                     } else {
                         json("""{"records":${recoveriesJson(25..29)}}""")
                     }
-                    "/developer/v2/cycle", "/developer/v2/activity/workout" -> json("""{"records":[]}""")
+                    "/developer/v2/activity/workout" -> json("""{"records":$workouts}""")
+                    "/developer/v2/cycle" -> json("""{"records":[]}""")
                     else -> json("{}", 404)
                 }
             }
@@ -119,11 +147,74 @@ class WhoopSyncerTest {
     @After
     fun tearDown() = server.close()
 
+    private val log = InMemorySyncLogStore()
+
     private fun syncer(dao: FakeMetricDao, store: WhoopCredentialStore = InMemoryWhoopCredentialStore(WhoopCredentials("hs1.4242.s", "4242"))): WhoopSyncer {
         val http = OkHttpClient()
         val edge = EdgeClient(EdgeConfig(server.url("/").toString(), requireHttps = false), http, HotJson)
         val tokens = WhoopAccessTokens(edge, store, clock).apply { prime("at-old", now.toEpochMilli() + 3_600_000) }
-        return WhoopSyncer(WhoopApi(http, HotJson, tokens, server.url("/")), dao, store, clock)
+        return WhoopSyncer(WhoopApi(http, HotJson, tokens, server.url("/")), dao, store, clock, log)
+    }
+
+    @Test
+    fun `a sync reports success with counts, logs it and keeps the glance in memory only`() = runBlocking {
+        workouts = """[{"id":"w1","start":"2026-11-05T17:00:00Z","end":"2026-11-05T17:45:00Z","timezone_offset":"+00:00",
+            "sport_name":"running","score_state":"SCORED","score":{"strain":12.5,"zone_durations":{"zone_one_milli":600000,
+            "zone_two_milli":1200000,"zone_three_milli":900000,"zone_four_milli":0,"zone_five_milli":0}}}]"""
+        val dao = FakeMetricDao()
+        val s = syncer(dao)
+        s.sync(SyncTrigger.MANUAL)
+
+        val done = assertIs<SyncProgress.Succeeded>(s.progress.value)
+        assertEquals(SyncTrigger.MANUAL, done.trigger)
+        assertEquals(30, done.counts.nights)
+        assertEquals(1, done.counts.workouts)
+        assertEquals(28, done.counts.baselineNights)
+
+        val entry = log.entries.value.single()
+        assertTrue(entry.ok)
+        assertEquals("MANUAL", entry.trigger)
+        assertEquals(30, entry.nights)
+        assertEquals(1, entry.workouts)
+
+        val glance = s.glance.value!!
+        assertEquals(LocalDate.of(2026, 11, 6), glance.sleep!!.wakeDay)
+        assertEquals(8.0 + 5 / 60.0, glance.sleep!!.needHours!!, 0.001) // 7 h 30 + 30 min + 5 min
+        assertEquals(38.0, glance.recovery!!.hrvMs!!, 0.001)
+        assertEquals("running", glance.workout!!.sport)
+        assertEquals(45, glance.workout!!.minutes)
+
+        // Raw values of the glance never reach the database or the log.
+        val dump = (dao.daily + dao.baselines + listOfNotNull(dao.sync.value) + log.entries.value).joinToString("\n")
+        listOf("running", "strain", "sport").forEach { assertTrue(it !in dump, "found '$it' in stored rows") }
+    }
+
+    @Test
+    fun `a WHOOP outage is logged with its code and the step, and will be retried`() = runBlocking {
+        sleepCode = 502
+        val dao = FakeMetricDao()
+        val s = syncer(dao)
+        assertEquals(SyncOutcome.Retry(SyncStatus.UNAVAILABLE), s.sync(SyncTrigger.MANUAL))
+
+        val failed = assertIs<SyncProgress.Failed>(s.progress.value)
+        assertEquals(SyncFailure.WHOOP_DOWN, failed.failure)
+        assertEquals(502, failed.httpCode)
+        assertTrue(failed.willRetry)
+        val entry = log.entries.value.single()
+        assertEquals("WHOOP_DOWN", entry.result)
+        assertEquals(502, entry.httpCode)
+        assertEquals("SLEEP", entry.step)
+        assertTrue(dao.daily.isEmpty())
+    }
+
+    @Test
+    fun `WHOOP 403 is a stop with its own reason`() = runBlocking {
+        sleepCode = 403
+        val dao = FakeMetricDao()
+        val s = syncer(dao)
+        assertEquals(SyncOutcome.Stop(SyncStatus.DENIED), s.sync())
+        assertEquals(SyncFailure.WHOOP_DENIED, assertIs<SyncProgress.Failed>(s.progress.value).failure)
+        assertEquals("DENIED", dao.sync.value?.status)
     }
 
     @Test

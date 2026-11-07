@@ -14,6 +14,7 @@ dependencies {
     api(project(":core:network"))
     api(project(":core:database"))
     api(project(":domain:metrics"))
+    api(project(":domain:engine"))
 
     api(libs.appauth)
     api(libs.androidx.work.runtime.ktx)

@@ -1,25 +1,39 @@
 package com.healthofatitan.app.integration.whoop.di
 
+import android.app.AlarmManager
 import android.content.Context
+import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
 import com.healthofatitan.app.integration.whoop.EdgeClient
 import com.healthofatitan.app.integration.whoop.EncryptedWhoopCredentialStore
+import com.healthofatitan.app.integration.whoop.FileSyncLogStore
+import com.healthofatitan.app.integration.whoop.SyncLogStore
 import com.healthofatitan.app.integration.whoop.WhoopAccessTokens
 import com.healthofatitan.app.integration.whoop.WhoopApi
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
 import com.healthofatitan.app.integration.whoop.WhoopSyncScheduler
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
+import com.healthofatitan.app.integration.whoop.day.DayNotifier
+import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
+import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
+import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
+import java.io.File
 import okhttp3.OkHttpClient
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Singleton
 
 @Module
@@ -28,7 +42,7 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideClock(): Clock = Clock.systemDefaultZone()
+    fun provideClock(): Clock = SystemZoneClock
 
     @Provides
     @Singleton
@@ -50,8 +64,13 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideSyncer(api: WhoopApi, dao: MetricDao, store: WhoopCredentialStore, clock: Clock): WhoopSyncer =
-        WhoopSyncer(api, dao, store, clock)
+    fun provideSyncLog(@ApplicationContext context: Context, json: Json): SyncLogStore =
+        FileSyncLogStore(File(context.noBackupFilesDir, "whoop_sync_log.json"), json)
+
+    @Provides
+    @Singleton
+    fun provideSyncer(api: WhoopApi, dao: MetricDao, store: WhoopCredentialStore, clock: Clock, log: SyncLogStore): WhoopSyncer =
+        WhoopSyncer(api, dao, store, clock, log)
 
     @Provides
     @Singleton
@@ -68,5 +87,25 @@ object WhoopModule {
         scheduler: WhoopSyncScheduler,
         dao: MetricDao,
         clock: Clock,
-    ): WhoopConnection = WhoopConnection(config, edge, store, tokens, syncer, scheduler, dao, clock)
+    ): WhoopConnection = WhoopConnection(
+        config, edge, store, tokens, syncer, scheduler, dao, clock,
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    )
+
+    /** A09 §7a: tomorrow's alarm sets tonight's bedtime; reading it needs no permission. */
+    @Provides
+    @Singleton
+    fun provideNextAlarm(@ApplicationContext context: Context): NextAlarmSource = NextAlarmSource {
+        context.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime?.let(Instant::ofEpochMilli)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource): DayPlanRepository =
+        DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock)
+
+    @Provides
+    @Singleton
+    fun provideMorning(syncer: WhoopSyncer, plans: DayPlanRepository, notifier: DayNotifier): MorningCoordinator =
+        MorningCoordinator(syncer, plans, notifier, SystemZoneClock)
 }

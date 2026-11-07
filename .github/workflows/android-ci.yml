@@ -73,7 +73,7 @@ jobs:
         run: ./gradlew :app:contentCompile --stacktrace
 
       - name: Unit tests (JVM + Robolectric)
-        run: ./gradlew :core:model:test :domain:metrics:test testDebugUnitTest --stacktrace
+        run: ./gradlew :core:model:test :domain:metrics:test :domain:engine:test testDebugUnitTest --stacktrace
 
       - name: Lint
         run: ./gradlew :app:lintDebug --stacktrace

@@ -44,3 +44,5 @@ include(":feature:sos")
 include(":core:network")
 include(":domain:metrics")
 include(":integration:whoop")
+// Slice 2 (day rules A09, plan, morning push):
+include(":domain:engine")

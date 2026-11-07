@@ -3,7 +3,9 @@ package com.healthofatitan.app.integration.whoop
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.entity.BaselineSnapshotEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
+import com.healthofatitan.app.core.database.entity.RoutineAnchorEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
+import com.healthofatitan.app.core.database.entity.TrainingSessionEntity
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.network.HotJson
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +35,27 @@ class FakeMetricDao : MetricDao() {
     val daily = mutableListOf<MetricDailyEntity>()
     val baselines = mutableListOf<BaselineSnapshotEntity>()
     val sync = MutableStateFlow<SyncStateEntity?>(null)
+    val sessions = mutableListOf<TrainingSessionEntity>()
+    val anchors = mutableListOf<RoutineAnchorEntity>()
+
+    override suspend fun upsertSessions(rows: List<TrainingSessionEntity>) {
+        sessions.removeAll { old -> rows.any { it.sourceId == old.sourceId } }
+        sessions += rows
+    }
+
+    override suspend fun deleteSessionsFrom(userId: String, fromDay: String) {
+        sessions.removeAll { it.dayKey >= fromDay }
+    }
+
+    override suspend fun upsertAnchors(rows: List<RoutineAnchorEntity>) {
+        anchors.removeAll { old -> rows.any { it.anchorId == old.anchorId } }
+        anchors += rows
+    }
+
+    override suspend fun metricsForDays(userId: String, days: List<String>) = daily.filter { it.dayKey in days }
+
+    override suspend fun firstDay(userId: String, metricId: String) =
+        daily.filter { it.metricId == metricId && it.value != null }.minOfOrNull { it.dayKey }
 
     override suspend fun upsertDaily(rows: List<MetricDailyEntity>) {
         daily.removeAll { old -> rows.any { it.dayKey == old.dayKey && it.metricId == old.metricId && it.metricVersion == old.metricVersion } }

@@ -225,7 +225,8 @@ class WhoopSyncerTest {
         assertIs<SyncOutcome.Done>(outcome)
         assertTrue(paths.contains("/developer/v2/recovery?next=p2"), "second page fetched")
         val today = dao.daily.filter { it.dayKey == "2026-11-06" }.associateBy { "${it.metricId}@${it.metricVersion}" }
-        assertEquals(setOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1"), today.keys)
+        assertEquals(setOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1", "RHRZ@1", "RRZ@1"), today.keys)
+        assertTrue(today.getValue("RHRZ@1").value!! > 0.0, "high RHR gives a positive z, no bpm stored")
         // A short night with low HRV and high RHR: Заряд below the norm.
         assertTrue(today.getValue("ECAP@1").value!! < 50.0)
         assertTrue(today.getValue("ORS@1").level!! < 0)

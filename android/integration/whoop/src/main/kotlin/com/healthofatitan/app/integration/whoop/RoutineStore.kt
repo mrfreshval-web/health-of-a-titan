@@ -25,6 +25,8 @@ internal object RoutineStore {
     private const val NIGHTS_28 = "nights_28"
     private const val HOME_TZ = "home_tz_offset"
     private const val LAST_WAKE = "last_wake"
+    private const val LAST_TZ = "last_tz_offset"
+    private const val LAST_TZ_RUN = "last_tz_run_nights"
 
     fun toRows(user: String, a: RoutineAnchors, at: Long): List<RoutineAnchorEntity> {
         fun row(id: String, value: Int?, day: LocalDate? = null) = RoutineAnchorEntity(user, id, value, day?.toString(), SOURCE_WHOOP, at)
@@ -41,6 +43,8 @@ internal object RoutineStore {
             row(NIGHTS_28, a.nights28),
             row(HOME_TZ, a.homeTzOffsetMin),
             row(LAST_WAKE, a.lastWakeMin, a.lastWakeDay),
+            row(LAST_TZ, a.lastTzOffsetMin),
+            row(LAST_TZ_RUN, a.lastTzRunNights),
         )
     }
 
@@ -61,6 +65,8 @@ internal object RoutineStore {
             homeTzOffsetMin = v(HOME_TZ),
             lastWakeDay = byId[LAST_WAKE]?.dayKey?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
             lastWakeMin = v(LAST_WAKE),
+            lastTzOffsetMin = v(LAST_TZ),
+            lastTzRunNights = v(LAST_TZ_RUN) ?: 0,
         )
     }
 

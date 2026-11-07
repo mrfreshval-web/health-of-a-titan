@@ -164,7 +164,7 @@ class MetricEngineTest {
     fun `values carry their formula version`() {
         val r = MetricEngine.compute(fixture { copy(lnRmssd = ln(60.0)) })
         assertTrue(r.daily.all { it.metric.version == 1 })
-        assertEquals(setOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1"), r.daily.map { it.metric.toString() }.toSet())
+        assertEquals(setOf("ORS@1", "SLP@1", "SLPDEBT@1", "TRL@1", "ECAP@1", "LRB@1", "RHRZ@1", "RRZ@1"), r.daily.map { it.metric.toString() }.toSet())
     }
 
     @Test

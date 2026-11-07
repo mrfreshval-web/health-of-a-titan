@@ -30,7 +30,16 @@ object Metrics {
     /** Весы: z₇(0.5·TRL + 0.5·WLD) − z₇(0.6·ORS + 0.4·SLP) (A25 §4.2). */
     val LRB = MetricRef("LRB", 1)
 
-    val all = listOf(ORS, SLP, SLP_DEBT, TRL, ECAP, LRB)
+    /**
+     * Resting heart rate of the night as a z against the 28-day norm (A09 SAF-04, `rhr.z_day`).
+     * Only the z is stored, never beats per minute (R-11). Added by the A39 review, ⚑ A25.
+     */
+    val RHR_Z = MetricRef("RHRZ", 1)
+
+    /** Respiratory rate of the night as a z against the norm (A09 SAF-04, `rr.z_day`). */
+    val RR_Z = MetricRef("RRZ", 1)
+
+    val all = listOf(ORS, SLP, SLP_DEBT, TRL, ECAP, LRB, RHR_Z, RR_Z)
 }
 
 /** Inputs of the personal baseline (A14 `BaselineSnapshot.inputId`). */

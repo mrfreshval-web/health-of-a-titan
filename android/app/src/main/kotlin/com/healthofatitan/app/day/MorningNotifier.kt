@@ -26,7 +26,7 @@ import javax.inject.Singleton
 /**
  * The morning push (A11 §2): channel «Утро», default importance, title = regime, text = the day
  * in one line. No S4/S5 content (the engine never puts alcohol or intimacy into it). On the lock
- * screen only «HoT · план на день готов». A tap opens «Сегодня».
+ * screen only «HoT · день собран». A tap opens «Сегодня».
  */
 @Singleton
 class MorningNotifier @Inject constructor(@param:ApplicationContext private val context: Context) : DayNotifier {
@@ -72,8 +72,8 @@ class MorningNotifier @Inject constructor(@param:ApplicationContext private val 
     private companion object {
         const val CHANNEL = "morning"
         const val CHANNEL_NAME = "Утро"
-        const val CHANNEL_DESCRIPTION = "Режим и план дня, когда WHOOP посчитал сон"
-        const val PUBLIC_TITLE = "HoT · план на день готов"
+        const val CHANNEL_DESCRIPTION = "Режим дня — когда WHOOP посчитает ночь"
+        const val PUBLIC_TITLE = "HoT · день собран"
         const val NOTIFICATION_ID = 1001
     }
 }

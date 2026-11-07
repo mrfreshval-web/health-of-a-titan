@@ -38,6 +38,7 @@ import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
@@ -99,25 +100,31 @@ class DayPlanRepository(
     private val mutex = Mutex()
 
     /**
-     * Builds or rebuilds today's plan. Returns null while WHOOP has not scored last night: the
-     * plan is made from data, never from a guess (D-027).
+     * Builds or rebuilds today's plan. Until [MANUAL_FROM] it waits (returns null) while WHOOP
+     * has not scored last night, or has scored the sleep but not yet the recovery: the plan and
+     * the push are made from data, never from a guess (D-027). From 09:30 a night that is still
+     * missing gives a default day with the MANUAL flag (A09 REG-05), rebuilt once WHOOP catches up.
      */
     suspend fun refresh(): DayPlan? = mutex.withLock {
         val now = clock.instant()
         val today = LocalDate.now(clock)
         val yesterday = today.minusDays(1)
+        val early = LocalTime.now(clock).isBefore(MANUAL_FROM)
         val rows = metricDao.metricsForDays(user, listOf(today.toString(), yesterday.toString()))
         fun row(day: LocalDate, ref: MetricRef): MetricDailyEntity? =
             rows.firstOrNull { it.dayKey == day.toString() && it.metricId == ref.id && it.metricVersion == ref.version }
 
-        val sleep = row(today, Metrics.SLP)?.value ?: return@withLock null
+        val sleep = row(today, Metrics.SLP)?.value
+        if (sleep == null && early) return@withLock null
         val ors = row(today, Metrics.ORS)
+        val baselineNights = metricDao.syncState(WhoopSyncer.SOURCE)?.baselineNights ?: 0
+        // Sleep scored, recovery not yet: wait for it rather than push a «data limited» day.
+        if (sleep != null && early && baselineNights >= MIN_BASELINE && (ors?.value == null)) return@withLock null
         val lrbSeries = metricDao.series(user, Metrics.LRB.id, Metrics.LRB.version, today.minusDays(14).toString())
         var lrbAbove = 0
         for (r in lrbSeries.sortedByDescending { it.dayKey }) {
             if ((r.value ?: break) > 1.0) lrbAbove++ else break
         }
-        val baselineNights = metricDao.syncState(WhoopSyncer.SOURCE)?.baselineNights ?: 0
         val firstDay = metricDao.firstDay(user, Metrics.SLP.id)?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today
         val historyDays = ChronoUnit.DAYS.between(firstDay, today).toInt() + 1
 
@@ -132,6 +139,13 @@ class DayPlanRepository(
         }
         val yPlan = previous.firstOrNull { it.dayKey == yesterday.toString() }
         val lightRun = streak { DayFlag.LIGHT_WEEK.name in it.flags.split(',') }
+        val sickRun = streak { DayFlag.SICK.name in it.flags.split(',') }
+        // SAF-03 see_doctor: nights in a row with resting HR ≥ +2 SD (only the z is stored).
+        val rhrSeries = metricDao.series(user, Metrics.RHR_Z.id, Metrics.RHR_Z.version, today.minusDays(7).toString())
+        var rhrHigh = 0
+        for (r in rhrSeries.sortedByDescending { it.dayKey }) {
+            if ((r.value ?: break) >= 2.0) rhrHigh++ else break
+        }
 
         val evening = dayDao.evening(user, yesterday.toString())?.let { e ->
             EveningFacts(e.alcohol, e.body?.let { b -> Body.entries.firstOrNull { it.name == b } })
@@ -141,6 +155,7 @@ class DayPlanRepository(
         val schedule = Anchors.resolve(anchors, today, alarm)
         val phoneOffset = clock.zone.rules.getOffset(now).totalSeconds / 60
         val tzShift = anchors.homeTzOffsetMin?.let { (phoneOffset - it) / 60.0 } ?: 0.0
+        val tzDays = Anchors.daysSinceShift(anchors, phoneOffset)
         val sessions = dayDao.sessions(user, today.minusDays(28).toString()).mapNotNull(RoutineStore::fromRow)
 
         val input = DayInput(
@@ -155,16 +170,20 @@ class DayPlanRepository(
                 lrbDaysAbove1 = lrbAbove,
                 trlZYesterday = row(yesterday, Metrics.TRL)?.z,
                 chargeLevel = row(today, Metrics.ECAP)?.level,
+                rhrZ = row(today, Metrics.RHR_Z)?.value,
+                rrZ = row(today, Metrics.RR_Z)?.value,
+                rhrZStreakGe2 = rhrHigh,
             ),
-            data = DataFacts(baselineNights = baselineNights, historyDays = historyDays, coverage = ors?.coverage ?: 0.0, whoopToday = true),
+            data = DataFacts(baselineNights = baselineNights, historyDays = historyDays, coverage = ors?.coverage ?: 0.0, whoopToday = sleep != null),
             yesterday = YesterdayFacts(
                 regime = yPlan?.let { p -> Regime.entries.firstOrNull { it.name == p.regime } },
                 signals = yPlan?.signals?.split(',')?.filter { it.isNotBlank() }?.toSet().orEmpty(),
                 gentleStreak = streak { it.regime == Regime.GENTLE.name },
                 lightWeekDay = if (lightRun in 1..6) lightRun else 0,
+                sickStreak = sickRun,
             ),
             evening = evening,
-            context = ContextFacts(tzShift),
+            context = ContextFacts(tzShift, tzDays),
             schedule = schedule,
             history = sessions.filter { it.dayKey < today },
         )
@@ -219,7 +238,7 @@ class DayPlanRepository(
         plan
     }
 
-    /** Today's stored plan, if WHOOP has scored the night. */
+    /** Today's stored plan (built from data, or the MANUAL default from 09:30). */
     suspend fun planFor(day: LocalDate): DayPlanEntity? = dayDao.plan(user, day.toString())
 
     suspend fun markNotified(day: LocalDate) = dayDao.markNotified(user, day.toString(), clock.millis())
@@ -245,6 +264,12 @@ class DayPlanRepository(
     /** The evening deck: a skipped card is null, never 0 (A25 §2.1). */
     suspend fun saveEvening(day: LocalDate, alcohol: Int?, body: Body?) {
         dayDao.upsertEvening(EveningCheckEntity(user, day.toString(), alcohol, body?.name, clock.millis()))
+    }
+
+    companion object {
+        /** A09 REG-05: no scored night by this time → the default day (MANUAL). */
+        val MANUAL_FROM: LocalTime = LocalTime.of(9, 30)
+        const val MIN_BASELINE = 14
     }
 
     private fun toView(p: DayPlanEntity, items: List<PlanItemEntity>) = DayView(

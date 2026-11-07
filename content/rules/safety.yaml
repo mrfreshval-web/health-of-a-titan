@@ -1,7 +1,7 @@
 # A09 §3 — safety rules. Evaluated FIRST and override everything (A04 §4, A19 §1.2 step 0).
 # The user can never override them upward. Crisis wording belongs to Agent 10 (A07 §4.4).
 # Medical content: changes only with review by Agent 3; crisis — Agent 10; wording on doctors — Agent 7.
-version: 1
+version: 2
 reviewedBy: []
 status: draft
 ruleSet: day
@@ -61,7 +61,7 @@ rules:
     review: [agent-10, agent-7]
 
   - id: SAF-03
-    version: 1
+    version: 2
     title_ru: "Симптомы болезни"
     domain: safety
     stage: safety
@@ -80,9 +80,10 @@ rules:
           any:
             - {fact: rhr.z_streak_ge2, op: ge, value: 3}
             - {fact: card.U5, op: has, value: something_wrong}
+            - {fact: streak.sick, op: ge, value: 2}          # day@2: the third day of a cold in a row
         then:
           - {do: nudge, kind: doctor, text_key: sick_persisting}
-        why_ru: "Третий день пульс покоя заметно выше твоей нормы и есть симптомы. Это стоит обсудить с врачом, особенно если становится хуже."
+        why_ru: "Третий день простуды. Если не легчает или стало хуже — покажись врачу."
     user_override: down_only
     why_ru: "Ты отметил, что простужен. Сегодня без нагрузок: тело и так работает. Если хочется — короткая прогулка в лёгком темпе. Возвращаться будем по шагам (TR-04)."
     evidence:
@@ -93,6 +94,8 @@ rules:
     contraindications_ru: []
     red_flags_ru: ["Температура и пульс покоя ≥ +2 SD от нормы 3+ ночи", "Ухудшение, одышка, боль в груди → SAF-01"]
     review: [agent-3, agent-12]
+    changelog:
+      - "v2 (A39, 2026-11-07): see_doctor и на третий день простуды подряд (streak.sick ≥ 2); простуда приходит из вечерней колоды (eve.body = sick). Формулировка «к врачу» — на ревью Агента 7."
 
   - id: SAF-04
     version: 1
@@ -117,7 +120,7 @@ rules:
       level: C
       kind: estimate
       sources: ["A04 §2: RHR и частота дыхания ночью как личный тренд", "Miller 2020, PLoS One (дыхание до болезни; DOI требует проверки)"]
-      note_ru: "Не диагноз и не «мониторинг болезни»: только вопрос и осторожность (граница wellness — Агент 7)."
+      note_ru: "Не диагноз и не «мониторинг болезни»: только вопрос и осторожность (граница wellness — Агент 7). В движке с day@2 (A39): z пульса и дыхания хранятся как RHRZ@1 / RRZ@1, без уд/мин."
     contraindications_ru: []
     red_flags_ru: ["Если вместе с этим есть симптомы → SAF-03"]
     review: [agent-3, agent-9, agent-7]

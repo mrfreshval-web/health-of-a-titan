@@ -143,13 +143,17 @@ private fun BoxScope.Work(run: WorkoutRun, step: WorkoutStep.Work, now: Long, mo
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(8.dp))
-        TitanExercise(
+        TitanExerciseView(
+            exercise = exercise,
             timeline = timeline(exercise, run.poses, step.item.tempo, otherSide = step.side == Side.SECOND),
             front = exercise.frontView(),
             light = figureLight(mode),
             glow = mode.color(),
+            accent = mode.color(),
             modifier = Modifier.fillMaxWidth().height(300.dp),
             animate = animate && !countdown && !state.paused,
+            otherSide = step.side == Side.SECOND,
+            tempo = step.item.tempo,
             description = exercise.nameRu,
         )
         Text(

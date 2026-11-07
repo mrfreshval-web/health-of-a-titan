@@ -1,0 +1,11 @@
+{
+  "name": "hot-lottie-preview",
+  "private": true,
+  "description": "Preview renderer for the Titan Lottie files (lottie-web in headless Chromium).",
+  "dependencies": {
+    "lottie-web": "^5.13.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

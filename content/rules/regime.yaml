@@ -2,13 +2,15 @@
 # Engine: :domain:engine (A14 ADR-14). Pure functions, no network, no LLM.
 # Medical content: changes only with review by Agent 3 (+12 for training, +10 for wording).
 # All thresholds are relative to the personal norm (robust z, A25 P1) unless marked absolute.
-version: 1
+version: 2
 reviewedBy: []
 status: draft
 ruleSet: day
+# day@2 (A39 expert review, 2026-11-07): SAF-04 and EVE-01 in the engine, REG-05@2, SAF-03@2,
+# metrics RHRZ@1 / RRZ@1. Changes behaviour → new manifest version (D-023, A09 §6).
 # Metric versions these rules were tuned on (A25 metricId@ver). A new metric version
 # requires a review of the thresholds below and a bump of this file (A09 §6).
-metrics_required: ["ORS@1", "SLP@1", "REG@1", "LRB@1", "TRL@1", "SWB@1", "CLR@1", "EMB@1", "CON@1", "WLD@1"]
+metrics_required: ["ORS@1", "SLP@1", "REG@1", "LRB@1", "TRL@1", "SWB@1", "CLR@1", "EMB@1", "CON@1", "WLD@1", "RHRZ@1", "RRZ@1"]
 
 # ---------------------------------------------------------------------------
 # Facts the engine must provide (A25 metrics, cards, labels, context).
@@ -19,9 +21,9 @@ facts:
   - {id: ors.z_day,        type: number, source: "A25 ORS for last night, before EWMA", class: S3}
   - {id: ors.ewma7,        type: number, source: "A25 ORS EWMA 7 days", class: S3}
   - {id: hrv.z_day,        type: number, source: "z(ln rMSSD) last night", class: S3}
-  - {id: rhr.z_day,        type: number, source: "z(RHR) last night", class: S3}
+  - {id: rhr.z_day,        type: number, source: "RHRZ@1: z(RHR) last night, only the z is stored", class: S3}
   - {id: rhr.z_streak_ge2, type: integer, source: "nights in a row with rhr.z_day >= 2", class: S3}
-  - {id: rr.z_day,         type: number, source: "z(respiratory rate) last night", class: S3}
+  - {id: rr.z_day,         type: number, source: "RRZ@1: z(respiratory rate) last night, only the z is stored", class: S3}
   - {id: sleep.hours,      type: number, source: "WHOOP sleep or manual answer, hours", class: S3}
   - {id: sleep.prev_hours, type: number, source: "the night before last", class: S3}
   - {id: sleep.debt7_h,    type: number, source: "A25 SLP debt, capped at 10", class: S3}
@@ -33,9 +35,10 @@ facts:
   - {id: trl.z_yesterday,  type: number, source: "A25 TRL of yesterday vs norm", class: S3}
   - {id: train.yesterday_type, type: enum, values: [none, strength, intervals, zone2, mobility, rest], class: S3}
   - {id: train.yesterday_rpe, type: integer, source: "sRPE card, 1-10", class: S3}
-  - {id: whoop.recovery_pct, type: number, source: "WHOOP Recovery %, in memory only, calibration fallback, never stored", class: S3}
+  - {id: whoop.recovery_pct, type: number, source: "RETIRED in day@2: WHOOP Recovery % is not read (A25 P7, A39); kept so day@1 history stays readable", class: S3}
   # data quality
   - {id: data.baseline_n,  type: integer, source: "nights in the 28-day baseline (incl. WHOOP history loaded at connect)", class: S1}
+  - {id: data.history_days, type: integer, source: "days since the first WHOOP night HoT knows (age of the norm, day@2)", class: S1}
   - {id: data.coverage,    type: number, source: "share of ORS input weight available today, 0-1 (A25 P5)", class: S1}
   - {id: data.whoop_today, type: boolean, source: "WHOOP cycle for today is scored", class: S1}
   - {id: data.manual_mode, type: boolean, source: "no WHOOP by fallback time (09:30) or API down > 24 h (A10 C8)", class: S1}
@@ -98,6 +101,8 @@ facts:
   - {id: regime.final, type: enum, values: [BOOST, STEADY, GENTLE], source: "regime after caps, conflicts and hysteresis (map and schedule stages read it)", class: S3}
   - {id: regime.data_only_gentle, type: boolean, source: "GENTLE came from physiology/sleep points without self_low and without hard cap", class: S3}
   - {id: streak.gentle, type: integer, source: "GENTLE days in a row incl. today", class: S3}
+  - {id: streak.sick, type: integer, source: "SICK days in a row before today (day@2, SAF-03 see_doctor)", class: S3}
+  - {id: eve.body, type: enum, values: [fine, sore, sick], source: "evening deck «Как тело?» (D-027); sick → card.U5 cold", class: S3}
   - {id: count.low_days_7, type: integer, source: "days of last 7 with regime <= STEADY and self_low and no known cause", class: S3}
   - {id: count.mood_low_14, type: integer, source: "days of last 14 with U3_z <= -1 or U3 <= 2", class: S4}
   - {id: count.bad_sleep_21, type: integer, source: "nights of last 21 with U1 <= 2", class: S3}
@@ -146,6 +151,7 @@ predicates:
     any:
       - {fact: card.U5, op: has, value: cold}
       - {fact: label.bod_illness, op: eq, value: true}
+      - {fact: eve.body, op: eq, value: sick}
 
 # ---------------------------------------------------------------------------
 # Regimes and «Карта дня» defaults (A04 §3 step 4, A19 §1.2 step 1).
@@ -327,7 +333,7 @@ rules:
     review: [agent-3, agent-5]
 
   - id: REG-05
-    version: 1
+    version: 2
     title_ru: "Мало данных: калибровка, пропуски, ручной режим"
     domain: regime
     stage: data
@@ -344,10 +350,13 @@ rules:
         when: {fact: data.baseline_n, op: lt, value: 14}
         then:
           - {do: set_flag, value: CALIBRATION}
-          - {do: set_param, key: physio_signal, value: {source: whoop.recovery_pct, point_if_le: 33, boost_requires_ge: 67}}
-        why_ru: "Я пока изучаю твою норму (нужно ~14 ночей). Сегодня опираюсь на восстановление WHOOP, сон и твоё самочувствие."
+          - {do: set_param, key: disable_signals, value: [SG-ORS-DAY, SG-ORS-TREND]}
+          - {do: cap_regime, value: STEADY}
+        why_ru: "Изучаю твою норму: нужно около 14 ночей. Пока без Разгона."
       - id: preliminary
-        when: {all: [{fact: data.baseline_n, op: ge, value: 14}, {fact: data.baseline_n, op: lt, value: 28}]}
+        # day@2: «age of the norm» = days since the first WHOOP night HoT knows (not baseline_n,
+        # which is < 28 after any missed night and would block Разгон for good).
+        when: {all: [{fact: data.baseline_n, op: ge, value: 14}, {fact: data.history_days, op: lt, value: 28}]}
         then:
           - {do: set_flag, value: PRELIMINARY_NORM}
           - {do: set_param, key: boost_requires, value: [card.U2]}
@@ -369,17 +378,21 @@ rules:
           - {do: set_flag, value: MANUAL}
           - {do: ask, card: MANUAL_3Q}
           - {do: cap_regime, value: STEADY, unless: {all: [{fact: sleep.hours, op: ge, value: 7.0}, {fact: card.U1, op: ge, value: 4}, {fact: card.U2, op: ge, value: 7}, {fact: regime.yesterday, op: ne, value: GENTLE}]}}
-        why_ru: "Данных WHOOP пока нет. Собрал день по твоим трём ответам; уточню, когда браслет догонит."
+        # Slice 2 has no morning cards (D-027): no scored night by 09:30 → a default Ровно day,
+        # no push for it; rebuilt when WHOOP scores the night.
+        why_ru: "WHOOP ещё не посчитал ночь — день собран по умолчанию, уточню позже."
     user_override: down_only
     why_ru: "{variant_why}"
     evidence:
       level: C
       kind: estimate
       sources: ["A04 §2 «личная базовая линия» п. 1-4", "A25 P1, P5"]
-      note_ru: "Минимум 14 значений — A25 P1 (ур. C). Если при подключении WHOOP отдал ≥ 14 ночей истории, калибровки нет с первого дня."
+      note_ru: "Минимум 14 значений — A25 P1 (ур. C). Если при подключении WHOOP отдал ≥ 14 ночей истории, калибровки нет с первого дня. С day@2 Recovery % WHOOP не читается (A25 P7 и минимизация данных важнее A09 v0.1): на калибровке Разгона нет — это безопаснее и обратимее (A26 §4)."
     contraindications_ru: []
     red_flags_ru: []
     review: [agent-3, agent-9]
+    changelog:
+      - "v2 (A39, 2026-11-07): calibration без Recovery % WHOOP — потолок Ровно; preliminary по возрасту нормы (history_days); manual без карточек — день по умолчанию без пуша."
 
   - id: REG-06
     version: 1

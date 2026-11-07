@@ -103,6 +103,8 @@ internal data class WhoopWorkout(
     @Serializable
     internal data class Score(
         @SerialName("zone_durations") val zones: Zones? = null,
+        /** 0–100: share of the workout with heart-rate data (A35 §4 rule 3, «без браслета»). */
+        @SerialName("percent_recorded") val percentRecorded: Double? = null,
     )
 
     @Serializable

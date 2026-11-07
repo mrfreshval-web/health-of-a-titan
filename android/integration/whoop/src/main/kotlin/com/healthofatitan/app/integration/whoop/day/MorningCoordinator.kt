@@ -1,5 +1,6 @@
 package com.healthofatitan.app.integration.whoop.day
 
+import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.MorningPolicy
 import com.healthofatitan.app.integration.whoop.SyncProgress
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
@@ -46,7 +47,8 @@ class MorningCoordinator(
     suspend fun onDataChanged(): MorningPolicy.Step = mutex.withLock {
         plans.refresh()
         val today = LocalDate.now(clock)
-        val plan = plans.planFor(today)
+        // A MANUAL default day (no scored night yet) is not pushed: the push waits for the data.
+        val plan = plans.planFor(today)?.takeUnless { DayFlag.MANUAL.name in it.flags.split(',') }
         val step = MorningPolicy.next(LocalDateTime.now(clock), plan != null, plan?.notifiedAt != null)
         if (step is MorningPolicy.Step.NotifyNow && plan != null) {
             notifier.showMorning(plan.headline, plan.summary)

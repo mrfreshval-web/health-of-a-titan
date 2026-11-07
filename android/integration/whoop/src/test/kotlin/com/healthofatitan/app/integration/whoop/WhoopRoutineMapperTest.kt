@@ -46,6 +46,9 @@ class WhoopRoutineMapperTest {
         assertEquals(Intensity.MIXED, WhoopRoutineMapper.intensityOf(z(two = 10, three = 20, four = 5)))
         assertEquals(Intensity.MIXED, WhoopRoutineMapper.intensityOf(null))
         assertEquals(Intensity.MIXED, WhoopRoutineMapper.intensityOf(z()))
+        // Strap off for most of the session: the zones say nothing, never «confirmed».
+        assertEquals(Intensity.MIXED, WhoopRoutineMapper.intensityOf(z(one = 10, two = 30, three = 5), percentRecorded = 30.0))
+        assertEquals(Intensity.ZONE2, WhoopRoutineMapper.intensityOf(z(one = 10, two = 30, three = 5), percentRecorded = 95.0))
     }
 
     @Test

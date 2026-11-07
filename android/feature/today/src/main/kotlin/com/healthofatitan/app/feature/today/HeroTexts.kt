@@ -21,7 +21,7 @@ object HeroTexts {
     const val STAGE_LIGHT = "Лёгкий"
     const val STAGE_AWAKE = "Без сна"
     const val STAGES_NONE = "Состав сна: нет данных. Фазы приходят из WHOOP при синхронизации — сейчас их нет в памяти."
-    const val STAGES_SOURCE = "Фазы — по данным WHOOP. Только показываю, в норму они не входят."
+    const val STAGES_SOURCE = "Фазы — оценка WHOOP по пульсу и движению, не лабораторный замер. Только показываю, в Заряд они не входят."
 
     const val PULSE_TITLE = "Пульс покоя"
     const val PULSE_WHAT = "Это не пульс сейчас и не цель: WHOOP измеряет его ночью, во сне. Он входит в Заряд."
@@ -30,9 +30,10 @@ object HeroTexts {
 
     const val CHARGE = "Заряд"
     const val NORM_TICK = "твоя норма — 50"
-    const val CHARGE_WHAT = "Заряд — как ты восстановился за ночь по сравнению со своей нормой: 50 — твоя обычная ночь, " +
-        "ниже — сил меньше обычного, выше — больше. Считаю по ВСР, пульсу покоя и дыханию за последние 28 ночей; " +
-        "это не Recovery % WHOOP. Что повлияло на день — в «Почему такой день» ниже."
+    const val CHARGE_WHAT = "Заряд — как тело восстановилось за ночь по сравнению с твоей нормой: 50 — обычная для тебя ночь, " +
+        "ниже — восстановление слабее обычного, выше — сильнее. Считаю по ВСР (вариабельности пульса), пульсу покоя и дыханию " +
+        "этой ночи против твоих последних 28 ночей; это не Recovery % WHOOP и не оценка самочувствия. " +
+        "Что повлияло на день — в «Почему такой день» ниже."
 
     /** «6:48» on the chip. */
     fun sleepChip(hours: Double): String = TitanTexts.hm(hours)
@@ -44,10 +45,10 @@ object HeroTexts {
     fun pulseSpoken(bpm: Int) = "Пульс покоя $bpm ударов в минуту"
     fun loadSpoken(ceiling: Double) = "Потолок нагрузки ${TitanTexts.ceiling(ceiling)} из 21"
 
-    /** «6 ч 48 мин из нужных 8 ч 06 мин» or «6 ч 48 мин». */
+    /** «6 ч 48 мин из 8 ч 06 мин по оценке WHOOP» or «6 ч 48 мин». */
     fun sleepLine(hours: Double, needHours: Double?): String {
         val slept = hm((hours * 60).roundToInt())
-        return if (needHours != null && needHours > 0) "$slept из нужных ${hm((needHours * 60).roundToInt())}" else slept
+        return if (needHours != null && needHours > 0) "$slept из ${hm((needHours * 60).roundToInt())} по оценке WHOOP" else slept
     }
 
     fun pulseLine(bpm: Int) = "$bpm ударов в минуту — ночью, в покое."

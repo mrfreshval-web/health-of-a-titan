@@ -31,6 +31,7 @@ import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotListRow
 import com.healthofatitan.app.core.ui.component.HotPendingCard
 import com.healthofatitan.app.core.ui.component.HotSpacing
+import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopRoute
@@ -132,7 +133,7 @@ fun MeScreen(
             HotListRow(
                 title = "Помощь",
                 onClick = onOpenHelp,
-                caption = "988 · 911",
+                caption = rememberHelpLines().caption, // Y6: the numbers of the phone's country
                 divider = false,
                 modifier = Modifier.testTag(ME_HELP_ROW_TAG),
             )

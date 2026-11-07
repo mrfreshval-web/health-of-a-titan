@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -71,6 +72,17 @@ class DawnRepository(
         combine(plans.latest, dawnDao.observeDay(user, today.toString())) { plan, shown ->
             DawnPolicy.due(now, plan?.dayKey, shown != null)
         }
+    }
+
+    /** «Рассвет» was passed (or offered) on [day]: its row exists in `dawn_log`. */
+    fun shown(day: LocalDate): Flow<Boolean> = dawnDao.observeDay(user, day.toString()).map { it != null }
+
+    /**
+     * The haiku of the day for «Я сегодня» (A46 §2.2: all day after «Рассвет»), read only: it never
+     * picks or logs a haiku. Null before the dawn and when none fitted.
+     */
+    fun shownHaiku(day: LocalDate): Flow<List<String>?> = dawnDao.observeDay(user, day.toString()).map { row ->
+        row?.haikuId?.let { id -> library().firstOrNull { it.id == id }?.lines }
     }
 
     /** Today's dawn: the haiku is chosen once and logged right away (the first show wins). */

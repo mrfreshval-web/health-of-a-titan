@@ -32,11 +32,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotOverline
@@ -47,6 +51,7 @@ import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.component.HotStatTile
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanSealMoment
+import com.healthofatitan.app.core.ui.component.dialHelp
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.training.PlayerPhase
@@ -105,7 +110,7 @@ fun PlayerScreen(run: WorkoutRun, now: Long, actions: PlayerActions, animate: Bo
                     step is WorkoutStep.Rest -> Rest(run, step, now, mode, animate)
                     step is WorkoutStep.Work -> Work(run, step, now, mode, animate)
                 }
-                if (state.paused) Paused(actions)
+                if (state.paused) Paused(actions, feltBad = state.feltBad)
             }
             state.pendingRpe?.takeIf { !state.paused }?.let { ask ->
                 Rpe(ask.label, actions.onRpe)
@@ -314,18 +319,53 @@ private fun Controls(phase: PlayerPhase, actions: PlayerActions) {
 }
 
 @Composable
-private fun BoxScope.Paused(actions: PlayerActions) {
+private fun BoxScope.Paused(actions: PlayerActions, feltBad: Boolean) {
     Column(
         Modifier
             .matchParentSize()
             .background(HotThemeTokens.colors.knockout)
-            .padding(24.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
+            .testTag(PLAYER_PAUSED_TAG),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
     ) {
-        Text(TrainingTexts.PAUSED, style = HotType.headline)
-        HotPrimaryButton(TrainingTexts.RESUME, onClick = actions.onResume, modifier = Modifier.fillMaxWidth())
-        HotSecondaryButton(TrainingTexts.FINISH, onClick = actions.onFinish, modifier = Modifier.fillMaxWidth())
+        if (feltBad) {
+            // After «Мне плохо» finishing is the main way out; resuming stays possible, not suggested.
+            FeelBad()
+            HotSecondaryButton(TrainingTexts.FINISH, onClick = actions.onFinish, modifier = Modifier.fillMaxWidth())
+            HotTextButton(TrainingTexts.RESUME, onClick = actions.onResume)
+        } else {
+            Text(TrainingTexts.PAUSED, style = HotType.headline)
+            HotPrimaryButton(TrainingTexts.RESUME, onClick = actions.onResume, modifier = Modifier.fillMaxWidth())
+            HotSecondaryButton(TrainingTexts.FINISH, onClick = actions.onFinish, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+/**
+ * «Мне плохо» (A40 §2.5, A19 §6.2): what to do now, before «Продолжить». The numbers are 112 and
+ * 911, in this order, as everywhere (core/model HelpNumbers); the dialer asks before calling.
+ */
+@Composable
+private fun FeelBad() {
+    val context = LocalContext.current
+    val numbers = HelpNumbers.IN_TEXT
+    Column(Modifier.testTag(PLAYER_FEEL_BAD_HELP_TAG), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(TrainingTexts.FEEL_BAD_TITLE, style = HotType.headline, modifier = Modifier.semantics { heading() })
+        Text(TrainingTexts.feelBadUrgent(numbers), style = MaterialTheme.typography.bodyLarge)
+        Text(TrainingTexts.feelBadBreath(numbers), style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HelpNumbers.ALL.forEachIndexed { i, number ->
+                val call = TrainingTexts.callEmergency(number)
+                if (i == 0) {
+                    HotPrimaryButton(call, onClick = { context.dialHelp(number) }, modifier = Modifier.weight(1f))
+                } else {
+                    HotSecondaryButton(call, onClick = { context.dialHelp(number) }, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        Text(TrainingTexts.FEEL_BAD_REST, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

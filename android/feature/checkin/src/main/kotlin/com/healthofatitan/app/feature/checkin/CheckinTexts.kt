@@ -278,7 +278,7 @@ object CheckinTexts {
     const val PAIN_CHEST = "Давит или жжёт в груди"
     const val PAIN_JOINT = "Болит сустав"
 
-    /** SAF-01 why_ru (content/rules/safety.yaml), unchanged wording; the number is the country's. */
+    /** SAF-01 why_ru (content/rules/safety.yaml), unchanged wording; [number] is «112 или 911». */
     fun painChest(number: String) = "Ты отметил давление или жжение в груди. Если это происходит сейчас — звони $number. Тренировки на паузе, пока врач не разрешит."
 
     const val PAIN_JOINT_LINE = "Эту зону сегодня не нагружаю. Если боль острая, сустав отекает или болит в покое — покажись врачу."
@@ -290,7 +290,8 @@ object CheckinTexts {
     const val CARE_HELP = "Нужна помощь сейчас"
     const val CARE_TALK = "Поговорить"
     const val CARE_OK = "Всё ок, просто день"
-    const val CARE_OK_LINE = "Понял. Если что — помощь в один тап, под аватаром."
+    // Review 2026-11-07 (Agent 10): help is two taps («аватар › Помощь», D-033), not one.
+    const val CARE_OK_LINE = "Понял. Если что — помощь всегда под аватаром."
 
     // ── Discoveries (И2.21) — ⚑ Agents 10, 3, 9 ────────────────────────────────────────────
     const val DISCOVERY = "Открытие"
@@ -333,16 +334,23 @@ object CheckinTexts {
             Link.LIGHT_CHARGE -> "В утра со светом Заряд $dir на $n ${levels(abs(effect))}, чем без него"
             Link.BREATH_CHARGE -> "В утра с дыханием Заряд $dir на $n ${levels(abs(effect))}, чем без него"
             Link.STACK_HEAD -> "На следующее утро после стека Голова $dir на $n ${levels(abs(effect))}"
-            Link.SCREENS_SLEEP -> "После вечеров с экранами после 23 сон по WHOOP $dir твоей нормы на $n"
+            Link.SCREENS_SLEEP -> "После вечеров с экранами после 23 сон по WHOOP ${z(effect)} $dir твоей нормы"
             Link.SCREENS_CHARGE -> "После вечеров с экранами после 23 Заряд утром $dir на $n ${levels(abs(effect))}"
-            Link.ALCOHOL_PULSE -> "После вечеров с алкоголем пульс покоя $dir твоей нормы на $n"
+            Link.ALCOHOL_PULSE -> "После вечеров с алкоголем пульс покоя ${z(effect)} $dir твоей нормы"
             Link.ALCOHOL_HEAD -> "После вечеров с алкоголем Голова утром $dir на $n ${levels(abs(effect))}"
             Link.SWEETS_WEATHER -> "После сладкого вечером Погода утром $dir на $n ${levels(abs(effect))}"
             Link.TRAINING_HEAD -> "На утро после тренировки Голова $dir на $n ${levels(abs(effect))}"
-            Link.CLOSENESS_SLEEP -> "После дней с близостью сон по WHOOP $dir твоей нормы на $n"
+            Link.CLOSENESS_SLEEP -> "После дней с близостью сон по WHOOP ${z(effect)} $dir твоей нормы"
             Link.PULLS_DRIVE -> "В дни, когда что-то тянуло, Тяга к делу $dir на $n ${levels(abs(effect))}"
         }
     }
+
+    /**
+     * Review 2026-11-07 (Agent 3): sleep and resting pulse are measured against the norm in
+     * standard deviations; a bare «на 0,8» reads as beats or hours. In words on the card, the
+     * number stays in «Как считал».
+     */
+    private fun z(effect: Double): String = if (abs(effect) >= 1.0) "заметно" else "чуть"
 
     fun counts(n1: Int, n0: Int): String = "с — $n1 · без — $n0 · $LINK_NOT_CAUSE"
 
@@ -375,7 +383,7 @@ object CheckinTexts {
     const val S_DISCOVERIES_WHY = "Не чаще раза в неделю; связь, не причина"
     const val S_HAPTICS = "Вибрация"
     const val S_STACK = "Мой стек утра"
-    const val S_STACK_EMPTY = "Пока пусто — добавь, что принимаешь утром"
+    const val S_STACK_EMPTY = "Пока пусто — добавь, если что-то принимаешь утром"
     const val S_REMOVE = "Убрать"
     const val S_USAGE = "Как идёт"
 
@@ -465,7 +473,7 @@ object CheckinTexts {
         LineContext.EVENING_HEAVY -> when (persona) {
             MentorPersona.BRO -> listOf("Тяжёлый день. Завтра начнём мягче.")
             MentorPersona.BUTLER -> listOf("Непростой вечер. Утро подготовлю бережнее.")
-            else -> listOf("Буря проходит. Завтра — мягкое начало.")
+            else -> listOf("Тяжёлый день закрыт. Завтра — мягкое начало.")
         }
     }
 

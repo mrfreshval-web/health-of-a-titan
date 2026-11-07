@@ -40,32 +40,39 @@ def _deg(x):
     return math.degrees(x)
 
 
+NOD_LIFT = 0.1       # front-view nod: rig units of lift per degree (+10° → the head 1 unit up)
+NOD_SQUASH = 0.004   # and of foreshortening per degree (10° → 4 % shorter)
+
+
 def bone_values(p, front):
     """Per-frame layer values: rotation relative to the parent, position in the parent, scale y,
     plus the world origin/angle of every bone (rig units) for gradient points and props."""
     d = _deg(math.atan(p.get("spine", 0.0)))
     h = 13.0 / math.cos(math.radians(d))
     torso = p["torso"]
-    head = p["head"] + p.get("nod", 0.0)
+    # nod: in profile the head turns; in the front view (Path v1 §3.1, + up) it cannot turn in the
+    # picture plane, so the head lifts or drops on the neck and foreshortens (pitch_values)
+    head = p["head"] + (0.0 if front is True else p.get("nod", 0.0))
     chest_abs = torso + d
-    sw = rig.FRONT_SHOULDER if front else 0.0
-    hw = rig.FRONT_HIP if front else 0.0
     v = {}
     hip = (p["rx"], p["ry"])
     v["pelvis"] = dict(r=torso - d, p=(0.0, 0.0), abs=torso - d, o=hip)
     mid = rig.step(hip, torso - d, h)
     v["chest"] = dict(r=2 * d, p=(0.0, -h), abs=chest_abs, o=mid)
     sh = rig.step(mid, chest_abs, h)
-    v["head"] = dict(r=head - chest_abs, p=(0.0, -h), abs=head, o=sh)
-    for side, sgn in (("N", 1), ("F", -1)):
+    nod = p.get("nod", 0.0) if front is True else 0.0
+    v["head"] = dict(r=head - chest_abs, p=(0.0, -h - NOD_LIFT * nod), abs=head, o=sh, sy=1.0 - NOD_SQUASH * abs(nod))
+    for side in "NF":
+        sw, hw = rig.side_offsets(front, side)
         ln = p.get("armLen" + side, 1.0)
-        # the shoulder offset of the front view is along the chest's local x
-        so = (sh[0] + sgn * sw * math.cos(math.radians(chest_abs)), sh[1] + sgn * sw * math.sin(math.radians(chest_abs)))
-        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sgn * sw, -h), abs=p["ua" + side], o=so, sy=ln)
-        el = rig.step(so, p["ua" + side], rig.L["ua"] * ln)
-        v["fa" + side] = dict(r=p["fa" + side] - p["ua" + side], p=(0.0, -rig.L["ua"] * ln), abs=p["fa" + side], o=el, sy=ln)
-        ho = (hip[0] + sgn * hw, hip[1])
-        v["th" + side] = dict(r=p["th" + side], p=(sgn * hw, 0.0), abs=p["th" + side], o=ho)
+        ul = ln * p.get("uaLen" + side, 1.0)
+        # the shoulder offset of the front and 3/4 views is along the chest's local x
+        so = (sh[0] + sw * math.cos(math.radians(chest_abs)), sh[1] + sw * math.sin(math.radians(chest_abs)))
+        v["ua" + side] = dict(r=p["ua" + side] - chest_abs, p=(sw, -h), abs=p["ua" + side], o=so, sy=ul)
+        el = rig.step(so, p["ua" + side], rig.L["ua"] * ul)
+        v["fa" + side] = dict(r=p["fa" + side] - p["ua" + side], p=(0.0, -rig.L["ua"] * ul), abs=p["fa" + side], o=el, sy=ln)
+        ho = (hip[0] + hw, hip[1])
+        v["th" + side] = dict(r=p["th" + side], p=(hw, 0.0), abs=p["th" + side], o=ho)
         kn = rig.step(ho, p["th" + side], rig.L["th"])
         v["sh" + side] = dict(r=p["sh" + side] - p["th" + side], p=(0.0, -rig.L["th"]), abs=p["sh" + side], o=kn)
         an = rig.step(kn, p["sh" + side], rig.L["sh"])
@@ -144,7 +151,7 @@ class Builder:
         return self.ind
 
     def scalar(self, values, tol=0.04):
-        return lt.fit_scalar(values, self.breaks, tol)
+        return lt.fit_scalar(values, self.breaks, tol, cuts=getattr(self, "cuts", ()))
 
     def split_pos(self, xs, ys, tol=0.02):
         fx, fy = self.scalar(xs, tol), self.scalar(ys, tol)

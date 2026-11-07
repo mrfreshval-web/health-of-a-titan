@@ -1,16 +1,12 @@
-# Emergency resources by country (A07 §4.5, A11 §8.1). Used offline by the SOS screen.
-# Slice 0: pipeline example only — the SOS screen still uses built-in US numbers.
-# Crisis content: changes only with review by Agent 10.
-version: 1
-reviewedBy: []
+# Help numbers (A07 §4.5, A11 §8.1). Founder's decision 2026-11-07: «телефон везде 112 и 911, все».
+# The same two numbers everywhere and in this order; no crisis lines by country, no country
+# detection (replaces Y6 of docs/reviews/2026-11-07-content-review.md).
+# The app keeps a built-in copy (core/model HelpNumbers) so SOS opens instantly and offline;
+# HelpNumbersTest fails if the two differ. Change both together.
+# Crisis content: changes only with review by Agents 10 and 7.
+version: 3
+reviewedBy: [agent-10, agent-7]
 status: draft
-countries:
-  US:
-    emergency:
-      number: "911"
-      label: "911"
-    crisisLine:
-      number: "988"
-      label: "988 — поговорить"
-      sms: "988"
-      chatUrl: "https://988lifeline.org/chat/"
+numbers:
+  - number: "112"
+  - number: "911"

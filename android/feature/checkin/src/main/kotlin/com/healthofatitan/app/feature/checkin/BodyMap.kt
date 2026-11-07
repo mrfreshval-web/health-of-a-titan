@@ -1,8 +1,5 @@
 package com.healthofatitan.app.feature.checkin
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,9 +29,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanGeometry
+import com.healthofatitan.app.core.ui.component.dialHelp
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.domain.checkin.BodyArea
 import com.healthofatitan.app.domain.checkin.Pain
@@ -45,9 +45,6 @@ import kotlin.math.min
 const val BODY_MAP_TAG = "checkin_body_map"
 const val PAIN_TAG = "checkin_pain"
 const val PAIN_CHEST_TAG = "checkin_pain_chest"
-
-/** The emergency number shown with SAF-01 (A07 §4.5: built-in US numbers, as on the SOS screen). */
-const val EMERGENCY_NUMBER = "911"
 
 /**
  * «Где?» (И2.15, sc5): the Titan as a silhouette — tap a zone and it lights amber (never red);
@@ -122,16 +119,16 @@ fun PainAnswer(pain: Pain) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(14.dp)) {
-                Text(CheckinTexts.painChest(EMERGENCY_NUMBER), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(CheckinTexts.painChest(HelpNumbers.IN_TEXT), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(6.dp))
-                HotTextButton("${CheckinTexts.CALL} $EMERGENCY_NUMBER", onClick = { context.dial(EMERGENCY_NUMBER) })
+                // 112 and 911, in this order, as everywhere.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HelpNumbers.ALL.forEach { number ->
+                        HotTextButton("${CheckinTexts.CALL} $number", onClick = { context.dialHelp(number) })
+                    }
+                }
             }
         }
         PainRoute.SPARE_ZONE -> Text(CheckinTexts.PAIN_JOINT_LINE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-internal fun Context.dial(number: String) {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    runCatching { startActivity(intent) }
 }

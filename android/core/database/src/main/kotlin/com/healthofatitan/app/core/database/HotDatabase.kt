@@ -18,7 +18,13 @@ import com.healthofatitan.app.core.database.entity.EveningCheckEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.NutritionEveningEntity
 import com.healthofatitan.app.core.database.entity.NutritionProfileEntity
+import com.healthofatitan.app.core.database.entity.PathChangeProposalEntity
+import com.healthofatitan.app.core.database.entity.PathGoalComponentEntity
 import com.healthofatitan.app.core.database.entity.PathGoalEntity
+import com.healthofatitan.app.core.database.entity.PathGoalVersionEntity
+import com.healthofatitan.app.core.database.entity.PathHorizonEntity
+import com.healthofatitan.app.core.database.entity.PathLetterEntity
+import com.healthofatitan.app.core.database.entity.PathMarkEntity
 import com.healthofatitan.app.core.database.entity.PathStepEntity
 import com.healthofatitan.app.core.database.entity.PlanItemEntity
 import com.healthofatitan.app.core.database.entity.ReturnLogEntity
@@ -34,6 +40,15 @@ import com.healthofatitan.app.core.database.entity.CheckinDayEntity
 import com.healthofatitan.app.core.database.entity.CheckinDiscoveryEntity
 import com.healthofatitan.app.core.database.entity.CheckinEventEntity
 import com.healthofatitan.app.core.database.dao.CheckinDao
+import com.healthofatitan.app.core.database.dao.TodayDao
+import com.healthofatitan.app.core.database.entity.TodayMarkEntity
+import com.healthofatitan.app.core.database.dao.WeekDao
+import com.healthofatitan.app.core.database.entity.BodyInputEntity
+import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
+import com.healthofatitan.app.core.database.entity.WeekFrameEntity
+import com.healthofatitan.app.core.database.entity.WeekGoalEntity
+import com.healthofatitan.app.core.database.entity.WeekPlanEntity
 import kotlin.reflect.KClass
 
 /**
@@ -66,8 +81,21 @@ import kotlin.reflect.KClass
         CheckinDayEntity::class,
         CheckinDiscoveryEntity::class,
         CheckinEventEntity::class,
+        TodayMarkEntity::class,
+        WeekPlanEntity::class,
+        WeekGoalEntity::class,
+        WeekDayScoreEntity::class,
+        WeekFrameEntity::class,
+        BodyInputEntity::class,
+        WeekExperimentEntity::class,
+        PathGoalComponentEntity::class,
+        PathGoalVersionEntity::class,
+        PathChangeProposalEntity::class,
+        PathHorizonEntity::class,
+        PathLetterEntity::class,
+        PathMarkEntity::class,
     ],
-    version = 9,
+    version = 12,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -87,6 +115,10 @@ abstract class HotDatabase : RoomDatabase() {
 
     abstract fun trainingLogDao(): TrainingLogDao
     abstract fun checkinDao(): CheckinDao
+
+    abstract fun todayDao(): TodayDao
+
+    abstract fun weekDao(): WeekDao
 
     companion object {
         const val FILE_NAME = "hot.db"
@@ -119,6 +151,19 @@ abstract class HotDatabase : RoomDatabase() {
             CheckinDayEntity::class,
             CheckinDiscoveryEntity::class,
             CheckinEventEntity::class,
+            TodayMarkEntity::class,
+            WeekPlanEntity::class,
+            WeekGoalEntity::class,
+            WeekDayScoreEntity::class,
+            WeekFrameEntity::class,
+            BodyInputEntity::class,
+            WeekExperimentEntity::class,
+            PathGoalComponentEntity::class,
+            PathGoalVersionEntity::class,
+            PathChangeProposalEntity::class,
+            PathHorizonEntity::class,
+            PathLetterEntity::class,
+            PathMarkEntity::class,
         )
     }
 }

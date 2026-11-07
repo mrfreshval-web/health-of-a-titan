@@ -1,9 +1,5 @@
 package com.healthofatitan.app.feature.sos
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,22 +41,27 @@ import androidx.compose.ui.unit.em
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.R
+import com.healthofatitan.app.core.ui.component.dialHelp
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.core.ui.theme.HotType
 
 const val SOS_SCREEN_TAG = "screen_sos"
-const val SOS_CALL_988_TAG = "sos_call_988"
+
+/** The first help number, 112. */
+const val SOS_CALL_112_TAG = "sos_call_112"
+
+/** The second help number, 911. */
 const val SOS_CALL_911_TAG = "sos_call_911"
 
 /**
- * Emergency numbers for the founder in the US (A11 §8.1, A07 §4.5). Hardcoded on purpose:
- * this screen must open instantly and offline. Country selection comes from
- * content/safety/resources.yaml in slice 4.
+ * Words of the emergency block (A07 §4.4). Numbers: 112 and 911, everywhere and in this order
+ * (founder's decision 2026-11-07, core/model HelpNumbers). Crisis content: Agents 10 and 7.
  */
-internal object SosNumbers {
-    const val CRISIS_LINE = "988"
-    const val EMERGENCY = "911"
+internal object SosTexts {
+    const val DANGER = "Если опасность прямо сейчас"
+    val HUMANS = "Я ИИ, не человек. Живые люди ответят по ${HelpNumbers.FIRST} и ${HelpNumbers.SECOND}."
 }
 
 /** SOS outside the tabs (A11 §1.1): from the top bar, the quick settings tile and the shortcut. */
@@ -108,10 +109,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                             .semantics { heading() },
                     )
                 }
-                EmergencyBlock(
-                    onCrisisLine = { context.dial(SosNumbers.CRISIS_LINE) },
-                    onEmergency = { context.dial(SosNumbers.EMERGENCY) },
-                )
+                EmergencyBlock(onCall = { context.dialHelp(it) })
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Я рядом. Что сейчас?",
@@ -125,7 +123,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    "Я ИИ, не человек. Живые люди — 988.",
+                    SosTexts.HUMANS,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -137,7 +135,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmergencyBlock(onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
+private fun EmergencyBlock(onCall: (String) -> Unit) {
     val onBlock = MaterialTheme.colorScheme.onErrorContainer
     val block = MaterialTheme.colorScheme.errorContainer
     Card(
@@ -147,50 +145,42 @@ private fun EmergencyBlock(onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
-                "Если опасность прямо сейчас",
+                SosTexts.DANGER,
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
+            // 112 first and filled, 911 second and outlined: the same order on every screen.
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
-                    onClick = onCrisisLine,
+                    onClick = { onCall(HelpNumbers.FIRST) },
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = onBlock, contentColor = block),
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 56.dp)
-                        .testTag(SOS_CALL_988_TAG),
+                        .testTag(SOS_CALL_112_TAG),
                 ) {
                     Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("988 — поговорить", style = MaterialTheme.typography.titleMedium)
+                    Text(HelpNumbers.FIRST, style = MaterialTheme.typography.titleMedium)
                 }
                 OutlinedButton(
-                    onClick = onEmergency,
+                    onClick = { onCall(HelpNumbers.SECOND) },
                     shape = CircleShape,
                     border = BorderStroke(1.dp, onBlock),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = onBlock),
-                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp),
                     modifier = Modifier
+                        .weight(1f)
                         .heightIn(min = 56.dp)
                         .testTag(SOS_CALL_911_TAG),
                 ) {
                     Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("911", style = MaterialTheme.typography.titleMedium)
+                    Text(HelpNumbers.SECOND, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
-    }
-}
-
-/** Opens the dialer with the number pre-filled; the user confirms the call (no CALL_PHONE). */
-internal fun Context.dial(number: String) {
-    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    try {
-        startActivity(intent)
-    } catch (@Suppress("UNUSED_PARAMETER") e: ActivityNotFoundException) {
-        // No dialer (e.g. tablet without telephony): the number stays visible on screen.
     }
 }

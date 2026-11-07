@@ -27,6 +27,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotListRow
 import com.healthofatitan.app.core.ui.component.HotPendingCard
@@ -132,7 +133,7 @@ fun MeScreen(
             HotListRow(
                 title = "Помощь",
                 onClick = onOpenHelp,
-                caption = "988 · 911",
+                caption = HelpNumbers.CAPTION,
                 divider = false,
                 modifier = Modifier.testTag(ME_HELP_ROW_TAG),
             )

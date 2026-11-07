@@ -11,10 +11,10 @@ enum class CrisisLevel(val value: Int) {
     /** 1 — distress or an ambiguous phrase: help stays visible, one gentle check (A07 §4.3). */
     CLARIFY(1),
 
-    /** 2 — passive thoughts: coaching stops, the 988 card is shown full screen. */
+    /** 2 — passive thoughts: coaching stops, the help card (112 · 911) is shown full screen. */
     PASSIVE(2),
 
-    /** 3 — active or acute risk, or harm to another person: 911 and 988 on the first screen. */
+    /** 3 — active or acute risk, or harm to another person: 112 and 911 on the first screen. */
     ACUTE(3),
     ;
 

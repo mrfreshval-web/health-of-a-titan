@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -24,9 +25,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSecondaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
+import com.healthofatitan.app.core.ui.component.dialHelp
 import com.healthofatitan.app.core.ui.theme.HotType
 
 const val CARE_TAG = "checkin_care"
@@ -36,7 +39,8 @@ const val CARE_OK_TAG = "checkin_care_ok"
 /**
  * «Как ты на самом деле?» (sc6, И2.8′, A07 §4.3 level 1): a sober screen — no Titan, no game.
  * «Нужна помощь сейчас» opens the SOS screen (its texts unchanged), «Поговорить» opens the mentor
- * in its careful mode, «Всё ок, просто день» closes. 988 and 911 are on this screen itself.
+ * in its careful mode, «Всё ок, просто день» closes. 112 and 911 (in this order, as everywhere;
+ * core/model HelpNumbers) are on this screen itself.
  */
 @Composable
 fun CareScreen(onHelp: () -> Unit, onTalk: () -> Unit, onClose: () -> Unit) {
@@ -68,8 +72,11 @@ fun CareScreen(onHelp: () -> Unit, onTalk: () -> Unit, onClose: () -> Unit) {
         }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { context.dial("988") }, modifier = Modifier.weight(1f).height(56.dp)) { Text("988") }
-            OutlinedButton(onClick = { context.dial(EMERGENCY_NUMBER) }, modifier = Modifier.weight(1f).height(56.dp)) { Text(EMERGENCY_NUMBER) }
+            HelpNumbers.ALL.forEach { number ->
+                OutlinedButton(onClick = { context.dialHelp(number) }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                    Text(number)
+                }
+            }
         }
     }
 }

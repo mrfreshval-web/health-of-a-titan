@@ -20,33 +20,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.StatusRings
+import com.healthofatitan.app.core.ui.component.StubScreen
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
-import com.healthofatitan.app.core.model.mentor.MentorPersona
+import com.healthofatitan.app.domain.today.AutoOpen
+import com.healthofatitan.app.domain.today.AutoOpenReason
+import com.healthofatitan.app.domain.today.RassvetStep
+import com.healthofatitan.app.domain.today.Ritual
+import com.healthofatitan.app.domain.today.TodayCopy
 import com.healthofatitan.app.feature.checkin.CHECKIN_FULL_SCREEN
 import com.healthofatitan.app.feature.checkin.CheckinNav
 import com.healthofatitan.app.feature.checkin.CheckinSettingsRow
@@ -55,22 +62,19 @@ import com.healthofatitan.app.feature.checkin.CheckinTodayCards
 import com.healthofatitan.app.feature.checkin.EveningAreas
 import com.healthofatitan.app.feature.checkin.EveningKnownLine
 import com.healthofatitan.app.feature.checkin.EveningWeather
-import com.healthofatitan.app.feature.checkin.MorningDue
 import com.healthofatitan.app.feature.checkin.checkinScreens
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
-import com.healthofatitan.app.feature.nutrition.PlateOfDay
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
-import com.healthofatitan.app.feature.path.PathTodayStep
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.pathRitualScreen
 import com.healthofatitan.app.feature.path.pathScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.CloseDayExtras
 import com.healthofatitan.app.feature.today.dawnScreen
 import com.healthofatitan.app.feature.today.todayScreen
-import com.healthofatitan.app.feature.training.TrainingDayCardRoute
 import com.healthofatitan.app.feature.training.TrainingTexts
 import com.healthofatitan.app.feature.training.trainingScreens
 import com.healthofatitan.app.feature.week.weekScreen
@@ -82,10 +86,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
-/** Bottom tabs «Сегодня · Наставник · Неделя · Путь» (A11 §1.1, D-033: «Я» became «Путь»). */
+/**
+ * Bottom modules «Сегодня · Неделя · Путь» (D-051; «За плечами» opens from «Путь»). The mentor left the bar: Винс is
+ * the circle on the left of every header.
+ */
 enum class HotTab(val route: String, val label: String, @param:DrawableRes val icon: Int) {
     TODAY(HotRoute.TODAY, "Сегодня", R.drawable.core_ui_ic_today),
-    MENTOR(HotRoute.MENTOR, "Наставник", R.drawable.core_ui_ic_mentor),
     WEEK(HotRoute.WEEK, "Неделя", R.drawable.core_ui_ic_week),
     PATH(HotRoute.PATH, "Путь", R.drawable.core_ui_ic_path),
     ;
@@ -93,23 +99,34 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
     val testTag: String get() = "tab_$route"
 }
 
+const val BEHIND_SCREEN_TAG = "screen_behind"
+
+/** The screen a step of «Рассвет» opens (D-040: one ritual, three steps). */
+fun RassvetStep.route(): String = when (this) {
+    RassvetStep.DECK -> HotRoute.CHECKIN
+    RassvetStep.REVEAL -> HotRoute.CHECKIN_REVEAL
+    RassvetStep.DAWN -> HotRoute.DAWN
+}
+
 /**
- * App shell: one Activity, NavHost with 4 tabs + `sos` and `dawn` outside the tabs (A14 §7, ADR-01).
- * D-029 / D-033: the header of every tab is the Titan glyph, three rings and the mentor's avatar;
- * help is «аватар › Помощь» and «⋮ › Помощь» in the mentor chat (≤ 2 taps from any tab), the
- * quick settings tile and the shortcut open it in one. Settings and the mentor's character live
- * under the same avatar.
+ * App shell: one Activity, NavHost with 4 modules + `sos`, `dawn` and the screens under them (A14
+ * §7, ADR-01, D-038). The header (A46 §2.1): Винс on the left, the date of «Сегодня» in the
+ * middle, the profile on the right; help is «профиль › Помощь» (≤ 2 taps from any tab, T-06), the
+ * quick settings tile and the shortcut open it in one.
+ *
+ * Nothing opens by itself (T-05) except «Рассвет» — once a day, after the night is scored — and
+ * the crisis card (CrisisGuard ≥ 2, opened by the screen that detects it).
  *
  * @param pendingRoute route requested from outside (tile, shortcut, deep link), consumed once.
  * @param stateful false draws every screen from its default state without ViewModels: the
  *   navigation tests run without Hilt.
- * @param syncProgress live WHOOP sync: the mark in every tab header turns into the compact sync
- *   indicator, and a sync the user asked for ends with a haptic tick (success or failure).
- * @param rings the three header rings (D-029), from data only.
- * @param dawnDue «Рассвет» is due (first open of the day after 05:00, plan ready): shown once.
- * @param persona the mentor's character for the avatar (D-030); null = not chosen yet (Сенсей).
- * @param morningDue state cards (A44, D-036): the blind deck or the reveal opens by itself once a
- *   day over «Сегодня», before «Рассвет»; «Рассвет» waits until nothing is due.
+ * @param syncProgress live WHOOP sync: the Titan glyph by the date turns into the sync indicator.
+ * @param rassvetDue the step «Рассвет» opens at by itself now ([com.healthofatitan.app.domain.today.Rassvet.trigger]);
+ *   null when the night is not scored, the ritual is passed or it was already offered today.
+ * @param rassvetNext the next step not passed today, for the chain deck → reveal → dawn and a tap
+ *   on the «Рассвет» point.
+ * @param onRassvetOffered the ritual was opened by itself today: it is not offered again.
+ * @param persona the mentor's character for Винс's circle (D-030); null = not chosen yet.
  */
 @Composable
 fun HotApp(
@@ -118,16 +135,16 @@ fun HotApp(
     navController: NavHostController = rememberNavController(),
     stateful: Boolean = true,
     syncProgress: SyncProgress = SyncProgress.Idle,
-    rings: StatusRings = StatusRings.Empty,
-    dawnDue: Boolean = false,
+    rassvetDue: RassvetStep? = null,
+    rassvetNext: RassvetStep? = null,
+    onRassvetOffered: () -> Unit = {},
     persona: MentorPersona? = null,
-    morningDue: MorningDue = MorningDue.NONE,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val inSos = currentRoute == HotRoute.SOS
     val fullScreen = inSos || currentRoute == HotRoute.DAWN || currentRoute == HotRoute.TRAINING_PLAYER ||
-        currentRoute in CHECKIN_FULL_SCREEN
+        currentRoute == HotRoute.BREATHER || currentRoute == HotRoute.PATH_RITUAL || currentRoute in CHECKIN_FULL_SCREEN
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
 
@@ -136,30 +153,41 @@ fun HotApp(
             navController.currentBackStackEntryFlow.first() // wait until NavHost has set the graph
             when (pendingRoute) {
                 HotRoute.SOS -> navController.openSos()
-                HotRoute.TRAINING_PLAYER -> navController.navigate(HotRoute.TRAINING_PLAYER) { launchSingleTop = true }
-                HotRoute.CHECKIN -> navController.navigate(HotRoute.CHECKIN) { launchSingleTop = true }
+                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR, HotRoute.BEHIND ->
+                    navController.navigate(pendingRoute) { launchSingleTop = true }
                 else -> navController.openTab(pendingRoute)
             }
             onPendingRouteConsumed()
         }
     }
 
-    // State cards (D-036): the blind deck, then the reveal, each once a day over «Сегодня».
-    var morningOpened by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(morningDue, currentRoute) {
-        val key = "${LocalDate.now()}:$morningDue"
-        if (morningDue != MorningDue.NONE && pendingRoute == null && currentRoute == HotRoute.TODAY && morningOpened != key) {
-            morningOpened = key
-            navController.navigate(if (morningDue == MorningDue.WAKE) HotRoute.CHECKIN else HotRoute.CHECKIN_REVEAL) { launchSingleTop = true }
+    // «Рассвет» (D-040): one trigger a day, only over «Сегодня», never over help; then its steps
+    // follow one another while the person goes on (the deck, the reveal, the dawn).
+    var chained by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(rassvetDue, currentRoute) {
+        val step = rassvetDue ?: return@LaunchedEffect
+        if (pendingRoute == null && currentRoute == HotRoute.TODAY && AutoOpen.reason(0, step) == AutoOpenReason.RASSVET) {
+            onRassvetOffered()
+            chained = "${LocalDate.now()}:${step.name}"
+            navController.navigate(step.route()) { launchSingleTop = true }
         }
     }
-
-    // «Рассвет» once a day, only over «Сегодня», never over help and after the morning cards.
-    LaunchedEffect(dawnDue, currentRoute, morningDue, morningOpened) {
-        // a deck closed with ✕ does not hold «Рассвет» back: it was offered once today
-        val morningWaits = morningDue != MorningDue.NONE && morningOpened != "${LocalDate.now()}:$morningDue"
-        if (dawnDue && !morningWaits && pendingRoute == null && currentRoute == HotRoute.TODAY) {
-            navController.navigate(HotRoute.DAWN) { launchSingleTop = true }
+    LaunchedEffect(rassvetNext, currentRoute) {
+        val last = chained ?: return@LaunchedEffect
+        val next = rassvetNext
+        if (next == null || !last.startsWith(LocalDate.now().toString())) {
+            chained = null
+            return@LaunchedEffect
+        }
+        // back on «Сегодня» after a step that is now passed: open the next one; a step closed
+        // without passing it ends the chain (the ritual is never pushed twice).
+        if (currentRoute == HotRoute.TODAY && navController.currentDestination?.route == HotRoute.TODAY) {
+            if (last.endsWith(next.name)) {
+                chained = null
+            } else {
+                chained = "${LocalDate.now()}:${next.name}"
+                navController.navigate(next.route()) { launchSingleTop = true }
+            }
         }
     }
 
@@ -173,13 +201,14 @@ fun HotApp(
             topBar = {
                 if (!fullScreen) {
                     HotTopBar(
-                        // «Сегодня» and «Путь» have no title: the hero speaks there (A37 s2, j2-path)
+                        // «Сегодня» and «Путь» have no title: the date and the hero speak there
                         title = nested?.title ?: currentTab.label.takeIf { currentTab != HotTab.TODAY && currentTab != HotTab.PATH },
                         overline = if (nested != null) nested.backLabel else TabHeaders.overline(currentTab, LocalDate.now()),
                         onBack = if (nested != null) ({ if (!navController.popBackStack()) navController.openTab(nested.tab.route) }) else null,
                         // The WHOOP screen has the big mark itself; one animated titan per screen.
                         sync = if (currentRoute == HotRoute.WHOOP) null else sync.toMark(),
-                        rings = rings,
+                        mentor = { MentorCircle(persona) { navController.navigate(HotRoute.MENTOR) { launchSingleTop = true } } },
+                        center = if (nested == null && currentTab == HotTab.TODAY) TabHeaders.today(LocalDate.now()) else null,
                         avatar = {
                             AvatarMenu(
                                 persona = persona,
@@ -200,28 +229,14 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (fullScreen) Modifier else Modifier.padding(padding),
             ) {
-                val openNutrition = { route: String -> navController.navigate(route) { launchSingleTop = true } }
                 val open: (String) -> Unit = { route -> navController.navigate(route) { launchSingleTop = true } }
                 val back: () -> Unit = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) }
                 todayScreen(
-                    onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    onConnectWhoop = { open(HotRoute.WHOOP) },
                     // CrisisGuard level ≥ 2 in the evening note opens the crisis card (A07 §4.1, D-029)
                     onOpenHelp = { navController.openSos() },
                     stateful = stateful,
-                    // stream Г: «шаг дня» of the path, owned by :feature:path (A42 §3.1)
-                    pathStep = { if (stateful) PathTodayStep(onOpenPath = { navController.openTab(HotRoute.PATH) }) },
-                    plateOfDay = {
-                        PlateOfDay(
-                            onOpenMeal = { openNutrition(HotRoute.nutritionMeal(it)) },
-                            onOpenProfile = { openNutrition(HotRoute.NUTRITION_PROFILE) },
-                            onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) },
-                        )
-                    },
-                    // Stream B: «Тренировка дня», its own card from :feature:training.
-                    trainingCard = {
-                        if (stateful) TrainingDayCardRoute(onOpen = { navController.navigate(HotRoute.TRAINING) { launchSingleTop = true } })
-                    },
-                    // State cards (A44, D-036): the morning, the reveal, the ritual, a discovery.
+                    // State cards (A44, D-036) in «Ритм дня»: the morning, the reveal, the ritual, a discovery.
                     stateCards = {
                         if (stateful) {
                             CheckinTodayCards(
@@ -240,25 +255,47 @@ fun HotApp(
                         afterBody = { day, body -> if (stateful) EveningAreas(day, body) },
                         afterAlcohol = { day -> if (stateful) EveningWeather(day, onCare = { open(HotRoute.CHECKIN_CARE) }) },
                     ),
-                    // UX review 119, R3: a tap on the training opens stream B, on a meal its card of stream C.
-                    onOpenRoute = { route -> navController.navigate(route) { launchSingleTop = true } },
+                    onOpenRoute = { route ->
+                        when (route) {
+                            HotRoute.SOS -> navController.openSos()
+                            in HotRoute.tabs -> navController.openTab(route)
+                            else -> open(route)
+                        }
+                    },
+                    onRitual = { ritual ->
+                        when (ritual) {
+                            Ritual.DAWN -> open((rassvetNext ?: RassvetStep.DAWN).route())
+                            Ritual.WEEK_ASSEMBLY -> navController.openTab(HotRoute.WEEK)
+                            // Переход and Приземление are off by default (D-043); their screens come later
+                            else -> Unit
+                        }
+                    },
+                    onBack = back,
+                    onAskMentor = { open(HotRoute.MENTOR) },
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
-                weekScreen()
-                pathScreen(stateful = stateful)
-                meScreen(
-                    onOpenWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
-                    onOpenHelp = { navController.openSos() },
-                    onOpenMentor = { navController.navigate(HotRoute.MENTOR_PERSONA) { launchSingleTop = true } },
+                weekScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
+                pathScreen(
                     stateful = stateful,
-                    onOpenNutrition = { openNutrition(HotRoute.NUTRITION_PROFILE) },
+                    onOpenRitual = { open(HotRoute.PATH_RITUAL) },
+                    onLookBack = { open(HotRoute.BEHIND) },
+                    onHelp = { navController.openSos() },
+                )
+                pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
+                behindScreen()
+                meScreen(
+                    onOpenWhoop = { open(HotRoute.WHOOP) },
+                    onOpenHelp = { navController.openSos() },
+                    onOpenMentor = { open(HotRoute.MENTOR_PERSONA) },
+                    stateful = stateful,
+                    onOpenNutrition = { open(HotRoute.NUTRITION_PROFILE) },
                     rows = { CheckinSettingsRow(onOpen = { open(HotRoute.CHECKIN_SETTINGS) }) },
                 )
                 mentorPersonaScreen(stateful = stateful)
-                nutritionScreens(onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
+                nutritionScreens(onOpenLevel = { open(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
                 whoopScreen(stateful = stateful)
-                dawnScreen(onStart = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
-                sosScreen(onClose = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
+                dawnScreen(onStart = back)
+                sosScreen(onClose = back)
                 checkinScreens(
                     onBack = back,
                     onGo = { route, replace ->
@@ -269,17 +306,24 @@ fun HotApp(
                         }
                     },
                     onHelp = { navController.openSos() },
-                    onTalk = { navController.openTab(HotRoute.MENTOR) },
+                    onTalk = { open(HotRoute.MENTOR) },
                     stateful = stateful,
                 )
                 trainingScreens(
-                    onOpenPlayer = { navController.navigate(HotRoute.TRAINING_PLAYER) { launchSingleTop = true } },
+                    onOpenPlayer = { open(HotRoute.TRAINING_PLAYER) },
                     onFeelBad = { navController.openSos() },
                     onClosePlayer = { if (!navController.popBackStack(HotRoute.TODAY, inclusive = false)) navController.openTab(HotRoute.TODAY) },
                     stateful = stateful,
                 )
             }
         }
+    }
+}
+
+/** «За плечами» (D-038, A47): Взято · Несу · Дано. A placeholder until its slice. */
+private fun NavGraphBuilder.behindScreen() {
+    composable(route = HotRoute.BEHIND) {
+        StubScreen(lead = TodayCopy.BEHIND_SOON, blocks = emptyList(), testTag = BEHIND_SCREEN_TAG)
     }
 }
 
@@ -313,13 +357,15 @@ private fun SyncHaptics(sync: SyncIndicator) {
 private fun SyncIndicator.toMark(): SyncMarkState = SyncMarkState(SyncMarkPhase.valueOf(light.name), progress, key, celebrate)
 
 /**
- * A screen under the avatar (D-033): «Путь» stays selected in the bar, the header shows the way
- * back. [backLabel] null: the arrow alone (the avatar can be opened from any tab).
+ * A screen under a module (D-033, D-038): its module stays selected in the bar, the header shows
+ * the way back. [backLabel] null: the arrow alone.
  */
 private class NestedScreen(val tab: HotTab, val title: String, val backLabel: String?)
 
 private val NESTED = mapOf(
     HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
+    // D-051: «За плечами» is the reverse plan of the Path, not a tab.
+    HotRoute.BEHIND to NestedScreen(HotTab.PATH, "За плечами", "Путь"),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
     HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
@@ -328,11 +374,15 @@ private val NESTED = mapOf(
     HotRoute.TRAINING to NestedScreen(HotTab.TODAY, TrainingTexts.SCREEN_TITLE, TrainingTexts.BACK_LABEL),
     HotRoute.CHECKIN_SETTINGS to NestedScreen(HotTab.PATH, CheckinTexts.SETTINGS, null),
     HotRoute.CHECKIN_COLLECTION to NestedScreen(HotTab.PATH, CheckinTexts.COLLECTION, CheckinTexts.SETTINGS),
+    HotRoute.MENTOR to NestedScreen(HotTab.TODAY, "Винс", null),
+    HotRoute.WHY to NestedScreen(HotTab.TODAY, TodayCopy.WHY_TITLE, TodayCopy.BLOCK_ME),
+    HotRoute.SUPPORT to NestedScreen(HotTab.TODAY, TodayCopy.BLOCK_SUPPORTS, TodayCopy.BLOCK_SUPPORTS),
+    HotRoute.ARSENAL to NestedScreen(HotTab.TODAY, TodayCopy.ARSENAL, null),
 )
 
 /**
- * Bottom tabs in «Титаниум» (A37 §6): a floating glass pill over the content, line icons; the
- * active tab is the dawn icon on a soft light. No shadow in the dark theme.
+ * Bottom modules in «Титаниум» (A37 §6): a floating glass pill over the content, line icons; the
+ * active module is the dawn icon on a soft light. No shadow in the dark theme.
  */
 @Composable
 private fun HotBottomBar(currentTab: HotTab, onTabClick: (HotTab) -> Unit) {
@@ -360,7 +410,7 @@ private fun HotBottomBar(currentTab: HotTab, onTabClick: (HotTab) -> Unit) {
                     selected = tab == currentTab,
                     onClick = { onTabClick(tab) },
                     icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                    label = { Text(tab.label, style = MaterialTheme.typography.labelMedium) },
+                    label = { Text(tab.label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.onSurface,

@@ -106,10 +106,16 @@ fun NavGraphBuilder.todayScreen(
     plateOfDay: @Composable () -> Unit = {},
     /** Stream B: «Тренировка дня», a card from another module put in by :app. */
     trainingCard: @Composable () -> Unit = {},
+    /** State cards (A44, D-036): the morning deck, the reveal, the ritual, a discovery; :app puts them in. */
+    stateCards: @Composable () -> Unit = {},
+    /** State cards in the evening: additions inside «Закрыть день» (A44 §1.4). */
+    closeDay: CloseDayExtras = CloseDayExtras(),
     /** R3: a plan item opens its screen by route (training → stream B, a meal → stream C). */
     onOpenRoute: (String) -> Unit = {},
 ) {
     val slots = TodaySlots(
+        top = { stateCards() },
+        closeDay = closeDay,
         training = { trainingCard() },
         afterPlan = {
             plateOfDay()
@@ -135,6 +141,10 @@ class TodaySlots(
     /** Stream B «Тренировка дня»: above the plan, or alone when the day has no plan yet. */
     val training: @Composable ColumnScope.() -> Unit = {},
     val evening: @Composable ColumnScope.() -> Unit = {},
+    /** State cards (A44): the first slot under the date, also before WHOOP is connected. */
+    val top: @Composable ColumnScope.() -> Unit = {},
+    /** Rows added inside «Закрыть день» by another module (A44 evening). */
+    val closeDay: CloseDayExtras = CloseDayExtras(),
 )
 
 const val TODAY_SCREEN_TAG = "screen_today"
@@ -235,6 +245,7 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
         ) {
             if (!connected) {
+                slots.top(this)
                 NotConnected(onConnectWhoop)
             } else {
                 Connected(whoop!!, state, day, actions, marks, slots, onSync)
@@ -260,6 +271,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     // A39 §7 order: safety → mode → «Почему так» → plan → evening; after 18:00 «Закрыть день»
     // moves to the top (A11 §3.1), right under safety.
     plan?.let { SafetyCard(it) }
+    slots.top(this)
     val eveningDay = day?.eveningFor
     val eveningPlan = day?.plan
     if (eveningDay != null && eveningPlan != null) {
@@ -270,6 +282,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
             onClose = actions.onCloseDay,
             onCrisis = actions.onCrisis,
             onOpenHelp = actions.onOpenHelp,
+            extras = slots.closeDay,
         )
         slots.evening(this)
     }

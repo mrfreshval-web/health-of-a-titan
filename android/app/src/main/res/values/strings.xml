@@ -4,4 +4,8 @@
     <string name="tile_sos_label">HoT SOS</string>
     <string name="shortcut_sos_short">SOS</string>
     <string name="shortcut_sos_long">SOS: срочная поддержка</string>
+    <!-- State cards (A44, D-036). Wording: review by Agent 10. -->
+    <string name="tile_morning_label">HoT Утро</string>
+    <string name="shortcut_morning_short">Утро</string>
+    <string name="shortcut_morning_long">Утро: как ты сегодня</string>
 </resources>

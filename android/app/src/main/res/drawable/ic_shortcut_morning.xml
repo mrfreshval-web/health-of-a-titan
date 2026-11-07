@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press shortcut «Утро» (A44, D-036): the morning deck in one tap. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/hot_night" />
+    <foreground android:drawable="@drawable/ic_shortcut_morning_foreground" />
+    <monochrome android:drawable="@drawable/ic_shortcut_morning_foreground" />
+</adaptive-icon>

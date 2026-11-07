@@ -24,6 +24,7 @@ import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.NightFacts
 import com.healthofatitan.app.domain.engine.Regime
 import com.healthofatitan.app.domain.engine.RuleRef
+import com.healthofatitan.app.domain.engine.SelfReport
 import com.healthofatitan.app.domain.engine.WorkoutMatcher
 import com.healthofatitan.app.domain.engine.YesterdayFacts
 import com.healthofatitan.app.domain.metrics.MetricRef
@@ -101,6 +102,8 @@ class DayPlanRepository(
     private val clock: Clock,
     /** RET-01: silence before today (A18 И4.4); null in tests that do not need it. */
     private val loop: DailyLoopRepository? = null,
+    /** A44 §5: the wake deck (Заряд → SG-SELF energy, morning body → SAF-03 / EVE-01). */
+    private val morningSelf: MorningSelfSource? = null,
 ) {
     private val user = HotDatabase.LOCAL_USER
     private val mutex = Mutex()
@@ -153,9 +156,10 @@ class DayPlanRepository(
             if ((r.value ?: break) >= 2.0) rhrHigh++ else break
         }
 
+        val self = morningSelf?.let { runCatching { it.of(today) }.getOrNull() }
         val evening = dayDao.evening(user, yesterday.toString())?.let { e ->
             EveningFacts(e.alcohol, e.body?.let { b -> Body.entries.firstOrNull { it.name == b } })
-        }
+        }.withMorningBody(self?.body)
         val anchors = RoutineStore.fromRows(dayDao.anchors(user))
         val alarm = alarms.nextAlarm()?.atZone(clock.zone)?.toLocalDateTime()
         val schedule = Anchors.resolve(anchors, today, alarm)
@@ -189,6 +193,7 @@ class DayPlanRepository(
                 sickStreak = sickRun,
             ),
             evening = evening,
+            self = SelfReport(energy = self?.energy),
             context = ContextFacts(tzShift, tzDays),
             schedule = schedule,
             history = sessions.filter { it.dayKey < today },
@@ -330,4 +335,22 @@ class DayPlanRepository(
         caffeineCutoffMin = p.caffeineCutoffMin,
         windDownMin = p.windDownMin,
     )
+}
+
+/**
+ * What the wake deck of today tells the plan (A44 §5): `charge@1` → `SelfReport.energy`
+ * (2 / 4 / 6 / 8 / 10) and the morning body, used only when the evening did not mark it.
+ */
+data class MorningSelf(val energy: Int? = null, val body: Body? = null)
+
+fun interface MorningSelfSource {
+    suspend fun of(day: LocalDate): MorningSelf?
+}
+
+/** The evening answer wins; the morning «простуда» / «забито» fills an empty evening (A44 §5 П3). */
+internal fun EveningFacts?.withMorningBody(morning: Body?): EveningFacts? = when {
+    morning == null -> this
+    this == null -> EveningFacts(body = morning)
+    body == null -> copy(body = morning)
+    else -> this
 }

@@ -52,6 +52,30 @@ object HotRoute {
     /** The workout player, full screen outside the tabs; its notification opens it. */
     const val TRAINING_PLAYER = "training_player"
 
+    /**
+     * State cards (A44 v0.2, D-036): «Пробуждение» blind, full screen outside the tabs. `hot://checkin`
+     * opens it from the quick settings tile, the launcher shortcut and the morning push (A34).
+     */
+    const val CHECKIN = "checkin"
+
+    /** «После ритуала» (Р1 + З-2), full screen. */
+    const val CHECKIN_RITUAL = "checkin_ritual"
+
+    /** The reveal «ты ↔ WHOOP», full screen. */
+    const val CHECKIN_REVEAL = "checkin_reveal"
+
+    /** «Как ты на самом деле?» (storm net), full screen, sober. */
+    const val CHECKIN_CARE = "checkin_care"
+
+    /** «Открытие» — a discovery and the collection, full screen. */
+    const val CHECKIN_DISCOVERY = "checkin_discovery"
+
+    /** «Что спрашивать» under «Настройки». */
+    const val CHECKIN_SETTINGS = "checkin_settings"
+
+    /** The collection of discoveries, under «Путь». */
+    const val CHECKIN_COLLECTION = "checkin_collection"
+
     const val DEEP_LINK_SCHEME = "hot"
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"

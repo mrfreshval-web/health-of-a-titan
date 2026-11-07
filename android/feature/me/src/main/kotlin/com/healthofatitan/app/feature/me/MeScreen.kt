@@ -2,6 +2,7 @@ package com.healthofatitan.app.feature.me
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,12 +58,14 @@ fun NavGraphBuilder.meScreen(
     onOpenMentor: () -> Unit = {},
     stateful: Boolean = true,
     onOpenNutrition: () -> Unit = {},
+    /** Rows of other modules under «Еда и тело» (state cards: «Что спрашивать»); :app puts them in. */
+    rows: @Composable ColumnScope.() -> Unit = {},
 ) {
     composable(route = HotRoute.ME) {
         if (stateful) {
-            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition)
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition, rows)
         } else {
-            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition)
+            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition, rows = rows)
         }
     }
 }
@@ -91,10 +94,11 @@ private fun MeRoute(
     onOpenHelp: () -> Unit,
     onOpenMentor: () -> Unit,
     onOpenNutrition: () -> Unit,
+    rows: @Composable ColumnScope.() -> Unit,
     viewModel: MeViewModel = hiltViewModel(),
 ) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition)
+    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition, rows = rows)
 }
 
 @Composable
@@ -105,6 +109,7 @@ fun MeScreen(
     onOpenHelp: () -> Unit = {},
     onOpenMentor: () -> Unit = {},
     onOpenNutrition: () -> Unit = {},
+    rows: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -151,6 +156,7 @@ fun MeScreen(
                 modifier = Modifier.testTag(ME_NUTRITION_ROW_TAG),
             )
         }
+        rows()
         Section("Подключения")
         HotCard(modifier = Modifier.fillMaxWidth()) {
             HotListRow(

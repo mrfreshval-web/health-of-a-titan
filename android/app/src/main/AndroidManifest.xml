@@ -74,5 +74,20 @@
                 android:name="android.service.quicksettings.TOGGLEABLE_TILE"
                 android:value="false" />
         </service>
+
+        <!-- A44 / D-036: quick settings tile «Утро» opens the morning deck (hot://checkin). -->
+        <service
+            android:name=".checkin.CheckinTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_morning"
+            android:label="@string/tile_morning_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="false" />
+        </service>
     </application>
 </manifest>

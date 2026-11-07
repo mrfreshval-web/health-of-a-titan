@@ -9,8 +9,11 @@ object HotRoute {
     const val MENTOR = "mentor"
     const val WEEK = "week"
 
-    /** Tab «Путь» (D-033, A42 §3.1): the Titan, the 12-week goal, its stages and «Твой Титан». */
+    /** Tab «Путь» (D-046…D-048, A55 §1): the goal, «Срез мира», the Titan of the horizon. */
     const val PATH = "path"
+
+    /** «Назови цель» (A56 §2): the ritual of 7 screens, full screen outside the tabs. */
+    const val PATH_RITUAL = "path_ritual"
 
     /**
      * «Настройки» under the avatar in the corner of every header (D-033): help, the mentor and the
@@ -76,10 +79,34 @@ object HotRoute {
     /** The collection of discoveries, under «Путь». */
     const val CHECKIN_COLLECTION = "checkin_collection"
 
+    /**
+     * «За плечами» (D-038, A47): since D-051 the reverse plan of the Path, opened from «Путь» by
+     * «Оглянуться ›», not a tab. A placeholder in this slice.
+     */
+    const val BEHIND = "behind"
+
+    /** «Почему так» (A46 §3): the tap on «Я сегодня». Inside «Сегодня». */
+    const val WHY = "why"
+
+    /** The screen of one support (A46 §2.3): `support/effort`, `support/water`… Inside «Сегодня». */
+    const val SUPPORT_ARG = "id"
+    const val SUPPORT = "support/{$SUPPORT_ARG}"
+
+    fun support(id: String): String = "support/$id"
+
+    /** «Передышка» (A49 §4, D-043): only by the person's own tap; full screen. */
+    const val BREATHER = "breather"
+
+    /** «Арсенал» of «За плечами» (A47 §6, D-043), opened from «Сегодня». A placeholder in this slice. */
+    const val ARSENAL = "arsenal"
+
     const val DEEP_LINK_SCHEME = "hot"
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"
 
-    /** Bottom bar order: «Сегодня · Наставник · Неделя · Путь» (D-033: still four). */
-    val tabs: List<String> = listOf(TODAY, MENTOR, WEEK, PATH)
+    /**
+     * Bottom bar order (D-051): «Сегодня · Неделя · Путь». «За плечами» opens from «Путь»; the
+     * mentor is the circle on the left of every header, not a tab.
+     */
+    val tabs: List<String> = listOf(TODAY, WEEK, PATH)
 }

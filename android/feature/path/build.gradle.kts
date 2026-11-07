@@ -6,14 +6,22 @@ android {
     namespace = "com.healthofatitan.app.feature.path"
 }
 
-// Stream Г «Наставник и Путь» (D-030, D-033, A42): tab «Путь», the 12-week goal, the step of the
-// day for «Сегодня» and the mentor's character.
+// «Путь» v1 (D-046…D-049, A54–A58): tab «Путь» with «Срез мира», the ritual «Назови цель», the
+// Titan of the horizon; and the mentor's character under the avatar.
 dependencies {
     implementation(project(":domain:path"))
+    // The rig of the Titan: the horizon Titan is drawn in code on the day Titan's joints (A58-VP §2).
+    implementation(project(":domain:training"))
+    // CrisisGuard over every free text of the ritual (A07).
+    implementation(project(":domain:engine"))
+    implementation(project(":domain:metrics"))
+    implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":integration:whoop"))
     implementation(libs.kotlinx.coroutines.android)
 
+    // The stop dictionary of A39 for the texts of the path.
+    testImplementation(project(":domain:today"))
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.compose.ui.test.junit4)

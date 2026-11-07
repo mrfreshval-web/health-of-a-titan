@@ -6,14 +6,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * A goal of the 12-week cycle (A42 §3.2, D-033): one ACTIVE at a time; a changed goal stays as
- * REPLACED so its weeks are kept (A42 §3.2 п. 4). Process only: «N days of 7» in one sphere —
- * no weight, no measurements, no raw WHOOP values.
+ * A practical goal of «Путь» v1 (A56 §1 `PracticalGoal`, D-048). Since v12 (A56 §5) the status is
+ * one of DRAFT · ACTIVE · PAUSED · HELD · REVIEW · TAKEN · RELEASED · QUEUED; the v10 goals of the
+ * 12-week path (A42) were migrated: REPLACED → RELEASED, DONE → TAKEN, their sphere kept in
+ * [legacySphere]. Only on the device (P-21): no network code reads this table.
  *
- * @property sphere `sleep`, `body`, … (domain `Sphere.id`)
- * @property baseline days of 7 «now» when the goal was taken; null = default plan, no data yet
- * @property stage1 / stage2 / stage3 the week goal of each 4-week stage, days of 7
- * @property status ACTIVE / REPLACED / DONE
+ * @property criteria the criteria «что будет правдой к сроку», `GoalCodec.encodeCriteria`
+ * @property stage the stage of 12 weeks the goal is in, from 1
+ * @property pausedDays closed pauses of the current stage (the milestones move by them, P-16)
  */
 @Entity(
     tableName = "path_goal",
@@ -22,20 +22,133 @@ import androidx.room.PrimaryKey
 data class PathGoalEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "user_id") val userId: String,
-    val sphere: String,
+    val title: String,
+    val why: String?,
+    @ColumnInfo(name = "be_name") val beName: String?,
+    val kind: String,
+    val template: String?,
     @ColumnInfo(name = "start_day") val startDay: String,
-    val baseline: Int?,
-    val stage1: Int,
-    val stage2: Int,
-    val stage3: Int,
+    val deadline: String,
+    val stage: Int,
+    val mode: String,
     val status: String,
+    val criteria: String,
+    val obstacle: String?,
+    @ColumnInfo(name = "if_then") val ifThen: String?,
+    val version: Int,
+    @ColumnInfo(name = "paused_days") val pausedDays: Int,
+    @ColumnInfo(name = "pause_from") val pauseFrom: String?,
+    @ColumnInfo(name = "pause_reason") val pauseReason: String?,
+    @ColumnInfo(name = "pause_until") val pauseUntil: String?,
+    @ColumnInfo(name = "taken_at") val takenAt: Long,
+    @ColumnInfo(name = "release_to_queue") val releaseToQueue: Boolean,
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "ended_day") val endedDay: String?,
+    @ColumnInfo(name = "legacy_sphere") val legacySphere: String?,
+)
+
+/** A component in a goal (A56 §1 `GoalComponent`): role, marks, the safe version, the lever. */
+@Entity(
+    tableName = "path_goal_component",
+    primaryKeys = ["goal_id", "component"],
+)
+data class PathGoalComponentEntity(
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "goal_id") val goalId: Long,
+    val component: String,
+    val role: String,
+    @ColumnInfo(name = "target_mark") val targetMark: Int?,
+    @ColumnInfo(name = "start_mark") val startMark: Int?,
+    @ColumnInfo(name = "safe_version") val safeVersion: String?,
+    @ColumnInfo(name = "is_lever") val isLever: Boolean,
+    @ColumnInfo(name = "sort_order") val sortOrder: Int,
+)
+
+/** A version of a goal (A56 §1 `GoalVersion`, P-11): the snapshot (`GoalCodec`), who and why. */
+@Entity(
+    tableName = "path_goal_version",
+    indices = [Index(value = ["goal_id", "v"], unique = true)],
+)
+data class PathGoalVersionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "goal_id") val goalId: Long,
+    val v: Int,
+    val snapshot: String,
+    @ColumnInfo(name = "change_type") val changeType: String,
+    val initiator: String,
+    val reason: String?,
+    val at: Long,
 )
 
 /**
- * The user's tap «шаг дня сделан» for a goal (A42 §3.3). [version] is FULL / NORMAL / MINIMAL:
- * in «Бережно» the minimal version counts as a step all the same.
+ * A card «было → станет» (A56 §1 `ChangeProposal`): kept until applied, declined or expired, so a
+ * card of the mentor or of HoT survives the screen. [state] OPEN · APPLIED · DECLINED · EXPIRED.
+ */
+@Entity(
+    tableName = "path_change_proposal",
+    indices = [Index(value = ["goal_id", "state"])],
+)
+data class PathChangeProposalEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "goal_id") val goalId: Long,
+    @ColumnInfo(name = "from_version") val fromVersion: Int,
+    @ColumnInfo(name = "change_type") val changeType: String,
+    val before: String,
+    val after: String,
+    val effects: String,
+    val initiator: String,
+    val soft: Boolean,
+    @ColumnInfo(name = "suggest_talk") val suggestTalk: Boolean,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "expires_at") val expiresAt: Long,
+    val state: String,
+)
+
+/**
+ * The Titan of the horizon of a goal (A57, A56 §1 `HorizonTitan`). The step is never stored as
+ * truth — it is the calendar; [shownStep] is only the last step the screen animated. [transferred]
+ * are the fires that moved to the person, comma-separated component ids; they never return (P-14).
+ */
+@Entity(tableName = "path_horizon")
+data class PathHorizonEntity(
+    @PrimaryKey @ColumnInfo(name = "goal_id") val goalId: Long,
+    @ColumnInfo(name = "user_id") val userId: String,
+    val transferred: String,
+    @ColumnInfo(name = "shown_step") val shownStep: Int,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+)
+
+/** «Голос с горизонта» (A57 §4.2): optional, ≤ 300 signs, opens at milestone 8 or the meeting. */
+@Entity(tableName = "path_letter")
+data class PathLetterEntity(
+    @PrimaryKey @ColumnInfo(name = "goal_id") val goalId: Long,
+    @ColumnInfo(name = "user_id") val userId: String,
+    val text: String,
+    @ColumnInfo(name = "open_at") val openAt: String,
+    @ColumnInfo(name = "written_on") val writtenOn: String,
+    @ColumnInfo(name = "opened_at") val openedAt: Long?,
+)
+
+/** A mark taken (A54 «рубеж»): never rolled back (P-14). [source] TEST · SELF · DATA. */
+@Entity(
+    tableName = "path_mark",
+    primaryKeys = ["goal_id", "component", "mark"],
+)
+data class PathMarkEntity(
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "goal_id") val goalId: Long,
+    val component: String,
+    val mark: Int,
+    @ColumnInfo(name = "day_key") val dayKey: String,
+    val source: String,
+    val at: Long,
+)
+
+/**
+ * The user's tap «шаг дня сделан» for a goal of the 12-week path (A42 §3.3) — history of the v10
+ * goals, kept as it was.
  */
 @Entity(
     tableName = "path_step",

@@ -4,17 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,8 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,21 +37,40 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotOverline
-import com.healthofatitan.app.core.ui.component.HotPrimaryButton
-import com.healthofatitan.app.core.ui.component.HotRatioBar
 import com.healthofatitan.app.core.ui.component.HotSpacing
-import com.healthofatitan.app.core.ui.component.HotStatTile
 import com.healthofatitan.app.core.ui.component.HotSyncMark
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
-import com.healthofatitan.app.core.ui.component.TitanScene
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
-import com.healthofatitan.app.core.ui.theme.HotType
+import com.healthofatitan.app.domain.engine.DayEngine
+import com.healthofatitan.app.domain.engine.DayFlag
+import com.healthofatitan.app.domain.engine.ItemStatus
+import com.healthofatitan.app.domain.today.DayFacts
+import com.healthofatitan.app.domain.today.DayLight
+import com.healthofatitan.app.domain.today.DayTask
+import com.healthofatitan.app.domain.today.MeInput
+import com.healthofatitan.app.domain.today.MeRules
+import com.healthofatitan.app.domain.today.MeView
+import com.healthofatitan.app.domain.today.Ritual
+import com.healthofatitan.app.domain.today.RhythmInput
+import com.healthofatitan.app.domain.today.RhythmRules
+import com.healthofatitan.app.domain.today.RhythmView
+import com.healthofatitan.app.domain.today.Scenario
+import com.healthofatitan.app.domain.today.Scenarios
+import com.healthofatitan.app.domain.today.SleepPrep
+import com.healthofatitan.app.domain.today.SupportNorms
+import com.healthofatitan.app.domain.today.SupportView
+import com.healthofatitan.app.domain.today.Supports
+import com.healthofatitan.app.domain.today.SupportsInput
+import com.healthofatitan.app.domain.today.TaskRules
+import com.healthofatitan.app.domain.today.TodayBlock
+import com.healthofatitan.app.domain.today.TodayLayout
 import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.whoop.SyncIndicator
 import com.healthofatitan.app.integration.whoop.SyncIndicators
@@ -72,7 +83,6 @@ import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopGlance
 import com.healthofatitan.app.integration.whoop.WhoopStatus
 import com.healthofatitan.app.integration.whoop.day.DayView
-import com.healthofatitan.app.integration.whoop.day.StrainCeiling
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -80,68 +90,68 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
 /**
- * Tab «Сегодня» in «Титаниум» (A37 §1 scenario 2, s2). From top to bottom: the date, the hero
- * (the Titan inside the Заряд ring, lit by the day's mode, with the mode word and three data
- * tokens), «Почему так», «Сейчас» — the one next action, «Линия дня», the full plan, the
- * evening deck, and the WHOOP sync line. Before today's plan exists the four WHOOP tiles of
- * slice 1 stand in. Pull down to refresh: the short «Титан приходит» (0.7 s) is the indicator.
- * Stream A: in the evening «Закрыть день» comes first, phone steps sit under the plan, and after
- * 7+ days of silence «С возвращением» is shown once before the screen.
+ * Tab «Сегодня» v3 (A46 v0.3, D-042): «Как я сегодня, что держится и что нужно от меня?». Four
+ * blocks in a fixed order (T-01) — «Я сегодня», «Опоры», «Дела дня», «Ритм дня» — under the header
+ * (Винс · date · profile). Every block opens its details; nothing opens by itself (T-05). The
+ * graphics are placeholders until Agents 4 and 17 («Колоннада», TitanLottie).
  *
- * @param onOpenHelp the crisis card (SOS): CrisisGuard level ≥ 2 in the evening note opens it.
+ * @param onOpenHelp the crisis card (SOS): CrisisGuard ≥ 2 in the evening note opens it.
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
- * @param pathStep «шаг дня» of the path (A42 §3.1, stream Г): a slot, the path module owns it.
+ * @param stateCards the state cards of A44 (morning deck, reveal, discovery), shown in «Ритм дня».
+ * @param onOpenRoute every tap that leaves the screen: «Почему так», a support, a task, a ritual.
+ * @param onRitual a tap on a ritual point: :app knows which step of «Рассвет» is due.
  */
 fun NavGraphBuilder.todayScreen(
     onConnectWhoop: () -> Unit,
     onOpenHelp: () -> Unit = {},
     stateful: Boolean = true,
-    pathStep: @Composable () -> Unit = {},
-    /** One card from another module (stream C «Тарелка дня»); the app passes it in. */
-    plateOfDay: @Composable () -> Unit = {},
-    /** Stream B: «Тренировка дня», a card from another module put in by :app. */
-    trainingCard: @Composable () -> Unit = {},
-    /** State cards (A44, D-036): the morning deck, the reveal, the ritual, a discovery; :app puts them in. */
     stateCards: @Composable () -> Unit = {},
-    /** State cards in the evening: additions inside «Закрыть день» (A44 §1.4). */
     closeDay: CloseDayExtras = CloseDayExtras(),
-    /** R3: a plan item opens its screen by route (training → stream B, a meal → stream C). */
     onOpenRoute: (String) -> Unit = {},
+    onRitual: (Ritual) -> Unit = {},
+    onBack: () -> Unit = {},
+    onAskMentor: () -> Unit = {},
 ) {
-    val slots = TodaySlots(
-        top = { stateCards() },
-        closeDay = closeDay,
-        training = { trainingCard() },
-        afterPlan = {
-            plateOfDay()
-            pathStep()
-        },
-    )
+    val slots = TodaySlots(top = { stateCards() }, closeDay = closeDay)
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp, slots, onOpenRoute) else TodayScreen(TodayUiState(), onConnectWhoop, slots = slots)
+        if (stateful) {
+            TodayRoute(onConnectWhoop, onOpenHelp, slots, onOpenRoute, onRitual)
+        } else {
+            TodayScreen(
+                TodayUiState(),
+                onConnectWhoop,
+                slots = slots,
+                actions = DayActions(onOpenHelp = onOpenHelp, onOpen = onOpenRoute, onRitual = onRitual, onConnectWhoop = onConnectWhoop),
+            )
+        }
     }
+    composable(route = HotRoute.WHY) { WhyRoute(stateful = stateful, onAsk = onAskMentor) }
+    composable(
+        route = HotRoute.SUPPORT,
+        arguments = listOf(navArgument(HotRoute.SUPPORT_ARG) { type = NavType.StringType }),
+    ) { entry ->
+        SupportRoute(id = entry.arguments?.getString(HotRoute.SUPPORT_ARG), stateful = stateful)
+    }
+    composable(route = HotRoute.BREATHER) { BreatherScreen(onHelp = onOpenHelp, onClose = onBack) }
+    composable(route = HotRoute.ARSENAL) { ArsenalScreen() }
 }
 
 /**
- * Places for the cards of the other streams (Б «Тренировка», В «Еда», Г «Путь») on «Сегодня»:
- * each stream adds its own composable here instead of rebuilding the layout.
- *
- * @param afterNow under «Сейчас» (the next action)
- * @param afterPlan under the plan and the steps
- * @param evening next to «Закрыть день» in the evening
+ * Places for what other modules put on «Сегодня» (A46 v0.3): the state cards of A44 inside «Ритм
+ * дня» and the additions of the evening inside «Закрыть день». Nothing else is added between the
+ * blocks (T-01).
  */
 class TodaySlots(
-    val afterNow: @Composable ColumnScope.() -> Unit = {},
-    val afterPlan: @Composable ColumnScope.() -> Unit = {},
-    /** Stream B «Тренировка дня»: above the plan, or alone when the day has no plan yet. */
-    val training: @Composable ColumnScope.() -> Unit = {},
-    val evening: @Composable ColumnScope.() -> Unit = {},
-    /** State cards (A44): the first slot under the date, also before WHOOP is connected. */
+    /** State cards (A44): the morning deck, the reveal, a discovery — at the end of «Ритм дня». */
     val top: @Composable ColumnScope.() -> Unit = {},
     /** Rows added inside «Закрыть день» by another module (A44 evening). */
     val closeDay: CloseDayExtras = CloseDayExtras(),
@@ -149,8 +159,6 @@ class TodaySlots(
 
 const val TODAY_SCREEN_TAG = "screen_today"
 const val TODAY_CONNECT_TAG = "today_connect_whoop"
-const val TODAY_STATE_TAG = "today_state_card"
-const val TODAY_SLEEP_TAG = "today_sleep"
 
 data class TodayUiState(
     val whoop: WhoopStatus? = null,
@@ -180,17 +188,13 @@ private fun TodayRoute(
     onOpenHelp: () -> Unit,
     slots: TodaySlots,
     onOpenRoute: (String) -> Unit,
+    onRitual: (Ritual) -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val day by dayModel.state.collectAsStateWithLifecycle()
-    val welcome by dayModel.welcome.collectAsStateWithLifecycle()
     LaunchedEffect(day.plan?.dayKey, day.today) { dayModel.opened() }
-    if (welcome) {
-        WelcomeBackScreen(today = day.today, onStart = dayModel::welcomeSeen)
-        return
-    }
     TodayScreen(
         state = state,
         onConnectWhoop = onConnectWhoop,
@@ -207,9 +211,123 @@ private fun TodayRoute(
             onOpenHelp = onOpenHelp,
             onSteps = dayModel::refreshSteps,
             onOpen = onOpenRoute,
+            onWater = dayModel::water,
+            onTaskDone = dayModel::taskDone,
+            onTaskToWeek = dayModel::toWeek,
+            onTaskBack = dayModel::backFromWeek,
+            onRitual = onRitual,
+            onConnectWhoop = onConnectWhoop,
+            onStartSmall = dayModel::welcomeSeen,
         ),
         slots = slots,
     )
+}
+
+/** «Сегодня» v3 as one pure view of the state (A46 §1–§2): what each block shows. */
+data class TodayView(
+    val scenario: Scenario,
+    val light: DayLight,
+    val me: MeView,
+    val supports: List<SupportView>,
+    val tasks: List<DayTask>,
+    val rhythm: RhythmView,
+    val blocks: List<TodayBlock>,
+)
+
+/** A workout counts as «just confirmed» for scenario 4.5 for three hours after its end. */
+private val AFTER_WORKOUT: Duration = Duration.ofHours(3)
+
+private fun minuteOf(instant: Instant, zone: ZoneId): Int = instant.atZone(zone).let { it.hour * 60 + it.minute }
+
+/**
+ * Maps the WHOOP state and the day to the four blocks. Pure, so the scenarios of A46 §4 are tested
+ * without a screen. Raw WHOOP values come from the in-memory glance only.
+ */
+fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.systemDefault()): TodayView {
+    val now = day?.now ?: LocalDateTime.now()
+    val today = now.toLocalDate()
+    val whoop = state.whoop
+    val connected = whoop?.connected == true
+    val plan: DayView? = day?.plan?.takeIf { day.planToday }
+    val nightReady = plan != null && DayFlag.MANUAL !in plan.flags
+    val mode = plan?.regime?.dayMode()
+    val glance = state.glance
+    val nowInstant = now.atZone(zone).toInstant()
+    val workout = glance?.workout
+    val workoutEnd = workout?.start?.plusSeconds(workout.minutes * 60L)
+    val trainingItem = plan?.items?.firstOrNull { it.id == DayEngine.Ids.TRAINING }
+    val workoutConfirmed = trainingItem?.status == ItemStatus.DONE_WHOOP && workoutEnd != null &&
+        !workoutEnd.isAfter(nowInstant) && Duration.between(workoutEnd, nowInstant) <= AFTER_WORKOUT
+    val facts = DayFacts(
+        now = now,
+        whoopConnected = connected,
+        nightReady = nightReady,
+        mode = mode,
+        safety = day?.safety ?: com.healthofatitan.app.domain.today.Safety.NONE,
+        returning = day?.returning == true,
+        dawnDone = day?.dawnShown == true,
+        workoutConfirmed = workoutConfirmed,
+    )
+    val scenario = Scenarios.of(facts)
+    val sleepHours = glance?.sleep?.takeIf { it.wakeDay == today }?.hours ?: state.metrics.sleepHours?.value?.takeIf { state.metrics.dayKey == today }
+    val me = MeRules.build(
+        MeInput(
+            scenario = scenario,
+            mode = mode,
+            haiku = day?.haiku,
+            safety = facts.safety,
+            charge = state.metrics.charge?.value?.roundToInt()?.takeIf { state.metrics.dayKey == today },
+            nightMinutes = sleepHours?.let { (it * 60).roundToInt() },
+            needMinutes = glance?.sleep?.takeIf { it.wakeDay == today }?.needHours?.let { (it * 60).roundToInt() },
+            self = day?.self,
+            baselineNights = whoop?.baselineNights ?: 0,
+        ),
+    )
+    // the cycle that runs today (it may have started yesterday evening)
+    val cycle = glance?.cycle?.takeIf { !it.start.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }
+    val phone = day?.steps as? PhoneSteps.Ready
+    val dinner = plan?.items?.firstOrNull { it.id == DayEngine.Ids.DINNER }?.let { it.endMin ?: it.startMin }
+    val prep = plan?.let {
+        SleepPrep(
+            caffeineUntilMin = it.caffeineCutoffMin,
+            dinnerUntilMin = dinner ?: SupportNorms.DINNER_UNTIL_MIN,
+            screensFromMin = it.windDownMin,
+            bedtimeMin = it.bedtimeMin,
+        )
+    } ?: SleepPrep()
+    val marks = day?.marks
+    val supports = Supports.build(
+        SupportsInput(
+            mode = mode,
+            scenario = scenario,
+            nowMin = now.hour * 60 + now.minute,
+            strain = cycle?.strain ?: glance?.dayStrain?.takeIf { !it.cycleStart.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }?.strain,
+            kilojoule = cycle?.kilojoule,
+            whoopSteps = cycle?.steps,
+            phoneSteps = phone?.today,
+            hourlySteps = phone?.hourly,
+            mealsMarked = marks?.meals?.size ?: 0,
+            water = marks?.water ?: 0,
+            sleep = prep,
+            lastWorkoutEndMin = workoutEnd?.takeIf { it.atZone(zone).toLocalDate() == today }?.let { minuteOf(it, zone) },
+            lastMealMin = marks?.lastMealAt?.let { minuteOf(Instant.ofEpochMilli(it), zone) },
+        ),
+    )
+    val done = marks?.done.orEmpty()
+    val candidates = day?.candidates.orEmpty().map { if (it.id in done) it.copy(done = true) else it }
+    val tasks = TaskRules.pick(scenario, mode, candidates, marks?.toWeek.orEmpty())
+        .map { if (it.id in done) it.copy(done = true) else it }
+    val rhythm = RhythmRules.build(
+        RhythmInput(
+            now = now,
+            scenario = scenario,
+            settings = day?.rituals ?: com.healthofatitan.app.domain.today.RitualSettings(),
+            dawnDone = day?.dawnShown == true,
+            dayClosed = day?.eveningAnswered == today || (day?.eveningAnswered == today.minusDays(1) && now.hour < 4),
+            sleep = if (plan != null) prep else null,
+        ),
+    )
+    return TodayView(scenario, Scenarios.light(scenario, now), me, supports, tasks, rhythm, TodayLayout.blocks(scenario, now))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -219,7 +337,7 @@ fun TodayScreen(
     onConnectWhoop: () -> Unit,
     modifier: Modifier = Modifier,
     onSync: () -> Unit = {},
-    /** Slice 2: the day (regime, plan, evening); null while it loads. */
+    /** The day (regime, plan, marks, tasks); null while it loads. */
     day: DayUiState? = null,
     actions: DayActions = DayActions(),
     slots: TodaySlots = TodaySlots(),
@@ -229,6 +347,8 @@ fun TodayScreen(
     val refreshing = connected && state.progress is SyncProgress.Running
     val pull = rememberPullToRefreshState()
     val marks = rememberDayMarks(actions.onToggle)
+    val view = todayView(state, day)
+    val withConnect = if (actions.onConnectWhoop === NO_CONNECT) actions.copyWith(onConnectWhoop = onConnectWhoop) else actions
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = { if (connected) onSync() },
@@ -240,147 +360,23 @@ fun TodayScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 4.dp, bottom = HotSpacing.sectionGap)
+                .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 0.dp, bottom = HotSpacing.sectionGap + 56.dp)
                 .testTag(TODAY_SCREEN_TAG),
             verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
         ) {
-            if (!connected) {
-                slots.top(this)
-                NotConnected(onConnectWhoop)
-            } else {
-                Connected(whoop!!, state, day, actions, marks, slots, onSync)
+            view.blocks.forEach { block ->
+                when (block) {
+                    TodayBlock.ME -> BlockMe(view, onOpen = { withConnect.onOpen(HotRoute.WHY) })
+                    TodayBlock.SUPPORTS -> BlockSupports(view, day?.today ?: LocalDate.now(), withConnect)
+                    TodayBlock.TASKS -> BlockTasks(view, day?.today ?: LocalDate.now(), withConnect, marks)
+                    TodayBlock.RHYTHM -> BlockRhythm(view, day, withConnect, slots)
+                }
             }
+            if (whoop != null && connected) SyncFooter(whoop, state, onSync)
         }
-        // R3: «Отмечено · Отменить» for 5 s after a mark, over the content.
+        // «Отмечено · Отменить» for 5 s after a mark (A46 §2.4), over the content.
         UndoBar(marks, Modifier.align(Alignment.BottomCenter).padding(horizontal = HotSpacing.edge, vertical = 12.dp))
-    }
-}
-
-@Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, marks: DayMarks, slots: TodaySlots, onSync: () -> Unit) {
-    val metrics = state.metrics
-    val glance = state.glance
-    val today = day?.today ?: LocalDate.now()
-    val plan = day?.plan?.takeIf { day.planToday }
-    val mode = plan?.regime?.mode()
-    val nowMin = day?.now?.let { it.hour * 60 + it.minute } ?: 0
-    val normReady = whoop.baselineNights >= TodayTexts.NORM_NIGHTS && metrics.dayKey != null
-    val facts = heroFacts(state, plan, mode)
-
-    HotOverline(TitanTexts.date(today), modifier = Modifier.align(Alignment.CenterHorizontally))
-    // A39 §7 order: safety → mode → «Почему так» → plan → evening; after 18:00 «Закрыть день»
-    // moves to the top (A11 §3.1), right under safety.
-    plan?.let { SafetyCard(it) }
-    slots.top(this)
-    val eveningDay = day?.eveningFor
-    val eveningPlan = day?.plan
-    if (eveningDay != null && eveningPlan != null) {
-        CloseDayCard(
-            plan = eveningPlan,
-            day = eveningDay,
-            mode = eveningPlan.regime.mode(),
-            onClose = actions.onCloseDay,
-            onCrisis = actions.onCrisis,
-            onOpenHelp = actions.onOpenHelp,
-            extras = slots.closeDay,
-        )
-        slots.evening(this)
-    }
-    // The closed day glows, whatever was marked (A37 §3 «без стыда»).
-    val closedPlan = day?.plan
-    if (eveningDay == null && day?.closedFor != null && closedPlan != null) {
-        DayClosedCard(closedPlan, day.closed, closedPlan.regime.mode())
-        slots.evening(this)
-    }
-    TodayHero(
-        mode = mode,
-        charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
-        normNights = whoop.baselineNights.coerceAtMost(TodayTexts.NORM_FULL_NIGHTS).takeIf { !normReady },
-        facts = facts,
-        summary = plan?.summary,
-        flags = plan?.flags.orEmpty(),
-        modifier = Modifier.testTag(TODAY_STATE_TAG),
-    )
-    if (plan != null) {
-        RegimeWhy(plan)
-        NotificationAsk()
-        // Y5: one focus card (the item of the moment or the node picked on «Линия дня»), the
-        // line under it, the full list folded. R3: a tap opens, a long press or a swipe marks.
-        var picked by rememberSaveable(plan.dayKey) { mutableStateOf<String?>(null) }
-        val now = nowItem(plan.items, nowMin)
-        val focus = plan.items.firstOrNull { it.id == picked } ?: now
-        focus?.let { FocusCard(plan, it, isNow = it.id == now?.id, mode = mode!!, marks = marks, onOpen = actions.onOpen) }
-        slots.afterNow(this)
-        if (plan.items.any { it.startMin != null }) {
-            HotOverline(TitanTexts.DAY_LINE)
-            DayLine(plan, nowMin, mode!!, selectedId = focus?.id, onSelect = { picked = if (it.id == now?.id) null else it.id })
-        }
-        slots.training(this)
-        PlanCard(plan, marks, actions.onOpen)
-        ActivityCard(plan, day?.steps ?: PhoneSteps.Unavailable, mode!!, onPermission = actions.onSteps)
-        slots.afterPlan(this)
-        SealOverlay(plan, glance)
-    } else {
-        if (day != null) DayPending()
-        Tiles(state)
-        slots.training(this)
-        if (day != null) ActivityCard(null, day.steps, HotMode.ROVNO, onPermission = actions.onSteps)
-    }
-    SyncFooter(whoop, state, onSync)
-}
-
-/**
- * The three facts of the hero (Y2): sleep with its composition, the resting pulse of the night and
- * the load ceiling in strain units. A fact without data is left out; a tap explains each one.
- */
-private fun heroFacts(state: TodayUiState, plan: DayView?, mode: HotMode?): List<HeroFact> {
-    val glance = state.glance
-    val sleepHours = glance?.sleep?.hours ?: state.metrics.sleepHours?.value
-    val pulse = glance?.recovery?.restingHr?.roundToInt()
-    val ceiling = plan?.let { StrainCeiling.of(it.regime) }
-    return listOfNotNull(
-        sleepHours?.let { h ->
-            HeroFact(FactKind.SLEEP, HeroTexts.sleepChip(h), HeroTexts.sleepSpoken(h)) {
-                SleepFact(h, glance?.sleep?.needHours, glance?.sleep?.stages)
-            }
-        },
-        pulse?.let { bpm -> HeroFact(FactKind.PULSE, "$bpm", HeroTexts.pulseSpoken(bpm)) { PulseFact(bpm) } },
-        if (ceiling != null && mode != null) {
-            HeroFact(FactKind.LOAD, HeroTexts.loadChip(ceiling), HeroTexts.loadSpoken(ceiling)) {
-                LoadFact(ceiling, glance?.dayStrain?.strain, mode)
-            }
-        } else {
-            null
-        },
-    )
-}
-
-/** Not connected: the Titan alone in the dark, one line and the way to WHOOP (A37 s1). */
-@Composable
-private fun NotConnected(onConnectWhoop: () -> Unit) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(24.dp))
-        TitanScene(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 320.dp).aspectRatio(1f),
-            ring = { 1f },
-            ringDashed = true,
-            ringColor = HotThemeTokens.colors.rule,
-            ringStroke = 6f,
-        )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            TodayTexts.LEAD_NOT_CONNECTED,
-            style = HotType.quote,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(28.dp))
-        HotPrimaryButton(
-            text = TodayTexts.CONNECT,
-            onClick = onConnectWhoop,
-            trailingArrow = true,
-            modifier = Modifier.fillMaxWidth().testTag(TODAY_CONNECT_TAG),
-        )
+        day?.plan?.takeIf { day.planToday }?.let { SealOverlay(it, state.glance) }
     }
 }
 
@@ -450,66 +446,4 @@ private fun SyncFooter(whoop: WhoopStatus, state: TodayUiState, onSync: () -> Un
             HotTextButton(TodayTexts.RETRY, onClick = onSync)
         }
     }
-}
-
-/** Four facts of the morning as tiles: sleep, recovery, workout, steps. Shown until today's plan exists. */
-@Composable
-private fun Tiles(state: TodayUiState) {
-    val glance = state.glance
-    val metrics = state.metrics
-    val sleepHours = glance?.sleep?.hours ?: metrics.sleepHours?.value
-    val need = glance?.sleep?.needHours
-    val recovery = glance?.recovery
-    val workout = glance?.workout
-    val orsLevel = metrics.recovery?.level
-    val sleepRatio: (@Composable () -> Unit)? = if (sleepHours != null && need != null && need > 0) {
-        { HotRatioBar((sleepHours / need).toFloat()) }
-    } else {
-        null
-    }
-
-    TileRow {
-        HotStatTile(
-            label = TodayTexts.SLEEP,
-            value = sleepHours?.let(TodayTexts::clock),
-            caption = TodayTexts.sleepCaption(need, metrics.sleepDebt?.value),
-            pendingCaption = TodayTexts.NO_DATA,
-            footer = sleepRatio,
-            modifier = Modifier.weight(1f).fillMaxHeight().testTag(TODAY_SLEEP_TAG),
-        )
-        HotStatTile(
-            label = TodayTexts.RECOVERY,
-            value = recovery?.hrvMs?.let(TodayTexts::hrv) ?: TodayTexts.levelShort(orsLevel),
-            caption = listOfNotNull(
-                TodayTexts.levelShort(orsLevel).takeIf { recovery?.hrvMs != null },
-                TodayTexts.HRV_LABEL.takeIf { recovery?.hrvMs != null },
-                recovery?.restingHr?.let(TodayTexts::restingHr),
-            ).joinToString(" · ").ifEmpty { null },
-            pendingCaption = TodayTexts.NO_DATA,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-        )
-    }
-    TileRow {
-        HotStatTile(
-            label = TodayTexts.WORKOUT,
-            value = workout?.let { TodayTexts.duration(it.minutes / 60.0) },
-            caption = workout?.let { TodayTexts.workoutCaption(it.sport, it.start) },
-            pendingCaption = TodayTexts.NO_DATA,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-        )
-        HotStatTile(
-            label = TodayTexts.STEPS,
-            value = null,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-        )
-    }
-}
-
-@Composable
-private fun TileRow(content: @Composable RowScope.() -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
-        content = content,
-    )
 }

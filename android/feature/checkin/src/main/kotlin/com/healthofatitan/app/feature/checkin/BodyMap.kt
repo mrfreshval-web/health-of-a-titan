@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,11 +29,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanGeometry
 import com.healthofatitan.app.core.ui.component.dialHelp
-import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.domain.checkin.BodyArea
 import com.healthofatitan.app.domain.checkin.Pain
@@ -110,8 +111,6 @@ fun BodyMap(
 @Composable
 fun PainAnswer(pain: Pain) {
     val context = LocalContext.current
-    // Y6: the emergency number of the phone's country (911, 112), as on the SOS screen.
-    val emergency = rememberHelpLines().emergency
     when (PainRules.route(pain)) {
         PainRoute.EMERGENCY -> Surface(
             shape = RoundedCornerShape(18.dp),
@@ -120,9 +119,14 @@ fun PainAnswer(pain: Pain) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(14.dp)) {
-                Text(CheckinTexts.painChest(emergency), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(CheckinTexts.painChest(HelpNumbers.IN_TEXT), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(6.dp))
-                HotTextButton("${CheckinTexts.CALL} $emergency", onClick = { context.dialHelp(emergency) })
+                // 112 and 911, in this order, as everywhere.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HelpNumbers.ALL.forEach { number ->
+                        HotTextButton("${CheckinTexts.CALL} $number", onClick = { context.dialHelp(number) })
+                    }
+                }
             }
         }
         PainRoute.SPARE_ZONE -> Text(CheckinTexts.PAIN_JOINT_LINE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

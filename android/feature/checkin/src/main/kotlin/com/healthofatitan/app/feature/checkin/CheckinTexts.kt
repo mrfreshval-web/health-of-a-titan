@@ -278,7 +278,7 @@ object CheckinTexts {
     const val PAIN_CHEST = "Давит или жжёт в груди"
     const val PAIN_JOINT = "Болит сустав"
 
-    /** SAF-01 why_ru (content/rules/safety.yaml), unchanged wording; the number is the country's. */
+    /** SAF-01 why_ru (content/rules/safety.yaml), unchanged wording; [number] is «112 или 911». */
     fun painChest(number: String) = "Ты отметил давление или жжение в груди. Если это происходит сейчас — звони $number. Тренировки на паузе, пока врач не разрешит."
 
     const val PAIN_JOINT_LINE = "Эту зону сегодня не нагружаю. Если боль острая, сустав отекает или болит в покое — покажись врачу."
@@ -292,9 +292,6 @@ object CheckinTexts {
     const val CARE_OK = "Всё ок, просто день"
     // Review 2026-11-07 (Agent 10): help is two taps («аватар › Помощь», D-033), not one.
     const val CARE_OK_LINE = "Понял. Если что — помощь всегда под аватаром."
-
-    /** Y6: the left button when the phone's country has no crisis line of ours. */
-    const val FIND_LINE = "Найти линию помощи"
 
     // ── Discoveries (И2.21) — ⚑ Agents 10, 3, 9 ────────────────────────────────────────────
     const val DISCOVERY = "Открытие"

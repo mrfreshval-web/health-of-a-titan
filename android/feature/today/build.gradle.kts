@@ -9,6 +9,7 @@ android {
 dependencies {
     implementation(project(":integration:whoop"))
     implementation(project(":integration:healthconnect"))
+    implementation(project(":domain:today"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
 

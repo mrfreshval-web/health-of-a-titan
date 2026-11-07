@@ -2,46 +2,28 @@ package com.healthofatitan.app.screenshots
 
 import android.app.Application
 import android.graphics.Bitmap
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.datastore.MentorPrefs
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.ModeWord
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.Regime
 import com.healthofatitan.app.domain.engine.RuleRef
-import com.healthofatitan.app.domain.path.GoalPlan
-import com.healthofatitan.app.domain.path.GoalRecord
-import com.healthofatitan.app.domain.path.GoalStatus
-import com.healthofatitan.app.domain.path.PathEngine
-import com.healthofatitan.app.domain.path.PathEvidence
-import com.healthofatitan.app.domain.path.PathRegime
-import com.healthofatitan.app.domain.path.Sphere
 import com.healthofatitan.app.feature.me.MeScreen
-import com.healthofatitan.app.feature.path.PathActions
-import com.healthofatitan.app.feature.path.PathScreen
-import com.healthofatitan.app.feature.path.PathTodayStepContent
-import com.healthofatitan.app.feature.path.PathView
 import com.healthofatitan.app.feature.path.PersonaScreen
-import com.healthofatitan.app.feature.path.toPath
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
 import com.healthofatitan.app.feature.today.TodaySlots
@@ -65,7 +47,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
- * Stream Г «Путь» screenshots (D-033, D-030, A42 §3), same rig as [TitaniumScreenshots]: Robolectric
+ * Stream Г screenshots (D-033, D-030): the mentor's character, settings and the step in «Сегодня»; «Путь» v1 lives in [PathV1Screenshots]. Same rig as [TitaniumScreenshots]: Robolectric
  * native graphics on a Pixel 9 Pro XL screen, opt-in with HOT_SCREENSHOTS. Numbers are illustrative.
  */
 @RunWith(AndroidJUnit4::class)
@@ -92,61 +74,17 @@ class TitaniumScreenshotsPath {
         File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    private val today = LocalDate.now()
-    private val start = today.minusDays(37) // week 6, stage 2
-    private val rings = StatusRings(strain = 8.4, strainCeiling = 12.0, untilBedMin = 12 * 60 + 20, dayFraction = 0.28f, bedtimeMin = 23 * 60, mode = HotMode.ROVNO)
-
-    /** Weeks 1–4 lit (5 nights of 7 h), week 5 «мимо» (3 of 5), week 6 under way (2 so far). */
-    private val evidence: PathEvidence = run {
-        val good = buildSet {
-            for (w in 0 until 4) for (d in 0 until 5) add(start.plusDays(w * 7L + d))
-            add(start.plusDays(30)); add(start.plusDays(32)); add(start.plusDays(34))
-            add(start.plusDays(35)); add(start.plusDays(36))
-        }
-        val sleep = (0L..37L).associate { start.plusDays(it) to if (start.plusDays(it) in good) 7.4 else 6.3 }
-        val training = setOf(0L, 1L, 2L, 4L, 5L).map { today.minusDays(it) }.toSet()
-        PathEvidence(today, sleep, training)
-    }
-
-    private val sleepGoal = GoalRecord(2, GoalPlan(Sphere.SLEEP, 3, listOf(4, 5, 5)), start)
-    private val pastGoal = GoalRecord(1, GoalPlan(Sphere.BODY, 1, listOf(2, 3, 3)), start.minusDays(21), GoalStatus.REPLACED, start.minusDays(1))
-
-    private fun pathView(regime: PathRegime, goals: List<GoalRecord> = listOf(pastGoal, sleepGoal)) = PathView(
-        state = PathEngine.state(today, goals, emptyMap(), evidence, regime),
-        regime = regime,
-        bedtimeMin = 23 * 60,
-    )
-
     @Composable
     private fun Header(title: String? = null, back: Boolean = false, mode: HotMode = HotMode.ROVNO, persona: MentorPersona = MentorPersona.SENSEI) {
         HotTopBar(
             title = title,
             overline = if (back) null else "Путь",
             onBack = if (back) ({}) else null,
-            rings = rings.copy(mode = mode),
             avatar = { AvatarMenu(persona, onHelp = {}, onMentor = {}, onSettings = {}) },
         )
     }
 
-    @Test
-    fun pathGoal() = shoot("20-path-goal-rovno") {
-        HotBackground {
-            Column(Modifier.fillMaxSize()) {
-                Header()
-                PathScreen(pathView(PathRegime.STEADY), PathActions())
-            }
-        }
-    }
-
-    @Test
-    fun pathProposal() = shoot("21-path-goal-proposal") {
-        HotBackground {
-            Column(Modifier.fillMaxSize()) {
-                Header()
-                PathScreen(pathView(PathRegime.STEADY, goals = emptyList()), PathActions())
-            }
-        }
-    }
+    private val today = LocalDate.now()
 
     private val whoop = WhoopStatus(configured = true, connected = true, whoopUserId = "1", lastSyncAt = System.currentTimeMillis(), baselineNights = 21)
 
@@ -171,13 +109,12 @@ class TitaniumScreenshotsPath {
     private fun shootToday(regime: Regime) = shoot("22-today-step-${regime.name.lowercase()}") {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = rings.copy(mode = regime.mode()), avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
+                HotTopBar(title = null, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
                 val metrics = TodayMetrics(today, charge = facet(31.0), balance = facet(0.1), recovery = facet(-1.2), sleepHours = facet(5.2), sleepDebt = facet(2.4))
                 TodayScreen(
                     TodayUiState(whoop = whoop, metrics = metrics),
                     onConnectWhoop = {},
                     day = DayUiState(plan = plan(regime), now = LocalDateTime.now().withHour(20).withMinute(5), loaded = true),
-                    slots = TodaySlots(afterPlan = { PathTodayStepContent(pathView(regime.toPath()).copy(bedtimeMin = 22 * 60 + 30), onToggle = {}, onOpenPath = {}) }),
                 )
             }
         }
@@ -185,31 +122,6 @@ class TitaniumScreenshotsPath {
 
     @Test
     fun todayStepGentle() = shootToday(Regime.GENTLE)
-
-    /** «Шаг дня» as «Сегодня» shows it, by mode: Разгон (done), Ровно, Бережно (minimal), no goal. */
-    @Test
-    fun todayStepStates() = shoot("26-today-step-by-mode") {
-        val body = GoalRecord(3, GoalPlan(Sphere.BODY, 1, listOf(2, 3, 3)), start)
-        val boost = PathView(PathEngine.state(today, listOf(body), mapOf(3L to setOf(today)), evidence, PathRegime.BOOST), PathRegime.BOOST)
-        val steady = pathView(PathRegime.STEADY).copy(bedtimeMin = 23 * 60)
-        val gentle = PathView(PathEngine.state(today, listOf(body), emptyMap(), PathEvidence(today), PathRegime.GENTLE), PathRegime.GENTLE)
-        val none = pathView(PathRegime.STEADY, goals = emptyList())
-        HotBackground {
-            Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = rings, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
-                Column(
-                    Modifier.padding(horizontal = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    listOf(HotMode.RAZGON to boost, HotMode.ROVNO to steady, HotMode.BEREZHNO to gentle).forEach { (mode, view) ->
-                        ModeWord(mode, style = MaterialTheme.typography.titleMedium, glyphSize = 20.dp, gap = 8.dp)
-                        PathTodayStepContent(view, onToggle = {}, onOpenPath = {})
-                    }
-                    PathTodayStepContent(none, onToggle = {}, onOpenPath = {})
-                }
-            }
-        }
-    }
 
     @Test
     fun personaChoice() = shoot("23-mentor-persona") {

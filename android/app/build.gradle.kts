@@ -80,6 +80,7 @@ dependencies {
     implementation(project(":feature:training"))
     implementation(project(":feature:checkin"))
     implementation(project(":domain:checkin"))
+    implementation(project(":domain:today"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

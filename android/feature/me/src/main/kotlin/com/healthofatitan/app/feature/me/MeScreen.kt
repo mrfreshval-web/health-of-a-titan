@@ -216,9 +216,9 @@ fun MeScreen(
     }
 }
 
-/** «Как к тебе обращаться: не важно»; the sex for calculations is not shown here (S3). */
+/** «Обращение: он · она · нейтрально» (Agent 10); the sex for calculations is not shown here (S3). */
 private fun profileCaption(profile: ProfileSettings?): String =
-    profile?.let { "${ProfileTexts.ADDRESS_TITLE}: ${ProfileTexts.address(it.addressForm)}" } ?: ProfileTexts.ROW_CAPTION
+    profile?.let { ProfileTexts.addressShort(it.addressForm) } ?: ProfileTexts.ROW_CAPTION
 
 private fun whoopCaption(status: WhoopStatus?): String = when {
     status == null || !status.connected -> WhoopTexts.NOT_CONNECTED

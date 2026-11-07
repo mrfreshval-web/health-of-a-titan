@@ -18,10 +18,13 @@ import kotlin.test.assertNull
 
 /**
  * Profile «Я» (A61 §2.1, D-055) on the founder's phone: a version-4 database opens through every
- * migration up to 13. Room validates `person_profile` against its entity; the age and sex the
+ * migration up to 14. Room validates `person_profile` against its entity; the age and sex the
  * fitness age kept in `body_input` seed the profile (the year of birth = the year of the entry
  * minus the age); without them the profile reads as defaults: neutral address, nothing given.
  * The store writes each field without touching the others.
+ *
+ * Review of Agent 7 (2026-11-07), MIGRATION_13_14: no year of birth from an age under 18, and the
+ * legacy age and sex rows of `body_input` are gone after the seed; the waist stays.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -101,12 +104,37 @@ class Migration12To13Test {
         val db = open(name)
         try {
             db.openHelper.writableDatabase // runs and validates every migration
-            assertEquals(13, db.openHelper.readableDatabase.version)
+            assertEquals(14, db.openHelper.readableDatabase.version)
             val store = ProfileSettingsStore(db.personProfileDao()) { 99L }
             assertEquals(ProfileSettings(AddressForm.NEUTRAL, 1988, SexForCalc.MALE), store.current())
             assertEquals(21L, db.personProfileDao().get(HotDatabase.LOCAL_USER)?.updatedAt)
+            // the profile alone keeps the age and the sex now (Agent 7): no copy left in body_input
+            assertNull(db.weekDao().latestInput("local", "age_years"))
+            assertNull(db.weekDao().latestInput("local", "sex"))
             // the waist stays where it was (Путь › Замеры)
             assertEquals(88.0, db.weekDao().latestInput("local", "waist_cm")?.value)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `an age under 18 seeds no year of birth`() = runTest {
+        val name = "migration-12-13-minor.db"
+        createVersion4(
+            name,
+            listOf(
+                "INSERT INTO body_input VALUES ('local', 'age_years', '2026-11-02', 16.0, NULL, 20)",
+                "INSERT INTO body_input VALUES ('local', 'sex', '2026-11-02', NULL, 'female', 21)",
+            ),
+        )
+        val db = open(name)
+        try {
+            db.openHelper.writableDatabase
+            val store = ProfileSettingsStore(db.personProfileDao()) { 99L }
+            assertEquals(ProfileSettings(AddressForm.NEUTRAL, null, SexForCalc.FEMALE), store.current())
+            assertNull(db.weekDao().latestInput("local", "age_years"))
+            assertNull(db.weekDao().latestInput("local", "sex"))
         } finally {
             db.close()
         }

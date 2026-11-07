@@ -98,7 +98,7 @@ import kotlin.reflect.KClass
         PathMarkEntity::class,
         PersonProfileEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {

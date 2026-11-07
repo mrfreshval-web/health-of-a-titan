@@ -378,7 +378,16 @@ class WeekRulesTest {
         val older = FitnessAge.view(on, unfit, null, 3)!!
         assertEquals(WeekCopy.FIT_ROOM, older.room)
         assertTrue(WeekStopWords.hits(older.room!!).isEmpty())
-        assertEquals(WeekCopy.FIT_NEED_INPUT, FitnessAge.view(on, fit.copy(sex = null), null, null)!!.missing)
+        // Agent 3 veto (2026-11-07): without the sex no estimate and no range, only the explanation
+        val noSex = FitnessAge.view(on, fit.copy(sex = null), null, null)!!
+        assertEquals(WeekCopy.FIT_NEED_SEX, noSex.missing)
+        assertNull(noSex.age)
+        assertNull(noSex.range)
+        assertNull(noSex.room)
+        assertNull(FitnessAge.estimate(fit.copy(sex = null)))
+        assertNull(FitnessAge.view(on, fit.copy(sex = null), null, null, atMilestone = 41.0, milestone = 2)!!.age)
+        assertEquals(WeekCopy.FIT_NEED_INPUT, FitnessAge.view(on, fit.copy(sex = null, ageYears = null), null, null)!!.missing)
+        assertEquals(WeekCopy.FIT_NEED_INPUT, FitnessAge.view(on, fit.copy(waistCm = null), null, null)!!.missing)
     }
 
     // ── Body, supports, view ─────────────────────────────────────────────────────────────────────

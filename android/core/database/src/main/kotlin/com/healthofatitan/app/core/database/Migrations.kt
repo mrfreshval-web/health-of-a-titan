@@ -360,8 +360,29 @@ object Migrations {
         }
     }
 
+    /**
+     * Review of A61 by Agent 7 (2026-11-07), data only, no schema change. MIGRATION_12_13 already
+     * went out in a build, so it stays as it was and this step cleans what it left:
+     * - a year of birth seeded from an age under 18 (the latest legacy age row, as 12→13 read it)
+     *   is dropped; a year the person typed in the profile since then is kept;
+     * - the legacy copies of the age and the sex in `body_input` are deleted: the profile alone
+     *   keeps them, and «не указано» means «не хранится». The waist stays (Путь › Замеры).
+     */
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            val latestAge = "FROM `body_input` a WHERE a.`user_id` = `person_profile`.`user_id` AND a.`kind` = 'age_years' " +
+                "AND a.`value` IS NOT NULL ORDER BY a.`day_key` DESC LIMIT 1"
+            db.execSQL(
+                "UPDATE `person_profile` SET `birth_year` = NULL WHERE `birth_year` IS NOT NULL " +
+                    "AND (SELECT a.`value` $latestAge) < 18 " +
+                    "AND `birth_year` = (SELECT CAST(substr(a.`day_key`, 1, 4) AS INTEGER) - CAST(a.`value` AS INTEGER) $latestAge)",
+            )
+            db.execSQL("DELETE FROM `body_input` WHERE `kind` IN ('age_years', 'sex')")
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
     )
 }

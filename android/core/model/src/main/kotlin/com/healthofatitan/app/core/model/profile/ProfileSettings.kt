@@ -27,8 +27,12 @@ enum class AddressForm(val code: String) {
 
 /**
  * «Пол для расчётов» (A61 §2.2, D-055 п. 3): a variable of the formulas (HUNT VO₂max, the
- * fitness age, reference ranges), not an identity and never the address of the texts. Health
- * data (S3): stays on the phone in the encrypted database, never goes to Claude.
+ * fitness age), not an identity and never the address of the texts. Health data (S3): stays on
+ * the phone in the encrypted database, never goes to Claude.
+ *
+ * Only HUNT reads it; no gate (pregnancy, cycle, nutrition) may depend on it (A61 §2.2, Agent 3).
+ * [UNSPECIFIED] gives no fitness age at all, never a range over both formulas (Agent 3 veto,
+ * 2026-11-07).
  *
  * @property code stable value stored on the device (`male | female | unspecified`)
  */

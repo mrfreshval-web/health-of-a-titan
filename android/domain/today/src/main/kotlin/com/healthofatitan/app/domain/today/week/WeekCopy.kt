@@ -204,7 +204,11 @@ object WeekCopy {
     const val FIT_NOTE = "оценка кардиофитнеса по модели HUNT, не медицинский вывод"
     const val FIT_DRIVERS = "что двигает число: пульс покоя, тренировки, талия"
     const val FIT_ROOM = "Есть куда расти — двигают пульс покоя, тренировки и талия."
-    const val FIT_NEED_INPUT = "Для оценки нужны возраст, пол и обхват талии."
+    const val FIT_NEED_INPUT = "Для оценки нужны год рождения, пол для расчётов и обхват талии."
+
+    /** Only the sex for calculations is missing (Agents 3 and 10, 2026-11-07): no estimate, no range. */
+    const val FIT_NEED_SEX = "Фитнес-возраст считается по формулам HUNT — отдельно для женщин и мужчин. " +
+        "Без пола для расчётов оценки нет; указать можно в Профиле. Неделя работает и без этого."
     const val FIT_WAIST = "Обхват талии, см"
     const val FIT_AGE = "Возраст, лет"
     const val FIT_SEX = "Пол"
@@ -279,7 +283,7 @@ object WeekCopy {
         TITAN, TITAN_FORMING, TITAN_READY, TITAN_REVEAL, TITAN_YEAR, TITAN_SHARE, SHARE_TITLE, SHARE_SLOGAN, PUSH_TITLE, PUSH_TEXT,
         PUSH_CHANNEL, PUSH_CHANNEL_DESCRIPTION, PUSH_PUBLIC, POSE_REST, POSE_STAND, POSE_HOLD, POSE_RISE, SKY_CLEAR, SKY_HAZE,
         SKY_DUSK, DETAIL_PRIDE, DETAIL_GOALS, DETAIL_SLEEP, DETAIL_FOCUS, DETAIL_MOVE,
-        FIT_TITLE, FIT_NOTE, FIT_DRIVERS, FIT_ROOM, FIT_NEED_INPUT, FIT_WAIST, FIT_AGE, FIT_SEX, FIT_MALE, FIT_FEMALE,
+        FIT_TITLE, FIT_NOTE, FIT_DRIVERS, FIT_ROOM, FIT_NEED_INPUT, FIT_NEED_SEX, FIT_WAIST, FIT_AGE, FIT_SEX, FIT_MALE, FIT_FEMALE,
         FIT_WAIST_DUE, fitPace("−0,6 года"), SEAL, SEAL_REVERSE, NEW_PAGE, TEXTURE_POLISHED, TEXTURE_MATTE, poseMeaning(POSE_HOLD),
         carvedSpoken(4), FIT_OPT_IN, FIT_OPT_OUT, FIT_WHAT, FIT_WHAT_TEXT, FIT_FIRST_AFTER, FIT_LEVER_RHR, FIT_LEVER_ACTIVITY,
         FIT_LEVER_WAIST, fitRange(41), fitLever(FIT_LEVER_RHR), fitMilestone(2),

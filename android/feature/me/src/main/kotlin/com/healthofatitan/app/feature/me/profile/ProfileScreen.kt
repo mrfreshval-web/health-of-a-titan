@@ -166,7 +166,7 @@ fun ProfileScreen(
                     },
                     label = { Text(ProfileTexts.BIRTH_YEAR) },
                     isError = wrong,
-                    supportingText = { Text(if (wrong) ProfileTexts.BIRTH_YEAR_WRONG else ProfileTexts.BIRTH_YEAR_NOTE) },
+                    supportingText = { Text(if (wrong) ProfileTexts.birthYearWrong(currentYear) else ProfileTexts.BIRTH_YEAR_NOTE) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().testTag(PROFILE_BIRTH_YEAR_TAG),

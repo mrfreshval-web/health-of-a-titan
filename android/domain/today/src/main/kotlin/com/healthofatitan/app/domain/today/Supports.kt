@@ -235,7 +235,8 @@ object Supports {
             id = SupportId.SLEEP_TONIGHT,
             label = TodayCopy.SLEEP_TONIGHT,
             value = TodayCopy.ofTotal(held, SleepPrep.TOTAL),
-            caption = i.sleep.bedtimeMin?.let { "${TodayCopy.WIN_BEDTIME} ${clock(it)}" },
+            // the bedtime alone: «отбой 23:00» does not fit a fifth of 412 dp (T-10); the word is in «Ритм дня»
+            caption = i.sleep.bedtimeMin?.let(::clock),
             fill = held.toFloat() / SleepPrep.TOTAL,
             source = TodayCopy.SOURCE_SLEEP_PREP,
             estimate = true,

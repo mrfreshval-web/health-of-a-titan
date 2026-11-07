@@ -300,10 +300,11 @@ private fun SupportColumn(s: SupportView, color: Color, modifier: Modifier, onCl
         )
         Text(
             s.label,
-            style = MaterialTheme.typography.labelSmall,
+            // «движение», «сон сегодня» are wider than a fifth of the card: two short lines, never cut
+            style = MaterialTheme.typography.bodySmall,
             color = HotThemeTokens.colors.textTertiary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            maxLines = 2,
+            minLines = 2,
             textAlign = TextAlign.Center,
         )
         s.caption?.let {

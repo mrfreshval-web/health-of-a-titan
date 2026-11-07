@@ -17,7 +17,7 @@ import java.util.Locale
  */
 object WhoopTexts {
     const val TITLE = "WHOOP"
-    const val BACK_LABEL = "Я · Подключения"
+    const val BACK_LABEL = "Настройки · Подключения"
     const val SOURCE = "WHOOP"
 
     const val NOT_CONNECTED = "Не подключён"
@@ -49,7 +49,6 @@ object WhoopTexts {
 
     const val NORM = "Норма"
     const val NORM_READY = "Норма готова"
-    fun normNights(n: Int) = "$n/14"
 
     const val OFFLINE = "Нет сети — обновлю сам"
 
@@ -81,7 +80,7 @@ object WhoopTexts {
         WhoopNote.DISCONNECTED -> "WHOOP отключён, токены удалены."
     }
 
-    /** «Обновлено 14:32», «Обновлено вчера, 14:32»; before the first sync — «Загружаю…». */
+    /** Y7: «Синхронизировано в 14:32», «… вчера в 14:32»; before the first sync — «Загружаю…». */
     fun syncLine(lastSyncAt: Long?, zone: ZoneId = ZoneId.systemDefault(), now: Instant = Instant.now()): String {
         if (lastSyncAt == null) return "Загружаю…"
         val at = Instant.ofEpochMilli(lastSyncAt).atZone(zone)
@@ -89,10 +88,10 @@ object WhoopTexts {
         val minutes = (now.toEpochMilli() - lastSyncAt) / 60_000
         val time = at.format(DateTimeFormatter.ofPattern("HH:mm"))
         return when {
-            minutes < 1 -> "Обновлено только что"
-            at.toLocalDate() == today -> "Обновлено $time"
-            at.toLocalDate() == today.minusDays(1) -> "Обновлено вчера, $time"
-            else -> "Обновлено " + at.format(DateTimeFormatter.ofPattern("d MMMM, HH:mm", Locale.forLanguageTag("ru")))
+            minutes < 1 -> "Синхронизировано только что"
+            at.toLocalDate() == today -> "Синхронизировано в $time"
+            at.toLocalDate() == today.minusDays(1) -> "Синхронизировано вчера в $time"
+            else -> "Синхронизировано " + at.format(DateTimeFormatter.ofPattern("d MMMM, HH:mm", Locale.forLanguageTag("ru")))
         }
     }
 

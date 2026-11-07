@@ -48,6 +48,10 @@ object TitanTexts {
     fun synced(at: Long?, zone: ZoneId = ZoneId.systemDefault()): String =
         "WHOOP" + (at?.let { " · " + hhmm.format(Instant.ofEpochMilli(it).atZone(zone)) } ?: "")
 
+    /** Y7: one line for the user, «WHOOP · синхронизировано в 06:41»; the log lives in a hidden place. */
+    fun syncedLine(at: Long?, zone: ZoneId = ZoneId.systemDefault()): String =
+        at?.let { "WHOOP · синхронизировано в " + hhmm.format(Instant.ofEpochMilli(it).atZone(zone)) } ?: "WHOOP"
+
     /** «5:50». */
     fun hm(hours: Double): String {
         val m = (hours * 60).roundToInt()

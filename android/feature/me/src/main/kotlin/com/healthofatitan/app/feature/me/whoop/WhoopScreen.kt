@@ -53,7 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotCard
-import com.healthofatitan.app.core.ui.component.HotNormRing
+import com.healthofatitan.app.core.ui.component.HotLearningBar
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSecondaryButton
@@ -113,8 +113,8 @@ fun WhoopRoute(modifier: Modifier = Modifier, viewModel: WhoopViewModel = hiltVi
 }
 
 /**
- * «Я → Подключения → WHOOP». The hero is the HoT mark itself as the sync indicator
- * ([HotSyncMark]): tap = refresh, long press = «Журнал синхронизации». One line under it says
+ * «Настройки → Подключения → WHOOP». The hero is the HoT mark itself as the sync indicator
+ * ([HotSyncMark]): tap = refresh, long press = «Журнал синхронизации» (hidden, for developers: Y7). One line under it says
  * what is happening; everything else is a number, a ring or one word. Every state is drawn with
  * the same care (A36 §11 rule 10): not connected, connecting, not allowed, connected, syncing,
  * done, failed.
@@ -328,7 +328,8 @@ private fun ConnectedContent(state: WhoopUiState, actions: WhoopActions, onDisco
     val failed = state.progress as? SyncProgress.Failed
     val line = when (indicator.light) {
         SyncLight.RUNNING -> (state.progress as? SyncProgress.Running)?.let { WhoopTexts.step(it.step) }
-        SyncLight.SUCCESS -> (state.progress as? SyncProgress.Succeeded)?.counts?.let { WhoopTexts.done(it.nights, it.workouts) }
+        // Y7: one line «Синхронизировано в 11:48»; the counts of a sync stay in the hidden log.
+        SyncLight.SUCCESS -> null
         SyncLight.ERROR -> failed?.let { WhoopTexts.failure(it.failure, it.httpCode) }
         SyncLight.IDLE -> null
     } ?: WhoopTexts.syncLine(status.lastSyncAt, now = Instant.ofEpochMilli(now))
@@ -370,23 +371,16 @@ private fun ConnectedContent(state: WhoopUiState, actions: WhoopActions, onDisco
         Spacer(Modifier.height(16.dp))
         HorizontalDivider(thickness = 1.dp, color = HotThemeTokens.colors.hairline)
         Spacer(Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val nights = status.baselineNights
-            HotNormRing(nights.coerceAtMost(14), 14, size = 48.dp)
-            Spacer(Modifier.width(14.dp))
-            Text(
-                if (nights >= 14) WhoopTexts.NORM_READY else WhoopTexts.NORM,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        // R5: «Учусь тебя: N из 28 ночей» instead of the «14/14» ring; a tap explains.
+        HotLearningBar(status.baselineNights)
     }
     if (state.note != null) NoteCard(WhoopTexts.note(state.note), actions.dismissNote)
 
     HotSecondaryButton(WhoopTexts.SYNC, onClick = actions.sync, enabled = !running, modifier = Modifier.fillMaxWidth())
     PrivacyLine()
+    // Y7: no «Журнал» button on view — the sync log is a developer tool, opened by a long press
+    // on the mark above (the hidden «Для разработчика» entry).
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        HotTextButton(WhoopTexts.LOG, onClick = onOpenLog, modifier = Modifier.testTag(WHOOP_LOG_TAG))
         HotTextButton(WhoopTexts.RECONNECT, onClick = actions.connect, enabled = state.phase == WhoopPhase.IDLE)
         HotTextButton(
             WhoopTexts.DISCONNECT,

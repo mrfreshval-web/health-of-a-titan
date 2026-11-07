@@ -4,6 +4,11 @@ name: Screenshots
 
 on:
   workflow_dispatch:
+    inputs:
+      tests:
+        description: "Test filter (Gradle --tests), e.g. *UxPolishScreenshots*"
+        required: false
+        default: "*Screenshots*"
 
 permissions:
   contents: read
@@ -25,14 +30,16 @@ jobs:
       - name: Render
         env:
           HOT_SCREENSHOTS: "1"
-        run: ./gradlew :app:testDebugUnitTest --tests '*Screenshots*' --stacktrace
+          TESTS: ${{ inputs.tests || '*Screenshots*' }}
+        run: ./gradlew :app:testDebugUnitTest --tests "$TESTS" --stacktrace
       - name: Print as base64 (artifact storage may be unreachable from agents)
         if: always()
         run: |
           for f in app/build/screenshots/*.png; do
             echo "::group::PNG $(basename "$f")"
             echo "BEGIN-PNG $(basename "$f")"
-            base64 -w 0 "$f"; echo
+            # folded: one very long line is cut from the downloaded log
+            base64 -w 60000 "$f"
             echo "END-PNG"
             echo "::endgroup::"
           done

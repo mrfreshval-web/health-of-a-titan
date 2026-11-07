@@ -14,9 +14,19 @@ object DayUiTexts {
     const val PENDING_TITLE = "План придёт, когда WHOOP посчитает ночь"
     const val PENDING_CAPTION = "Обычно — через несколько минут после подъёма."
     const val REGIME = "Режим дня"
-    const val WHY = "Почему так"
-    const val WHY_HIDE = "Скрыть"
+    const val WHY = "Почему такой день ⌄"
+    const val WHY_HIDE = "Свернуть ⌃"
     const val PLAN = "План"
+
+    /** R3: how an item is marked now that a tap opens it. */
+    const val MARK_HINT = "Отметить: удержи или смахни вправо. Отменить можно 5 секунд."
+    const val UNDO = "Отменить"
+
+    /** «Отмечено: Ужин» / «Отметка снята: Ужин» on the undo line. */
+    fun undoLine(title: String, marked: Boolean): String = if (marked) "Отмечено: $title" else "Отметка снята: $title"
+
+    /** «2 из 5» next to «План». */
+    fun planCount(done: Int, total: Int): String = "$done из $total"
     const val NOTIFY_HINT = "Утром пришлю режим дня — разреши уведомления."
     const val NOTIFY_ALLOW = "Разрешить"
 

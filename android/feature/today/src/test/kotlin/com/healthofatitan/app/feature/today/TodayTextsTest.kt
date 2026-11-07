@@ -1,5 +1,6 @@
 package com.healthofatitan.app.feature.today
 
+import com.healthofatitan.app.domain.engine.RegimeEngine
 import com.healthofatitan.app.integration.whoop.SyncFailure
 import com.healthofatitan.app.integration.whoop.SyncStatus
 import org.junit.Test
@@ -39,8 +40,11 @@ class TodayTextsTest {
     }
 
     @Test
-    fun `norm is a short fraction, not a paragraph`() {
-        assertEquals("9/14", TodayTexts.nights(9))
+    fun `norm is nights out of the window, never a fraction (UX review 119, R5)`() {
+        assertEquals("Учусь тебя: 9 из 28 ночей", TodayTexts.nights(9))
+        // The screen's numbers are the engine's: Заряд from 14 nights, the full window is 28.
+        assertEquals(RegimeEngine.MIN_BASELINE, TodayTexts.NORM_NIGHTS)
+        assertEquals(RegimeEngine.FULL_NORM_DAYS, TodayTexts.NORM_FULL_NIGHTS)
     }
 
     @Test

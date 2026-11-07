@@ -98,6 +98,12 @@ object HotType {
     /** Telemetry: date, source, time, captions (Geist Mono 500, +0.14 em, upper case). */
     val mono = mono(11, 14)
 
+    /**
+     * Clock times in lists and on «Линия дня» (UX review 119, R1): Geist Mono, every digit the
+     * same width, tight tracking so «23:05» never wraps in [com.healthofatitan.app.core.ui.component.HotNumbers.TimeColumn].
+     */
+    val time = mono(13, 16, 0.02)
+
     /** Ring values in the header (Geist 400, tabular). */
     val ringValue = geist(15, 18, FontWeight.Normal, -0.01)
 

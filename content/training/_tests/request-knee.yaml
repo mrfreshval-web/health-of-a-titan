@@ -1,0 +1,7 @@
+# Example request: user level, regime, place, kit, minutes and profile codes (A40 §4.4).
+level: advanced
+regime: STEADY
+place: home
+equipment: [mat, dumbbells, chair]
+minutes: 30
+profile: [knee_pain]

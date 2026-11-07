@@ -1,0 +1,2440 @@
+# Exercise library for the training system (A40 §5, content/training/SCHEMA.md).
+# ids are stable forever: never renumber, never reuse; to retire an exercise set `retired: true`.
+# level = the lowest level where the exercise may appear (classic < advanced < extreme).
+# contraindications = profile codes (A40 §8 «Профиль», shared with content/profile/ from A41).
+# risk_tags = properties of the movement; rules.yaml maps day flags and profile codes to forbidden tags.
+# animation.poses = key poses in words; the TitanPose keyframes (A40 §5.3) are produced later.
+# Technique texts: Agent 12. Contraindications and safety wording: review by Agent 3 (CLAUDE.md).
+# Validate: python3 content/training/scripts/check_training.py
+version: 1
+reviewedBy: []   # draft: Agent 12 with in-session review of Agent 3 (A40 §11); final review pending
+status: draft
+
+exercises:
+
+  # =====================================================================
+  # MOBILITY, STRETCHING, BREATHING — used in every warm-up and cool-down
+  # =====================================================================
+
+  - id: ex-cat-cow
+    name_ru: "Кошка — корова"
+    name_en: "Cat-cow"
+    a19: E30
+    level: classic
+    category: mobility
+    pattern: mobility_spine
+    muscles: {primary: [spine], secondary: [core]}
+    equipment: [mat]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "8", tempo: "3-1-3-1"}
+    technique_ru:
+      - "Встань на четвереньки: ладони под плечами, колени под тазом."
+      - "На выдохе округли спину, подбородок к груди, пупок к позвоночнику."
+      - "На вдохе плавно прогнись, грудь вперёд, взгляд чуть вверх."
+    mistakes_ru: ["Двигается только шея, а грудной отдел стоит", "Резкий прогиб в пояснице в конце"]
+    cues_ru: ["Двигайся позвонок за позвонком", "Дыхание ведёт движение"]
+    breathing_ru: "Выдох — округление, вдох — прогиб."
+    contraindications: [wrist_pain]
+    regressions: []
+    progressions: [ex-worlds-greatest]
+    swaps: [ex-open-book]
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: neutral, ru: "Четвереньки, спина ровная, как стол"}
+        - {key: cat, ru: "Спина круглая дугой вверх, голова опущена"}
+        - {key: cow, ru: "Спина прогнута, грудь вперёд, взгляд вперёд-вверх"}
+
+  - id: ex-worlds-greatest
+    name_ru: "Выпад с разворотом («лучшая растяжка»)"
+    name_en: "World's greatest stretch"
+    level: classic
+    category: mobility
+    pattern: mobility_hip
+    muscles: {primary: [hip_flexors, spine], secondary: [hamstrings, adductors, upper_back]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "4", tempo: "2-2-2-0"}
+    technique_ru:
+      - "Сделай длинный выпад вперёд правой ногой, левая рука на полу у стопы."
+      - "Опусти правый локоть к внутренней стороне стопы, задержись на выдохе."
+      - "Разверни корпус и подними правую руку к потолку, взгляд за рукой."
+    mistakes_ru: ["Заднее колено согнуто и таз проваливается", "Разворот идёт поясницей, а не грудью"]
+    cues_ru: ["Задняя нога — длинная пружина", "Раскрывай грудь, как книгу"]
+    breathing_ru: "Выдох — к стопе, вдох — разворот вверх."
+    contraindications: [knee_pain, hip_pain]
+    regressions: [ex-stretch-hip-flexor]
+    progressions: []
+    swaps: [ex-hip-90-90]
+    animation:
+      view: three_quarter
+      loop: true
+      props: []
+      poses:
+        - {key: lunge, ru: "Длинный выпад, рука у передней стопы, задняя нога прямая"}
+        - {key: elbow_down, ru: "Локоть опущен к внутренней стороне передней стопы"}
+        - {key: reach_up, ru: "Корпус развёрнут, рука вертикально вверх, взгляд за ней"}
+
+  - id: ex-hip-90-90
+    name_ru: "Поза 90/90"
+    name_en: "90/90 hip switch"
+    a19: E31
+    level: classic
+    category: mobility
+    pattern: mobility_hip
+    muscles: {primary: [glutes, hip_flexors], secondary: [adductors]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 45}
+    technique_ru:
+      - "Сядь: передняя нога согнута под 90° перед тобой, задняя — под 90° сбоку."
+      - "Выпрями спину и мягко наклонись грудью к передней голени."
+      - "Перекинь колени на другую сторону без помощи рук, если получается."
+    mistakes_ru: ["Круглая спина вместо наклона от таза", "Боль в колене — сигнал уменьшить угол"]
+    cues_ru: ["Грудь к голени, а не нос к колену", "Опирайся руками, если нужно"]
+    breathing_ru: "Спокойное дыхание, на выдохе чуть глубже."
+    contraindications: [knee_pain, hip_pain]
+    regressions: []
+    progressions: [ex-stretch-pigeon]
+    swaps: [ex-worlds-greatest]
+    animation:
+      view: front
+      loop: false
+      props: [mat]
+      poses:
+        - {key: sit, ru: "Сидя, обе ноги согнуты под прямым углом, спина вертикально"}
+        - {key: lean, ru: "Наклон грудью к передней голени от таза"}
+        - {key: switch, ru: "Колени перекинуты на другую сторону"}
+
+  - id: ex-open-book
+    name_ru: "Открытая книга"
+    name_en: "Open book"
+    a19: E33
+    level: classic
+    category: mobility
+    pattern: mobility_spine
+    muscles: {primary: [upper_back, spine], secondary: [chest]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "6", tempo: "2-2-2-0"}
+    technique_ru:
+      - "Ляг на бок, колени согнуты под 90°, руки вытянуты вперёд одна на другой."
+      - "Раскрой верхнюю руку дугой назад, взгляд следует за ладонью."
+      - "Колени остаются вместе на полу; вернись тем же путём."
+    mistakes_ru: ["Колени разъезжаются и поворачивается таз", "Рывок рукой вместо поворота грудью"]
+    cues_ru: ["Поворачивай грудь, рука просто едет следом", "Колени — якорь"]
+    breathing_ru: "Выдох — раскрытие."
+    contraindications: [shoulder_pain]
+    regressions: []
+    progressions: [ex-worlds-greatest]
+    swaps: [ex-cat-cow]
+    animation:
+      view: top
+      loop: true
+      props: [mat]
+      poses:
+        - {key: closed, ru: "На боку, руки вместе впереди, колени согнуты"}
+        - {key: open, ru: "Верхняя рука раскрыта назад, грудь смотрит в потолок"}
+
+  - id: ex-ankle-knee-wall
+    name_ru: "Колено к стене"
+    name_en: "Knee-to-wall ankle mobilisation"
+    level: classic
+    category: mobility
+    pattern: mobility_ankle
+    muscles: {primary: [calves], secondary: []}
+    equipment: [wall]
+    place: [home, gym, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "10", tempo: "1-1-1-0"}
+    technique_ru:
+      - "Встань лицом к стене, стопа в 5–10 см от неё, пятка на полу."
+      - "Веди колено к стене по линии второго пальца стопы."
+      - "Коснись стены и вернись; пятка не отрывается."
+    mistakes_ru: ["Пятка отрывается от пола", "Колено заваливается внутрь"]
+    cues_ru: ["Колено над вторым пальцем", "Пятка приклеена"]
+    breathing_ru: "Свободное дыхание."
+    contraindications: [ankle_pain]
+    regressions: []
+    progressions: [ex-deep-squat-hold]
+    swaps: [ex-stretch-calf]
+    animation:
+      view: side
+      loop: true
+      props: [wall]
+      poses:
+        - {key: start, ru: "Полувыпад у стены, передняя голень вертикально"}
+        - {key: touch, ru: "Колено касается стены, пятка на полу"}
+
+  - id: ex-band-dislocate
+    name_ru: "Проводка палки или резинки за спину"
+    name_en: "Band shoulder dislocate"
+    level: classic
+    category: mobility
+    pattern: mobility_shoulder
+    muscles: {primary: [rotator_cuff, chest], secondary: [front_delts]}
+    equipment: [band, stick]
+    place: [home, gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "10", tempo: "2-0-2-0"}
+    technique_ru:
+      - "Возьми резинку или палку широким хватом перед собой."
+      - "Прямыми руками проведи её дугой над головой за спину."
+      - "Верни тем же путём; если руки сгибаются — расширь хват."
+    mistakes_ru: ["Узкий хват и сгибание локтей", "Прогиб в пояснице, чтобы «дотянуться»"]
+    cues_ru: ["Рёбра вниз, пресс собран", "Широко и медленно"]
+    breathing_ru: "Вдох — вверх, выдох — за спину."
+    contraindications: [shoulder_pain, shoulder_injury]
+    regressions: [ex-arm-circles]
+    progressions: []
+    swaps: [ex-stretch-chest-doorway]
+    animation:
+      view: side
+      loop: true
+      props: [band]
+      poses:
+        - {key: front, ru: "Руки прямые перед бёдрами, резинка натянута"}
+        - {key: overhead, ru: "Руки прямые над головой"}
+        - {key: behind, ru: "Резинка за спиной на уровне поясницы"}
+
+  - id: ex-wrist-prep
+    name_ru: "Подготовка запястий"
+    name_en: "Wrist prep"
+    level: classic
+    category: mobility
+    pattern: mobility_wrist
+    muscles: {primary: [forearms], secondary: []}
+    equipment: [mat]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "10"}
+    technique_ru:
+      - "Встань на четвереньки, ладони под плечами, пальцы вперёд."
+      - "Плавно перенеси вес вперёд-назад и по кругу, 10 раз."
+      - "Разверни пальцы к коленям и повтори мягко, без боли."
+    mistakes_ru: ["Резкий перенос веса", "Терпеть боль в запястье"]
+    cues_ru: ["Ладонь прижата целиком", "Мягко, как разминка пальцев пианиста"]
+    breathing_ru: "Свободное дыхание."
+    contraindications: [wrist_pain, wrist_injury]
+    regressions: []
+    progressions: []
+    swaps: []
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: center, ru: "Четвереньки, плечи над ладонями"}
+        - {key: forward, ru: "Плечи впереди ладоней, запястья в разгибе"}
+        - {key: back, ru: "Таз к пяткам, ладони на полу"}
+
+  - id: ex-deep-squat-hold
+    name_ru: "Глубокий присед с удержанием"
+    name_en: "Deep squat hold"
+    level: classic
+    category: mobility
+    pattern: mobility_hip
+    muscles: {primary: [hip_flexors, adductors, calves], secondary: [lower_back]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: time
+    impact: low
+    risk_tags: [deep_knee_flexion]
+    default: {sets: 2, time_s: 30}
+    technique_ru:
+      - "Стопы чуть шире плеч, носки немного наружу."
+      - "Опустись в самый глубокий присед, который держишь с ровной спиной."
+      - "Локтями мягко раздвигай колени, держись за опору при необходимости."
+    mistakes_ru: ["Пятки отрываются от пола", "Сильно круглая поясница"]
+    cues_ru: ["Грудь вверх, колени наружу", "Можно держаться за дверной косяк"]
+    breathing_ru: "Медленное дыхание животом."
+    contraindications: [knee_pain, knee_injury, hip_pain]
+    regressions: [ex-ankle-knee-wall]
+    progressions: []
+    swaps: [ex-hip-90-90]
+    animation:
+      view: side
+      loop: false
+      props: []
+      poses:
+        - {key: stand, ru: "Стоя, стопы шире плеч"}
+        - {key: hold, ru: "Глубокий присед, грудь вверх, локти внутри коленей"}
+
+  - id: ex-leg-swings
+    name_ru: "Махи ногами"
+    name_en: "Leg swings"
+    level: classic
+    category: mobility
+    pattern: mobility_hip
+    muscles: {primary: [hip_flexors, hamstrings], secondary: [adductors]}
+    equipment: [wall]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "10"}
+    technique_ru:
+      - "Встань боком к стене и держись за неё рукой."
+      - "Свободно качай прямую ногу вперёд-назад, амплитуда растёт постепенно."
+      - "Затем 10 махов в сторону, стоя лицом к стене."
+    mistakes_ru: ["Махи с рывком на максимальной амплитуде сразу", "Корпус раскачивается вместе с ногой"]
+    cues_ru: ["Нога — маятник", "Корпус ровный, движение только в тазобедренном"]
+    breathing_ru: "Свободное дыхание."
+    contraindications: [hip_pain, lower_back_pain]
+    regressions: []
+    progressions: []
+    swaps: [ex-worlds-greatest]
+    animation:
+      view: side
+      loop: true
+      props: [wall]
+      poses:
+        - {key: front, ru: "Нога маховым движением впереди"}
+        - {key: back, ru: "Нога позади, корпус вертикально"}
+
+  - id: ex-arm-circles
+    name_ru: "Круги руками и плечами"
+    name_en: "Arm circles"
+    level: classic
+    category: mobility
+    pattern: mobility_shoulder
+    muscles: {primary: [rotator_cuff, side_delts], secondary: [traps]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 1, reps: "10"}
+    technique_ru:
+      - "Встань прямо, руки в стороны."
+      - "Начни с маленьких кругов и постепенно увеличивай их до полной амплитуды."
+      - "По 10 кругов вперёд и назад, затем 10 кругов плечами."
+    mistakes_ru: ["Поднятые к ушам плечи", "Рывки на большой амплитуде"]
+    cues_ru: ["Шея длинная", "Круги рисуют руки, а не корпус"]
+    breathing_ru: "Свободное дыхание."
+    contraindications: [shoulder_pain]
+    regressions: []
+    progressions: [ex-band-dislocate]
+    swaps: []
+    animation:
+      view: front
+      loop: true
+      props: []
+      poses:
+        - {key: side, ru: "Руки прямые в стороны"}
+        - {key: up, ru: "Руки над головой в круговом движении"}
+
+  - id: ex-scap-pushup
+    name_ru: "Отжимания лопатками"
+    name_en: "Scapular push-up"
+    level: classic
+    category: mobility
+    pattern: mobility_shoulder
+    muscles: {primary: [upper_back, rotator_cuff], secondary: [chest, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 1, reps: "10", tempo: "1-1-1-1"}
+    technique_ru:
+      - "Встань в упор на прямых руках (или на коленях)."
+      - "Не сгибая локти, сведи лопатки — грудь опустится на пару сантиметров."
+      - "Раздвинь лопатки и вытолкни пол, спина слегка округлится между лопатками."
+    mistakes_ru: ["Сгибаются локти", "Провисает поясница"]
+    cues_ru: ["Руки — палки, работают только лопатки", "Тело — доска"]
+    breathing_ru: "Выдох — выталкиваешь пол."
+    contraindications: [wrist_pain, shoulder_pain]
+    regressions: [ex-arm-circles]
+    progressions: [ex-pushup]
+    swaps: [ex-band-pull-apart]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: retract, ru: "Упор лёжа, лопатки сведены, грудь чуть ниже"}
+        - {key: protract, ru: "Упор лёжа, лопатки разведены, спина между ними чуть круглая"}
+
+  - id: ex-stretch-hip-flexor
+    name_ru: "Растяжка передней поверхности бедра в полувыпаде"
+    name_en: "Half-kneeling hip flexor stretch"
+    a19: E32
+    level: classic
+    category: stretch
+    pattern: stretch_lower
+    muscles: {primary: [hip_flexors], secondary: [quads]}
+    equipment: [mat]
+    place: [home, gym, outdoor, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 45}
+    technique_ru:
+      - "Встань в полувыпад: заднее колено на коврике, передняя голень вертикально."
+      - "Подкрути таз (копчик вниз) и напряги ягодицу задней ноги."
+      - "Мягко подай таз вперёд до ощущения растяжения спереди бедра."
+    mistakes_ru: ["Прогиб в пояснице вместо подкручивания таза", "Колено давит в жёсткий пол"]
+    cues_ru: ["Копчик вниз, рёбра вниз", "Ягодица задней ноги включена"]
+    breathing_ru: "Длинный выдох углубляет растяжение."
+    contraindications: [knee_pain]
+    regressions: [ex-stretch-quad]
+    progressions: [ex-worlds-greatest]
+    swaps: [ex-stretch-quad]
+    animation:
+      view: side
+      loop: false
+      props: [mat]
+      poses:
+        - {key: start, ru: "Полувыпад на колене, корпус вертикально"}
+        - {key: stretch, ru: "Таз подан вперёд, копчик подкручен"}
+
+  - id: ex-stretch-hamstring
+    name_ru: "Растяжка задней поверхности бедра лёжа"
+    name_en: "Supine hamstring stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_lower
+    muscles: {primary: [hamstrings], secondary: [calves]}
+    equipment: [mat, band]
+    place: [home, gym, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 45}
+    technique_ru:
+      - "Ляг на спину, накинь резинку, ремень или полотенце на стопу."
+      - "Подними прямую ногу вверх до первого ощущения растяжения."
+      - "Вторая нога лежит на полу, поясница прижата."
+    mistakes_ru: ["Тянуть ногу рывками", "Таз отрывается от пола"]
+    cues_ru: ["Пятка к потолку", "Растяжение — 5–6 из 10, не боль"]
+    breathing_ru: "На выдохе чуть ближе."
+    contraindications: [lower_back_pain]
+    regressions: []
+    progressions: []
+    swaps: [ex-stretch-pigeon]
+    animation:
+      view: side
+      loop: false
+      props: [mat, band]
+      poses:
+        - {key: start, ru: "Лёжа на спине, нога согнута, ремень на стопе"}
+        - {key: stretch, ru: "Нога прямая вертикально, вторая на полу"}
+
+  - id: ex-stretch-quad
+    name_ru: "Растяжка квадрицепса стоя"
+    name_en: "Standing quad stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_lower
+    muscles: {primary: [quads], secondary: [hip_flexors]}
+    equipment: [wall]
+    place: [home, gym, outdoor, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 30}
+    technique_ru:
+      - "Встань у опоры, возьмись за стопу и подтяни пятку к ягодице."
+      - "Колени рядом, таз слегка подкручен."
+      - "Держи спокойно, без рывков."
+    mistakes_ru: ["Колено уходит в сторону и вперёд", "Прогиб в пояснице"]
+    cues_ru: ["Колено смотрит в пол", "Таз подкручен"]
+    breathing_ru: "Спокойное дыхание."
+    contraindications: [knee_pain, knee_injury]
+    regressions: []
+    progressions: [ex-stretch-hip-flexor]
+    swaps: [ex-stretch-hip-flexor]
+    animation:
+      view: side
+      loop: false
+      props: [wall]
+      poses:
+        - {key: start, ru: "Стоя у стены, рука на опоре"}
+        - {key: stretch, ru: "Пятка у ягодицы, колени рядом"}
+
+  - id: ex-stretch-pigeon
+    name_ru: "Голубь (растяжка ягодицы)"
+    name_en: "Pigeon stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_lower
+    muscles: {primary: [glutes], secondary: [hip_flexors]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 45}
+    technique_ru:
+      - "Из упора на руках выведи правое колено вперёд к правой ладони, голень наискосок."
+      - "Левую ногу вытяни назад, таз ровно."
+      - "Опустись на предплечья, если удобно; колено без боли."
+    mistakes_ru: ["Таз заваливается на бок", "Терпеть боль в колене"]
+    cues_ru: ["Если колену неудобно — делай вариант лёжа на спине «четвёрка»", "Таз ровно, как фары машины"]
+    breathing_ru: "Медленный выдох — расслабление ягодицы."
+    contraindications: [knee_pain, knee_injury, hip_pain]
+    regressions: [ex-hip-90-90]
+    progressions: []
+    swaps: [ex-stretch-hamstring]
+    animation:
+      view: three_quarter
+      loop: false
+      props: [mat]
+      poses:
+        - {key: set, ru: "Передняя голень наискосок, задняя нога вытянута"}
+        - {key: fold, ru: "Корпус опущен на предплечья над передней голенью"}
+
+  - id: ex-stretch-child
+    name_ru: "Поза ребёнка"
+    name_en: "Child's pose"
+    level: classic
+    category: stretch
+    pattern: stretch_upper
+    muscles: {primary: [lats, lower_back], secondary: [glutes]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 60}
+    technique_ru:
+      - "Встань на колени, колени чуть шире таза, большие пальцы ног вместе."
+      - "Опусти таз к пяткам, руки вытяни вперёд по полу."
+      - "Лоб на коврик или на кулаки, дыши в спину."
+    mistakes_ru: ["Напряжённые плечи у ушей", "Задержка дыхания"]
+    cues_ru: ["Таз тянется назад, ладони вперёд", "Дыши в рёбра со спины"]
+    breathing_ru: "Медленный вдох в спину, длинный выдох."
+    contraindications: [knee_pain, knee_injury]
+    regressions: []
+    progressions: [ex-stretch-lat-wall]
+    swaps: [ex-stretch-lat-wall]
+    animation:
+      view: side
+      loop: false
+      props: [mat]
+      poses:
+        - {key: kneel, ru: "Стоя на коленях, корпус вертикально"}
+        - {key: rest, ru: "Таз на пятках, руки вытянуты вперёд, лоб у пола"}
+
+  - id: ex-stretch-chest-doorway
+    name_ru: "Растяжка груди в дверном проёме"
+    name_en: "Doorway chest stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_upper
+    muscles: {primary: [chest], secondary: [front_delts]}
+    equipment: [wall]
+    place: [home, gym, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 30}
+    technique_ru:
+      - "Поставь предплечье на косяк, локоть на уровне плеча."
+      - "Шагни вперёд одноимённой ногой и мягко разверни корпус от руки."
+      - "Держи до лёгкого растяжения груди."
+    mistakes_ru: ["Локоть выше уровня плеча с болью", "Плечо выталкивается вперёд"]
+    cues_ru: ["Лопатка назад и вниз", "Корпус уходит, рука на месте"]
+    breathing_ru: "Спокойное дыхание."
+    contraindications: [shoulder_pain, shoulder_injury]
+    regressions: []
+    progressions: [ex-band-dislocate]
+    swaps: [ex-band-dislocate]
+    animation:
+      view: top
+      loop: false
+      props: [wall]
+      poses:
+        - {key: set, ru: "Предплечье на косяке, корпус в проёме"}
+        - {key: stretch, ru: "Шаг вперёд, грудь раскрыта"}
+
+  - id: ex-stretch-lat-wall
+    name_ru: "Растяжка широчайших у стены"
+    name_en: "Wall lat stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_upper
+    muscles: {primary: [lats], secondary: [triceps, upper_back]}
+    equipment: [wall]
+    place: [home, gym, outdoor, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 40}
+    technique_ru:
+      - "Положи ладони на стену или стол, отойди на шаг назад."
+      - "Отведи таз назад, опусти грудь между рук, спина ровная."
+      - "Чуть сместись в сторону, чтобы почувствовать растяжение одной стороны."
+    mistakes_ru: ["Провисание в пояснице", "Плечи у ушей"]
+    cues_ru: ["Таз назад, грудь к полу", "Длинный бок"]
+    breathing_ru: "Выдох — опускаешь грудь."
+    contraindications: [shoulder_pain]
+    regressions: [ex-stretch-child]
+    progressions: []
+    swaps: [ex-stretch-child]
+    animation:
+      view: side
+      loop: false
+      props: [wall]
+      poses:
+        - {key: start, ru: "Ладони на опоре, стоя прямо"}
+        - {key: stretch, ru: "Угол 90° в тазу, спина и руки — одна линия"}
+
+  - id: ex-stretch-calf
+    name_ru: "Растяжка икр у стены"
+    name_en: "Wall calf stretch"
+    level: classic
+    category: stretch
+    pattern: stretch_lower
+    muscles: {primary: [calves], secondary: []}
+    equipment: [wall]
+    place: [home, gym, outdoor, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 30}
+    technique_ru:
+      - "Упрись руками в стену, одна нога сзади прямая, пятка на полу."
+      - "Подай таз к стене до растяжения икры задней ноги."
+      - "Затем слегка согни заднее колено — растяжение уйдёт ниже."
+    mistakes_ru: ["Пятка отрывается", "Стопа развёрнута наружу"]
+    cues_ru: ["Пятка в пол", "Носок вперёд"]
+    breathing_ru: "Спокойное дыхание."
+    contraindications: [ankle_pain]
+    regressions: []
+    progressions: []
+    swaps: [ex-ankle-knee-wall]
+    animation:
+      view: side
+      loop: false
+      props: [wall]
+      poses:
+        - {key: set, ru: "Руки на стене, ноги в шаге"}
+        - {key: stretch, ru: "Таз к стене, задняя пятка на полу"}
+
+  - id: ex-breath-long-exhale
+    name_ru: "Дыхание с длинным выдохом"
+    name_en: "Long-exhale breathing"
+    level: classic
+    category: breathing
+    pattern: breathing
+    muscles: {primary: [core], secondary: []}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 60}
+    technique_ru:
+      - "Ляг или сядь удобно, одна ладонь на животе."
+      - "Вдох носом спокойно, выдох — медленнее вдоха."
+      - "Если от дыхательных упражнений становится тревожно — просто дыши как обычно."
+    mistakes_ru: ["Форсировать вдох", "Считать через силу"]
+    cues_ru: ["Выдох длиннее вдоха", "Без задержек"]
+    breathing_ru: "Без счёта и задержек, комфорт важнее схемы."
+    contraindications: []
+    regressions: []
+    progressions: []
+    swaps: []
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: inhale, ru: "Лёжа, живот поднимается"}
+        - {key: exhale, ru: "Лёжа, живот опускается, плечи расслаблены"}
+
+  # =====================================================================
+  # CLASSIC — functional training, fitness strength, basic gymnastics, Zone 2
+  # =====================================================================
+
+  - id: ex-squat-bw
+    name_ru: "Приседания с весом тела"
+    name_en: "Bodyweight squat"
+    a19: E01
+    level: classic
+    category: strength
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [adductors, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: [deep_knee_flexion]
+    default: {sets: 3, reps: "12-15", rest_s: 60, tempo: "2-0-1-0", rpe: "6-7"}
+    technique_ru:
+      - "Стопы на ширине плеч, носки слегка наружу."
+      - "Отведи таз назад и вниз, колени идут по линии носков."
+      - "Опустись до параллели или ниже с ровной спиной и встань, толкая пол всей стопой."
+    mistakes_ru: ["Колени заваливаются внутрь", "Пятки отрываются от пола", "Круглая поясница внизу"]
+    cues_ru: ["Раздвигай пол стопами", "Грудь смотрит вперёд"]
+    breathing_ru: "Вдох — вниз, выдох — вверх."
+    contraindications: [knee_pain, knee_injury]
+    regressions: [ex-box-squat]
+    progressions: [ex-goblet-squat]
+    swaps: [ex-reverse-lunge]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: stand, ru: "Стоя, руки вдоль тела"}
+        - {key: bottom, ru: "Бёдра параллельно полу, руки вперёд для баланса, спина ровная"}
+
+  - id: ex-box-squat
+    name_ru: "Присед на стул"
+    name_en: "Box squat to chair"
+    a19: E02
+    level: classic
+    category: strength
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [core]}
+    equipment: [chair]
+    place: [home, gym, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "10-12", rest_s: 60, tempo: "3-1-1-0", rpe: "5-6"}
+    technique_ru:
+      - "Встань перед устойчивым стулом, стопы на ширине плеч."
+      - "Медленно сядь на край, руки вперёд."
+      - "Встань, отталкиваясь пятками, не раскачиваясь корпусом."
+    mistakes_ru: ["Плюхнуться на стул", "Рывок корпусом вперёд при вставании"]
+    cues_ru: ["Коснись стула, как будто он стеклянный", "Пятки толкают пол"]
+    breathing_ru: "Вдох — сесть, выдох — встать."
+    contraindications: [knee_pain]
+    regressions: []
+    progressions: [ex-squat-bw]
+    swaps: [ex-step-up]
+    animation:
+      view: side
+      loop: true
+      props: [chair]
+      poses:
+        - {key: stand, ru: "Стоя перед стулом, руки вперёд"}
+        - {key: seated, ru: "Касание сиденья, корпус слегка наклонён"}
+
+  - id: ex-goblet-squat
+    name_ru: "Гоблет-присед"
+    name_en: "Goblet squat"
+    a19: E03
+    level: classic
+    category: strength
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [core, upper_back]}
+    equipment: [dumbbells, kettlebell]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: [deep_knee_flexion]
+    default: {sets: 3, reps: "8-12", rest_s: 90, tempo: "3-0-1-0", rpe: "6-8"}
+    technique_ru:
+      - "Держи гантель или гирю у груди, локти смотрят вниз."
+      - "Присядь между коленей, грудь вверх."
+      - "Глубина — пока спина ровная; встань, толкая пол."
+    mistakes_ru: ["Вес уходит от груди и тянет вперёд", "Колени внутрь"]
+    cues_ru: ["Локти между коленей внизу", "Вес — как чашка горячего чая"]
+    breathing_ru: "Вдох перед спуском, выдох на подъёме."
+    contraindications: [knee_pain, knee_injury, lower_back_pain]
+    regressions: [ex-squat-bw]
+    progressions: [ex-back-squat]
+    swaps: [ex-bulgarian-split]
+    animation:
+      view: side
+      loop: true
+      props: [kettlebell]
+      poses:
+        - {key: stand, ru: "Стоя, гиря у груди, локти вниз"}
+        - {key: bottom, ru: "Глубокий присед, локти касаются внутренней стороны коленей"}
+
+  - id: ex-reverse-lunge
+    name_ru: "Выпад назад"
+    name_en: "Reverse lunge"
+    a19: E05
+    level: classic
+    category: strength
+    pattern: lunge
+    muscles: {primary: [quads, glutes], secondary: [adductors, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-10", rest_s: 60, tempo: "2-0-1-0", rpe: "6-7"}
+    technique_ru:
+      - "Стоя прямо, сделай широкий шаг назад."
+      - "Опусти заднее колено к полу, оба колена около 90°."
+      - "Вернись, толкаясь пяткой передней ноги."
+    mistakes_ru: ["Переднее колено уходит внутрь", "Корпус падает вперёд"]
+    cues_ru: ["Корпус — вертикальная колонна", "Вес на передней пятке"]
+    breathing_ru: "Вдох — шаг назад, выдох — возврат."
+    contraindications: [knee_pain, knee_injury]
+    regressions: [ex-step-up]
+    progressions: [ex-bulgarian-split]
+    swaps: [ex-step-up]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: stand, ru: "Стоя, ноги вместе"}
+        - {key: bottom, ru: "Заднее колено над полом, переднее над стопой, корпус вертикально"}
+
+  - id: ex-step-up
+    name_ru: "Зашагивание на ступеньку"
+    name_en: "Step-up"
+    a19: E07
+    level: classic
+    category: strength
+    pattern: lunge
+    muscles: {primary: [quads, glutes], secondary: [calves]}
+    equipment: [box, chair]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-10", rest_s: 60, tempo: "1-0-2-0", rpe: "6-7"}
+    technique_ru:
+      - "Поставь всю стопу на устойчивую ступеньку или скамью."
+      - "Встань за счёт передней ноги, задняя лишь помогает."
+      - "Опустись медленно и под контролем."
+    mistakes_ru: ["Толчок задней ногой", "Колено заваливается внутрь"]
+    cues_ru: ["Передняя пятка ведёт", "Вниз — медленнее, чем вверх"]
+    breathing_ru: "Выдох — подъём."
+    contraindications: [knee_pain, ankle_pain]
+    regressions: [ex-box-squat]
+    progressions: [ex-reverse-lunge]
+    swaps: [ex-reverse-lunge]
+    animation:
+      view: side
+      loop: true
+      props: [box]
+      poses:
+        - {key: foot_on, ru: "Одна стопа на ступеньке, колено согнуто"}
+        - {key: top, ru: "Стоя на ступеньке на прямой ноге"}
+
+  - id: ex-glute-bridge
+    name_ru: "Ягодичный мост"
+    name_en: "Glute bridge"
+    a19: E08
+    level: classic
+    category: strength
+    pattern: hinge
+    muscles: {primary: [glutes], secondary: [hamstrings, core]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "12-15", rest_s: 45, tempo: "1-1-2-0", rpe: "6-7"}
+    technique_ru:
+      - "Ляг на спину, пятки близко к тазу, руки вдоль тела."
+      - "Подними таз до прямой линии от плеч до коленей."
+      - "Задержись на секунду, сжав ягодицы, и медленно опустись."
+    mistakes_ru: ["Прогиб в пояснице наверху", "Толчок носками вместо пяток"]
+    cues_ru: ["Рёбра вниз", "Пятки в пол"]
+    breathing_ru: "Выдох — вверх."
+    contraindications: [lower_back_pain]
+    regressions: []
+    progressions: [ex-db-rdl]
+    swaps: [ex-bird-dog]
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: down, ru: "Лёжа на спине, колени согнуты"}
+        - {key: up, ru: "Таз поднят, линия плечи — колени прямая"}
+
+  - id: ex-db-rdl
+    name_ru: "Румынская тяга с гантелями"
+    name_en: "Dumbbell Romanian deadlift"
+    a19: E09
+    level: classic
+    category: strength
+    pattern: hinge
+    muscles: {primary: [hamstrings, glutes], secondary: [lower_back, forearms]}
+    equipment: [dumbbells, kettlebell]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-12", rest_s: 90, tempo: "3-0-1-0", rpe: "6-8"}
+    technique_ru:
+      - "Стоя, гантели перед бёдрами, колени чуть согнуты."
+      - "Отводи таз назад, гантели скользят вдоль ног, спина ровная."
+      - "Опустись до натяжения задней поверхности бедра и вернись, толкая таз вперёд."
+    mistakes_ru: ["Круглая спина", "Приседание вместо наклона", "Гантели далеко от ног"]
+    cues_ru: ["Закрой дверь тазом сзади", "Гантели бреют ноги"]
+    breathing_ru: "Вдох — вниз, выдох — вверх."
+    contraindications: [lower_back_pain, lower_back_injury]
+    regressions: [ex-glute-bridge]
+    progressions: [ex-trap-bar-deadlift]
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells]
+      poses:
+        - {key: stand, ru: "Стоя, гантели у бёдер"}
+        - {key: hinge, ru: "Корпус наклонён ~45°, гантели у середины голени, спина ровная"}
+
+  - id: ex-incline-pushup
+    name_ru: "Отжимания от стола или стены"
+    name_en: "Incline push-up"
+    a19: E11
+    level: classic
+    category: strength
+    pattern: push_h
+    muscles: {primary: [chest, triceps], secondary: [front_delts, core]}
+    equipment: [chair, wall]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 3, reps: "8-15", rest_s: 60, tempo: "2-0-1-0", rpe: "6-7"}
+    technique_ru:
+      - "Ладони на край устойчивого стола или стену на ширине плеч."
+      - "Тело — прямая линия от головы до пяток."
+      - "Опусти грудь к опоре, локти под ~45° к корпусу, выжми себя обратно."
+    mistakes_ru: ["Провисание таза", "Локти разведены в стороны под 90°"]
+    cues_ru: ["Тело — доска", "Грудь идёт первой"]
+    breathing_ru: "Вдох — вниз, выдох — от опоры."
+    contraindications: [wrist_pain, shoulder_pain]
+    regressions: [ex-scap-pushup]
+    progressions: [ex-pushup]
+    swaps: [ex-db-floor-press]
+    animation:
+      view: side
+      loop: true
+      props: [chair]
+      poses:
+        - {key: top, ru: "Наклонный упор на прямых руках"}
+        - {key: bottom, ru: "Грудь у края опоры, локти назад под 45°"}
+
+  - id: ex-pushup
+    name_ru: "Отжимания от пола"
+    name_en: "Push-up"
+    a19: E12
+    level: classic
+    category: strength
+    pattern: push_h
+    muscles: {primary: [chest, triceps], secondary: [front_delts, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 3, reps: "6-15", rest_s: 75, tempo: "2-0-1-0", rpe: "6-8"}
+    technique_ru:
+      - "Ладони под плечами, тело прямое, пресс и ягодицы напряжены."
+      - "Опусти грудь до 5–10 см от пола, локти под ~45°."
+      - "Выжми пол, сохраняя линию тела."
+    mistakes_ru: ["Провисание или «горка» тазом", "Голова тянется к полу раньше груди"]
+    cues_ru: ["Вкрути ладони в пол", "Тело поднимается одним куском"]
+    breathing_ru: "Вдох — вниз, выдох — вверх."
+    contraindications: [wrist_pain, shoulder_pain]
+    regressions: [ex-incline-pushup]
+    progressions: [ex-archer-pushup, ex-pike-pushup]
+    swaps: [ex-db-floor-press]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: top, ru: "Упор лёжа на прямых руках, тело — линия"}
+        - {key: bottom, ru: "Грудь у пола, локти назад под 45°, тело — линия"}
+
+  - id: ex-db-floor-press
+    name_ru: "Жим гантелей лёжа на полу"
+    name_en: "Dumbbell floor press"
+    a19: E13
+    level: classic
+    category: strength
+    pattern: push_h
+    muscles: {primary: [chest, triceps], secondary: [front_delts]}
+    equipment: [dumbbells]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-12", rest_s: 90, tempo: "2-1-1-0", rpe: "6-8"}
+    technique_ru:
+      - "Ляг на спину, колени согнуты, гантели над грудью."
+      - "Опусти гантели, пока плечо не коснётся пола, локти под ~45°."
+      - "Выжми вверх, лопатки прижаты к полу."
+    mistakes_ru: ["Удар локтем об пол", "Гантели разъезжаются в стороны"]
+    cues_ru: ["Касание пола — мягкое", "Лопатки в карманы"]
+    breathing_ru: "Выдох — жим."
+    contraindications: [shoulder_pain]
+    regressions: [ex-incline-pushup]
+    progressions: [ex-pushup]
+    swaps: [ex-pushup]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells, mat]
+      poses:
+        - {key: top, ru: "Лёжа, гантели над грудью на прямых руках"}
+        - {key: bottom, ru: "Плечи касаются пола, гантели у груди"}
+
+  - id: ex-db-row
+    name_ru: "Тяга гантели в наклоне"
+    name_en: "One-arm dumbbell row"
+    a19: E16
+    level: classic
+    category: strength
+    pattern: pull_h
+    muscles: {primary: [lats, upper_back], secondary: [biceps, rear_delts]}
+    equipment: [dumbbells, chair]
+    place: [home, gym]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-12", rest_s: 60, tempo: "1-1-2-0", rpe: "6-8"}
+    technique_ru:
+      - "Обопрись рукой и коленом о скамью или стул, спина ровная."
+      - "Тяни локоть к бедру, гантель идёт вдоль тела."
+      - "Медленно опусти до полного выпрямления руки."
+    mistakes_ru: ["Рывок корпусом", "Локоть уходит в сторону"]
+    cues_ru: ["Локоть в задний карман", "Лопатка начинает движение"]
+    breathing_ru: "Выдох — тяга."
+    contraindications: [lower_back_pain, shoulder_pain]
+    regressions: [ex-band-pull-apart]
+    progressions: [ex-inverted-row]
+    swaps: [ex-inverted-row, ex-lat-pulldown]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells, chair]
+      poses:
+        - {key: bottom, ru: "Наклон с опорой, рука с гантелью прямая вниз"}
+        - {key: top, ru: "Гантель у пояса, локоть выше спины"}
+
+  - id: ex-lat-pulldown
+    name_ru: "Тяга верхнего блока"
+    name_en: "Lat pulldown"
+    a19: E17
+    level: classic
+    category: strength
+    pattern: pull_v
+    muscles: {primary: [lats], secondary: [biceps, upper_back]}
+    equipment: [machine_cable]
+    place: [gym]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 3, reps: "8-12", rest_s: 90, tempo: "1-1-2-0", rpe: "6-8"}
+    technique_ru:
+      - "Сядь, зафиксируй бёдра валиком, хват чуть шире плеч."
+      - "Грудь вверх, тяни рукоять к ключицам, локти вниз."
+      - "Верни вверх под контролем до полного выпрямления."
+    mistakes_ru: ["Раскачка корпусом", "Тяга за голову"]
+    cues_ru: ["Локти в задние карманы", "Грудь навстречу рукояти"]
+    breathing_ru: "Выдох — тяга."
+    contraindications: [shoulder_pain, elbow_pain]
+    regressions: [ex-band-pull-apart]
+    progressions: [ex-pullup]
+    swaps: [ex-db-row]
+    animation:
+      view: side
+      loop: true
+      props: [machine_cable]
+      poses:
+        - {key: top, ru: "Сидя, руки вытянуты вверх к рукояти"}
+        - {key: bottom, ru: "Рукоять у ключиц, локти вниз, грудь вверх"}
+
+  - id: ex-db-press-standing
+    name_ru: "Жим гантелей стоя"
+    name_en: "Standing dumbbell press"
+    a19: E15
+    level: classic
+    category: strength
+    pattern: push_v
+    muscles: {primary: [front_delts, triceps], secondary: [side_delts, core]}
+    equipment: [dumbbells]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: [overhead_load]
+    default: {sets: 3, reps: "8-10", rest_s: 90, tempo: "2-0-1-0", rpe: "6-8"}
+    technique_ru:
+      - "Стоя, гантели у плеч, пресс и ягодицы напряжены."
+      - "Выжми вверх над головой, голова слегка проходит вперёд под руками."
+      - "Опусти к плечам под контролем."
+    mistakes_ru: ["Прогиб в пояснице", "Жим вперёд, а не вверх"]
+    cues_ru: ["Рёбра вниз", "Бицепсы у ушей наверху"]
+    breathing_ru: "Выдох — жим."
+    contraindications: [shoulder_pain, shoulder_injury, lower_back_pain]
+    regressions: [ex-arm-circles]
+    progressions: [ex-pike-pushup]
+    swaps: [ex-pike-pushup]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells]
+      poses:
+        - {key: rack, ru: "Гантели у плеч, локти чуть впереди"}
+        - {key: lockout, ru: "Руки прямые над головой, корпус вертикально"}
+
+  - id: ex-ytw
+    name_ru: "Y-T-W лёжа"
+    name_en: "Prone Y-T-W"
+    a19: E20
+    level: classic
+    category: strength
+    pattern: pull_h
+    muscles: {primary: [upper_back, rear_delts], secondary: [rotator_cuff, traps]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 2, reps: "6 каждой буквы", rest_s: 45, tempo: "1-2-1-0", rpe: "5-6"}
+    technique_ru:
+      - "Ляг на живот, лоб на сложенное полотенце."
+      - "Подними прямые руки буквой Y, затем T, затем W, сводя лопатки."
+      - "Поясница не прогибается — работает верх спины."
+    mistakes_ru: ["Подъём за счёт прогиба поясницы", "Плечи к ушам"]
+    cues_ru: ["Большие пальцы к потолку", "Лопатки в задние карманы"]
+    breathing_ru: "Выдох — подъём."
+    contraindications: [shoulder_pain, neck_pain]
+    regressions: [ex-band-pull-apart]
+    progressions: [ex-db-row]
+    swaps: [ex-band-pull-apart]
+    animation:
+      view: top
+      loop: true
+      props: [mat]
+      poses:
+        - {key: y, ru: "Руки над головой буквой Y"}
+        - {key: t, ru: "Руки в стороны буквой T"}
+        - {key: w, ru: "Локти согнуты и прижаты, буква W"}
+
+  - id: ex-band-pull-apart
+    name_ru: "Разведение резинки"
+    name_en: "Band pull-apart"
+    level: classic
+    category: strength
+    pattern: pull_h
+    muscles: {primary: [rear_delts, upper_back], secondary: [rotator_cuff]}
+    equipment: [band]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: []
+    default: {sets: 2, reps: "15-20", rest_s: 45, tempo: "1-1-2-0", rpe: "5-7"}
+    technique_ru:
+      - "Держи резинку прямыми руками перед собой на уровне плеч."
+      - "Разведи руки в стороны, сводя лопатки, до касания груди резинкой."
+      - "Верни медленно."
+    mistakes_ru: ["Сгибание локтей", "Прогиб в пояснице"]
+    cues_ru: ["Раскрой грудь", "Плечи вниз"]
+    breathing_ru: "Выдох — разведение."
+    contraindications: [shoulder_pain]
+    regressions: []
+    progressions: [ex-db-row]
+    swaps: [ex-ytw]
+    animation:
+      view: front
+      loop: true
+      props: [band]
+      poses:
+        - {key: front, ru: "Руки прямые вперёд, резинка натянута слегка"}
+        - {key: apart, ru: "Руки разведены в стороны, резинка у груди"}
+
+  - id: ex-inverted-row
+    name_ru: "Австралийские подтягивания"
+    name_en: "Inverted row"
+    level: classic
+    category: strength
+    pattern: pull_h
+    muscles: {primary: [upper_back, lats], secondary: [biceps, core]}
+    equipment: [bar, rings]
+    place: [gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: [grip_hang]
+    default: {sets: 3, reps: "6-12", rest_s: 75, tempo: "1-1-2-0", rpe: "6-8"}
+    technique_ru:
+      - "Повисни под низкой перекладиной на прямых руках, пятки на полу, тело прямое."
+      - "Подтяни грудь к перекладине, сводя лопатки."
+      - "Опустись медленно; чем вертикальнее тело — тем легче."
+    mistakes_ru: ["Провисает таз", "Тянется подбородок, а не грудь"]
+    cues_ru: ["Грудь к перекладине", "Тело — доска"]
+    breathing_ru: "Выдох — тяга."
+    contraindications: [shoulder_pain, elbow_pain]
+    regressions: [ex-db-row]
+    progressions: [ex-pullup]
+    swaps: [ex-db-row]
+    animation:
+      view: side
+      loop: true
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Тело наклонно под перекладиной, руки прямые"}
+        - {key: top, ru: "Грудь у перекладины, лопатки сведены"}
+
+  - id: ex-plank
+    name_ru: "Планка на предплечьях"
+    name_en: "Forearm plank"
+    a19: E21
+    level: classic
+    category: core
+    pattern: core_anti_ext
+    muscles: {primary: [core], secondary: [front_delts, glutes]}
+    equipment: [mat]
+    place: [home, gym, outdoor, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 3, time_s: 30, rest_s: 45, rpe: "6-7"}
+    technique_ru:
+      - "Локти под плечами, предплечья параллельно."
+      - "Тело — прямая от головы до пяток, ягодицы и пресс напряжены."
+      - "Дыши ровно; заканчивай, когда линия начинает ломаться."
+    mistakes_ru: ["Провисание поясницы", "Таз задран вверх", "Задержка дыхания"]
+    cues_ru: ["Тяни локти к пальцам ног, не двигая их", "Качество важнее секунд"]
+    breathing_ru: "Ровное дыхание без задержек."
+    contraindications: [lower_back_pain, shoulder_pain]
+    regressions: [ex-dead-bug]
+    progressions: [ex-hollow-hold]
+    swaps: [ex-dead-bug]
+    animation:
+      view: side
+      loop: false
+      props: [mat]
+      poses:
+        - {key: set, ru: "На коленях и предплечьях"}
+        - {key: hold, ru: "Тело прямой линией на предплечьях и носках"}
+
+  - id: ex-side-plank
+    name_ru: "Боковая планка"
+    name_en: "Side plank"
+    a19: E22
+    level: classic
+    category: core
+    pattern: core_anti_rot
+    muscles: {primary: [obliques], secondary: [glutes, side_delts]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: time_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 2, time_s: 25, rest_s: 30, rpe: "6-7"}
+    technique_ru:
+      - "Ляг на бок, локоть под плечом, ноги вместе."
+      - "Подними таз, чтобы тело стало прямой линией."
+      - "Держи, не заваливаясь вперёд или назад."
+    mistakes_ru: ["Таз провисает", "Плечо уходит к уху"]
+    cues_ru: ["Таз к потолку", "Длинная шея"]
+    breathing_ru: "Ровное дыхание."
+    contraindications: [shoulder_pain]
+    regressions: [ex-bird-dog]
+    progressions: []
+    swaps: [ex-pallof-press]
+    animation:
+      view: front
+      loop: false
+      props: [mat]
+      poses:
+        - {key: down, ru: "Лёжа на боку на локте"}
+        - {key: hold, ru: "Таз поднят, тело — прямая"}
+
+  - id: ex-dead-bug
+    name_ru: "Мёртвый жук"
+    name_en: "Dead bug"
+    a19: E23
+    level: classic
+    category: core
+    pattern: core_anti_ext
+    muscles: {primary: [core], secondary: [hip_flexors]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 2, reps: "6-8", rest_s: 45, tempo: "3-1-3-0", rpe: "5-6"}
+    technique_ru:
+      - "Лёжа на спине, руки вверх, колени над тазом под 90°."
+      - "Прижми поясницу к полу и медленно выпрями противоположные руку и ногу."
+      - "Верни и смени сторону."
+    mistakes_ru: ["Поясница отрывается от пола", "Спешка"]
+    cues_ru: ["Поясница приклеена", "Медленно, как под водой"]
+    breathing_ru: "Выдох — выпрямление."
+    contraindications: []
+    regressions: []
+    progressions: [ex-hollow-hold]
+    swaps: [ex-bird-dog]
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: start, ru: "Лёжа на спине, руки вверх, голени параллельно полу"}
+        - {key: extend, ru: "Рука за головой и противоположная нога вытянуты над полом"}
+
+  - id: ex-bird-dog
+    name_ru: "Птица — собака"
+    name_en: "Bird dog"
+    level: classic
+    category: core
+    pattern: core_anti_rot
+    muscles: {primary: [core, glutes], secondary: [lower_back, rear_delts]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 2, reps: "8", rest_s: 30, tempo: "2-2-2-0", rpe: "5"}
+    technique_ru:
+      - "На четвереньках, спина ровная."
+      - "Вытяни противоположные руку и ногу в линию с корпусом."
+      - "Задержись на 2 секунды и вернись без раскачки."
+    mistakes_ru: ["Таз поворачивается", "Нога выше линии спины с прогибом"]
+    cues_ru: ["На пояснице стакан воды", "Тянись, а не поднимай"]
+    breathing_ru: "Выдох — вытяжение."
+    contraindications: [wrist_pain]
+    regressions: []
+    progressions: [ex-dead-bug]
+    swaps: [ex-dead-bug]
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: start, ru: "Четвереньки, спина как стол"}
+        - {key: reach, ru: "Рука вперёд и противоположная нога назад в одну линию"}
+
+  - id: ex-pallof-press
+    name_ru: "Паллоф-пресс"
+    name_en: "Pallof press"
+    a19: E24
+    level: classic
+    category: core
+    pattern: core_anti_rot
+    muscles: {primary: [obliques, core], secondary: [chest]}
+    equipment: [band, machine_cable]
+    place: [home, gym]
+    measure: reps_per_side
+    impact: low
+    risk_tags: []
+    default: {sets: 2, reps: "10", rest_s: 45, tempo: "1-2-1-0", rpe: "6-7"}
+    technique_ru:
+      - "Встань боком к креплению резинки, рукоять у груди."
+      - "Выжми руки вперёд, не давая корпусу повернуться."
+      - "Задержись на 2 секунды и верни к груди."
+    mistakes_ru: ["Корпус разворачивается к креплению", "Стойка слишком узкая"]
+    cues_ru: ["Корпус — каменный", "Сопротивляйся повороту"]
+    breathing_ru: "Выдох — выжим."
+    contraindications: [lower_back_pain]
+    regressions: [ex-bird-dog]
+    progressions: []
+    swaps: [ex-side-plank]
+    animation:
+      view: front
+      loop: true
+      props: [band]
+      poses:
+        - {key: chest, ru: "Рукоять у груди, резинка тянет вбок"}
+        - {key: press, ru: "Руки выпрямлены вперёд, корпус не повёрнут"}
+
+  - id: ex-farmer-carry
+    name_ru: "Фермерская прогулка"
+    name_en: "Farmer's carry"
+    a19: E25
+    level: classic
+    category: strength
+    pattern: carry
+    muscles: {primary: [forearms, traps, core], secondary: [glutes]}
+    equipment: [dumbbells, kettlebell]
+    place: [home, gym, outdoor]
+    measure: distance
+    impact: low
+    risk_tags: []
+    default: {sets: 3, distance_m: 30, rest_s: 60, rpe: "6-8"}
+    technique_ru:
+      - "Подними тяжёлые гантели как в становой, спина ровная."
+      - "Иди короткими шагами, плечи вниз, корпус вертикально."
+      - "Опусти вес, присев, а не наклонившись."
+    mistakes_ru: ["Корпус наклоняется в сторону", "Плечи к ушам"]
+    cues_ru: ["Высокий рост, длинная шея", "Сжимай рукояти"]
+    breathing_ru: "Ровное дыхание на ходу."
+    contraindications: [lower_back_pain, lower_back_injury]
+    regressions: []
+    progressions: []
+    swaps: [ex-plank]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells]
+      poses:
+        - {key: step_l, ru: "Шаг левой, гантели вдоль тела"}
+        - {key: step_r, ru: "Шаг правой, корпус вертикально"}
+
+  - id: ex-brisk-walk
+    name_ru: "Быстрая ходьба / в гору"
+    name_en: "Brisk walk / incline walk"
+    a19: E26
+    level: classic
+    category: cardio
+    pattern: locomotion
+    muscles: {primary: [cardio], secondary: [calves, glutes]}
+    equipment: [none, treadmill]
+    place: [outdoor, gym, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 1800, rpe: "3-4", zone: Z2}
+    technique_ru:
+      - "Чаще шаг, руки работают согнутыми в локтях."
+      - "Темп — можешь говорить предложениями, но не петь (разговорный тест)."
+      - "На дорожке добавь наклон 3–8 %."
+    mistakes_ru: ["Держаться за поручни дорожки", "Темп, при котором трудно говорить"]
+    cues_ru: ["Говорить можно, петь — нет", "Шаг лёгкий и частый"]
+    breathing_ru: "Ровное, носом или носом и ртом."
+    contraindications: [ankle_pain]
+    regressions: []
+    progressions: [ex-cardio-machine]
+    swaps: [ex-cardio-machine]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: contact, ru: "Пятка передней ноги касается земли, руки в противоходе"}
+        - {key: pass, ru: "Нога проходит под корпусом"}
+
+  - id: ex-cardio-machine
+    name_ru: "Велотренажёр, эллипс или гребной"
+    name_en: "Bike / elliptical / rower steady"
+    a19: E28
+    level: classic
+    category: cardio
+    pattern: locomotion
+    muscles: {primary: [cardio], secondary: [quads, glutes]}
+    equipment: [bike, rower, treadmill]
+    place: [gym, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 1, time_s: 1800, rpe: "3-5", zone: Z2}
+    technique_ru:
+      - "Настрой седло на уровень бедра (велотренажёр) или упор стоп (гребной)."
+      - "Держи ровный каданс без рывков."
+      - "Темп по разговорному тесту или зоне 2 WHOOP."
+    mistakes_ru: ["Седло слишком низко — колени выше бёдер", "Рывки спиной на гребном"]
+    cues_ru: ["Ровно и долго", "Ноги — мотор, спина спокойна"]
+    breathing_ru: "Ровное дыхание."
+    contraindications: [knee_pain]
+    regressions: [ex-brisk-walk]
+    progressions: [ex-rower-intervals]
+    swaps: [ex-brisk-walk]
+    animation:
+      view: side
+      loop: true
+      props: [bike]
+      poses:
+        - {key: top, ru: "Педаль вверху, колено согнуто"}
+        - {key: bottom, ru: "Педаль внизу, нога почти прямая"}
+
+  - id: ex-high-march
+    name_ru: "Высокий марш"
+    name_en: "High-knee march"
+    a19: E29
+    level: classic
+    category: cardio
+    pattern: locomotion
+    muscles: {primary: [cardio, hip_flexors], secondary: [core, calves]}
+    equipment: [none]
+    place: [home, hotel, outdoor, gym]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 4, time_s: 40, rest_s: 20, rpe: "4-6"}
+    technique_ru:
+      - "Шагай на месте, поднимая колени к поясу."
+      - "Руки работают активно в противоходе."
+      - "Приземление мягкое, без прыжков."
+    mistakes_ru: ["Сутулость", "Приземление на пятку с ударом"]
+    cues_ru: ["Колено к ладони", "Тихо для соседей"]
+    breathing_ru: "Ровное дыхание."
+    contraindications: [hip_pain]
+    regressions: [ex-brisk-walk]
+    progressions: [ex-jump-rope]
+    swaps: [ex-brisk-walk]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: knee_up_l, ru: "Левое колено у пояса, правая рука вперёд"}
+        - {key: knee_up_r, ru: "Правое колено у пояса, левая рука вперёд"}
+
+  # =====================================================================
+  # ADVANCED — CrossFit-style functional, HIIT, kettlebell, periodised strength, base calisthenics
+  # =====================================================================
+
+  - id: ex-bulgarian-split
+    name_ru: "Болгарский сплит-присед"
+    name_en: "Bulgarian split squat"
+    a19: E06
+    level: advanced
+    category: strength
+    pattern: lunge
+    muscles: {primary: [quads, glutes], secondary: [adductors, core]}
+    equipment: [chair, box, dumbbells]
+    place: [home, gym, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: [deep_knee_flexion]
+    default: {sets: 3, reps: "8-10", rest_s: 90, tempo: "3-0-1-0", rpe: "7-8"}
+    technique_ru:
+      - "Задняя стопа на скамье, передняя — в длинном шаге от неё."
+      - "Опускайся вертикально, вес на передней ноге."
+      - "Вставай, толкаясь пяткой; гантели — по желанию."
+    mistakes_ru: ["Короткий шаг и колено далеко за носок", "Толчок задней ногой"]
+    cues_ru: ["Задняя нога — только для баланса", "Вниз как лифт"]
+    breathing_ru: "Вдох — вниз, выдох — вверх."
+    contraindications: [knee_pain, knee_injury, screening_not_cleared]
+    regressions: [ex-reverse-lunge]
+    progressions: [ex-pistol-squat]
+    swaps: [ex-goblet-squat]
+    animation:
+      view: side
+      loop: true
+      props: [box]
+      poses:
+        - {key: top, ru: "Задняя стопа на скамье, стоя на передней ноге"}
+        - {key: bottom, ru: "Переднее бедро параллельно полу, заднее колено у пола"}
+
+  - id: ex-back-squat
+    name_ru: "Присед со штангой на спине"
+    name_en: "Barbell back squat"
+    level: advanced
+    category: strength
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [adductors, lower_back, core]}
+    equipment: [barbell]
+    place: [gym]
+    measure: reps
+    impact: low
+    risk_tags: [heavy_load, valsalva, deep_knee_flexion]
+    default: {sets: 4, reps: "5", rest_s: 150, tempo: "2-0-1-0", rpe: "7-8"}
+    technique_ru:
+      - "Штанга на верхней части трапеций, хват чуть шире плеч, работай в силовой раме со страховочными упорами."
+      - "Вдох в живот, корпус жёсткий, присядь до параллели или ниже."
+      - "Вставай, толкая пол, грудь и таз поднимаются одновременно."
+    mistakes_ru: ["Таз поднимается быстрее груди", "Колени внутрь", "Без страховочных упоров"]
+    cues_ru: ["Раздвигай пол", "Спина — монолит"]
+    breathing_ru: "Короткое натуживание на тяжёлых подходах допустимо только без флагов давления; иначе — непрерывное дыхание и вес легче."
+    contraindications: [knee_pain, knee_injury, lower_back_pain, lower_back_injury, hypertension, heart_condition, hernia, screening_not_cleared]
+    regressions: [ex-goblet-squat]
+    progressions: []
+    swaps: [ex-bulgarian-split]
+    animation:
+      view: side
+      loop: true
+      props: [barbell, rack]
+      poses:
+        - {key: stand, ru: "Стоя, штанга на трапециях"}
+        - {key: bottom, ru: "Бёдра ниже параллели, корпус наклонён, штанга над серединой стопы"}
+
+  - id: ex-trap-bar-deadlift
+    name_ru: "Становая тяга с трэп-грифом"
+    name_en: "Trap bar deadlift"
+    a19: E10
+    level: advanced
+    category: strength
+    pattern: hinge
+    muscles: {primary: [glutes, hamstrings, quads], secondary: [lower_back, traps, forearms]}
+    equipment: [trap_bar, kettlebell]
+    place: [gym]
+    measure: reps
+    impact: low
+    risk_tags: [heavy_load, valsalva]
+    default: {sets: 4, reps: "5", rest_s: 150, tempo: "1-0-1-1", rpe: "7-8"}
+    technique_ru:
+      - "Встань в центр грифа, возьмись за рукояти, спина нейтральна."
+      - "Вытолкни пол ногами, гриф идёт вертикально."
+      - "Опускай под контролем, не бросая."
+    mistakes_ru: ["Круглая спина на старте", "Рывок руками"]
+    cues_ru: ["Вытолкни пол", "Плечи над рукоятями"]
+    breathing_ru: "Вдох перед подъёмом; при флагах давления — без задержки дыхания."
+    contraindications: [lower_back_pain, lower_back_injury, hypertension, heart_condition, hernia, screening_not_cleared]
+    regressions: [ex-db-rdl]
+    progressions: []
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [trap_bar]
+      poses:
+        - {key: setup, ru: "Присед-наклон внутри грифа, руки прямые, спина ровная"}
+        - {key: lockout, ru: "Стоя прямо, гриф у бёдер"}
+
+  - id: ex-kb-swing
+    name_ru: "Махи гирей"
+    name_en: "Kettlebell swing"
+    level: advanced
+    category: power
+    pattern: hinge
+    muscles: {primary: [glutes, hamstrings], secondary: [core, forearms, upper_back]}
+    equipment: [kettlebell, dumbbells]
+    place: [home, gym, outdoor]
+    measure: reps
+    impact: medium
+    risk_tags: [max_speed]
+    default: {sets: 5, reps: "15", rest_s: 60, rpe: "7-8"}
+    technique_ru:
+      - "Гиря перед тобой, наклонись тазом назад и возьми её двумя руками."
+      - "Закинь гирю между ног, как пас в американском футболе."
+      - "Резко разогни таз — гиря взлетает до уровня груди за счёт ног, руки лишь держат."
+    mistakes_ru: ["Приседание вместо наклона", "Подъём гири руками", "Прогиб назад наверху"]
+    cues_ru: ["Таз — пружина", "Наверху — стоя как планка"]
+    breathing_ru: "Резкий выдох наверху."
+    contraindications: [lower_back_pain, lower_back_injury, screening_not_cleared]
+    regressions: [ex-db-rdl]
+    progressions: [ex-kb-clean]
+    swaps: [ex-db-rdl]
+    animation:
+      view: side
+      loop: true
+      props: [kettlebell]
+      poses:
+        - {key: hike, ru: "Наклон ~45°, гиря между ног позади, спина ровная"}
+        - {key: float, ru: "Стоя прямо, руки и гиря вперёд на уровне груди"}
+
+  - id: ex-kb-clean
+    name_ru: "Взятие гири на грудь"
+    name_en: "Kettlebell clean"
+    level: advanced
+    category: power
+    pattern: olympic
+    muscles: {primary: [glutes, hamstrings], secondary: [forearms, upper_back, core]}
+    equipment: [kettlebell]
+    place: [home, gym, outdoor]
+    measure: reps_per_side
+    impact: medium
+    risk_tags: [max_speed]
+    default: {sets: 4, reps: "6", rest_s: 75, rpe: "7-8"}
+    technique_ru:
+      - "Начни как мах одной рукой."
+      - "Разгибая таз, веди гирю близко к телу, локоть вниз."
+      - "Мягко «обёрни» гирю вокруг кисти в стойку у груди, без удара по предплечью."
+    mistakes_ru: ["Гиря бьёт по предплечью", "Тяга рукой далеко от корпуса"]
+    cues_ru: ["Застёгивай куртку", "Локоть к рёбрам"]
+    breathing_ru: "Выдох — взятие."
+    contraindications: [wrist_pain, lower_back_pain, screening_not_cleared]
+    regressions: [ex-kb-swing]
+    progressions: [ex-db-snatch]
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [kettlebell]
+      poses:
+        - {key: hike, ru: "Наклон, гиря позади между ног в одной руке"}
+        - {key: rack, ru: "Стоя, гиря у груди на предплечье, локоть у рёбер"}
+
+  - id: ex-db-snatch
+    name_ru: "Рывок гантели одной рукой"
+    name_en: "Single-arm dumbbell snatch"
+    level: advanced
+    category: power
+    pattern: olympic
+    muscles: {primary: [glutes, hamstrings, side_delts], secondary: [traps, core]}
+    equipment: [dumbbells, kettlebell]
+    place: [home, gym]
+    measure: reps_per_side
+    impact: medium
+    risk_tags: [max_speed, overhead_load]
+    default: {sets: 4, reps: "6", rest_s: 75, rpe: "7-8"}
+    technique_ru:
+      - "Гантель между стоп, присед-наклон, спина ровная."
+      - "Взрывом ног и таза подними гантель вдоль тела, локоть высоко."
+      - "Подсядь и зафиксируй на прямой руке над головой; опусти в два движения."
+    mistakes_ru: ["Тяга одной рукой без ног", "Неустойчивый локоть наверху"]
+    cues_ru: ["Ноги — двигатель", "Наверху — фиксация 1 секунда"]
+    breathing_ru: "Выдох — взрыв."
+    contraindications: [shoulder_pain, shoulder_injury, lower_back_pain, screening_not_cleared]
+    regressions: [ex-kb-clean]
+    progressions: []
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells]
+      poses:
+        - {key: start, ru: "Присед-наклон, гантель у пола"}
+        - {key: pull, ru: "Таз разогнут, локоть высоко, гантель у груди"}
+        - {key: lockout, ru: "Рука прямая над головой, стойка устойчивая"}
+
+  - id: ex-db-thruster
+    name_ru: "Трастер с гантелями"
+    name_en: "Dumbbell thruster"
+    level: advanced
+    category: conditioning
+    pattern: full_body
+    muscles: {primary: [quads, glutes, front_delts], secondary: [triceps, core]}
+    equipment: [dumbbells]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: [overhead_load, deep_knee_flexion]
+    default: {sets: 4, reps: "10", rest_s: 60, rpe: "7-8"}
+    technique_ru:
+      - "Гантели у плеч, присядь как во фронтальном приседе."
+      - "Вставая, используй импульс ног и выжми гантели над головой одним движением."
+      - "Опусти гантели к плечам на пути в следующий присед."
+    mistakes_ru: ["Жим отдельно от приседа", "Прогиб в пояснице наверху"]
+    cues_ru: ["Ноги запускают жим", "Рёбра вниз"]
+    breathing_ru: "Выдох — на жиме."
+    contraindications: [shoulder_pain, knee_pain, lower_back_pain, screening_not_cleared]
+    regressions: [ex-goblet-squat]
+    progressions: []
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [dumbbells]
+      poses:
+        - {key: bottom, ru: "Присед, гантели у плеч"}
+        - {key: lockout, ru: "Стоя, гантели над головой на прямых руках"}
+
+  - id: ex-burpee
+    name_ru: "Бёрпи"
+    name_en: "Burpee"
+    level: advanced
+    category: conditioning
+    pattern: full_body
+    muscles: {primary: [full_body, cardio], secondary: [chest, quads]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: high
+    risk_tags: [high_impact, max_speed, wrist_load]
+    default: {sets: 5, reps: "10", rest_s: 60, rpe: "7-8"}
+    technique_ru:
+      - "Из положения стоя присядь и поставь ладони на пол."
+      - "Отпрыгни или отшагни ногами в упор лёжа, коснись грудью пола."
+      - "Верни ноги к рукам и выпрыгни вверх с хлопком над головой."
+    mistakes_ru: ["Провисание поясницы в упоре", "Жёсткое приземление на прямые ноги"]
+    cues_ru: ["Приземление тихое", "Ритм важнее скорости"]
+    breathing_ru: "Выдох — на выпрыгивании."
+    contraindications: [knee_pain, ankle_pain, wrist_pain, lower_back_pain, screening_not_cleared, pregnancy]
+    regressions: [ex-mountain-climber]
+    progressions: []
+    swaps: [ex-mountain-climber]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: stand, ru: "Стоя"}
+        - {key: plank, ru: "Упор лёжа, грудь у пола"}
+        - {key: jump, ru: "Прыжок вверх, руки над головой"}
+
+  - id: ex-mountain-climber
+    name_ru: "Скалолаз"
+    name_en: "Mountain climber"
+    level: advanced
+    category: conditioning
+    pattern: core_anti_ext
+    muscles: {primary: [core, hip_flexors], secondary: [front_delts, cardio]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: time
+    impact: medium
+    risk_tags: [wrist_load]
+    default: {sets: 4, time_s: 30, rest_s: 30, rpe: "7-8"}
+    technique_ru:
+      - "Упор лёжа на прямых руках, плечи над ладонями."
+      - "Поочерёдно подтягивай колени к груди в ровном ритме."
+      - "Таз остаётся на уровне плеч."
+    mistakes_ru: ["Таз задирается вверх", "Плечи уходят за ладони"]
+    cues_ru: ["Бег в планке", "Плечи над руками"]
+    breathing_ru: "Ритмичное дыхание."
+    contraindications: [wrist_pain, shoulder_pain, screening_not_cleared]
+    regressions: [ex-plank]
+    progressions: [ex-burpee]
+    swaps: [ex-high-march]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: left, ru: "Упор лёжа, левое колено у груди"}
+        - {key: right, ru: "Упор лёжа, правое колено у груди"}
+
+  - id: ex-box-jump
+    name_ru: "Запрыгивание на низкую тумбу"
+    name_en: "Low box jump"
+    level: advanced
+    category: power
+    pattern: jump
+    muscles: {primary: [quads, glutes, calves], secondary: [core]}
+    equipment: [box]
+    place: [gym]
+    measure: reps
+    impact: high
+    risk_tags: [high_impact, max_speed, fall_risk]
+    default: {sets: 4, reps: "5", rest_s: 90, rpe: "6-7"}
+    technique_ru:
+      - "Встань перед устойчивой тумбой высотой 30–50 см."
+      - "Замах руками, прыжок вверх, мягкое приземление в полуприсед всей стопой."
+      - "Сойди вниз шагом, а не спрыгивай."
+    mistakes_ru: ["Слишком высокая тумба", "Колени внутрь при приземлении", "Спрыгивание назад"]
+    cues_ru: ["Тихое приземление", "Вниз — шагом"]
+    breathing_ru: "Выдох — прыжок."
+    contraindications: [knee_pain, knee_injury, ankle_pain, ankle_injury, screening_not_cleared, pregnancy]
+    regressions: [ex-squat-bw]
+    progressions: []
+    swaps: [ex-kb-swing]
+    animation:
+      view: side
+      loop: true
+      props: [box]
+      poses:
+        - {key: load, ru: "Полуприсед, руки отведены назад"}
+        - {key: flight, ru: "В полёте, колени подтянуты, руки вперёд"}
+        - {key: land, ru: "Приземление на тумбу в полуприсед"}
+
+  - id: ex-jump-rope
+    name_ru: "Скакалка"
+    name_en: "Jump rope"
+    level: advanced
+    category: cardio
+    pattern: jump
+    muscles: {primary: [calves, cardio], secondary: [forearms, core]}
+    equipment: [jump_rope]
+    place: [home, gym, outdoor]
+    measure: time
+    impact: medium
+    risk_tags: [high_impact]
+    default: {sets: 6, time_s: 45, rest_s: 30, rpe: "6-8"}
+    technique_ru:
+      - "Локти у корпуса, вращай скакалку кистями."
+      - "Прыгай на передней части стопы невысоко, 2–3 см."
+      - "Начни с серий по 30–45 с."
+    mistakes_ru: ["Высокие прыжки", "Вращение плечами"]
+    cues_ru: ["Тихие лёгкие стопы", "Кисти крутят, плечи спят"]
+    breathing_ru: "Ровное дыхание."
+    contraindications: [ankle_pain, ankle_injury, knee_pain, screening_not_cleared]
+    regressions: [ex-high-march]
+    progressions: []
+    swaps: [ex-high-march]
+    animation:
+      view: side
+      loop: true
+      props: [jump_rope]
+      poses:
+        - {key: up, ru: "Невысоко в воздухе, скакалка под стопами"}
+        - {key: down, ru: "Касание носками, скакалка над головой"}
+
+  - id: ex-rower-intervals
+    name_ru: "Гребной тренажёр: интервалы"
+    name_en: "Rower intervals"
+    level: advanced
+    category: conditioning
+    pattern: locomotion
+    muscles: {primary: [cardio, lats, quads], secondary: [glutes, upper_back]}
+    equipment: [rower, bike]
+    place: [gym]
+    measure: time
+    impact: low
+    risk_tags: [max_speed]
+    default: {sets: 4, time_s: 240, rest_s: 180, rpe: "8", zone: Z4}
+    technique_ru:
+      - "Порядок гребка: ноги → корпус → руки; обратно: руки → корпус → ноги."
+      - "Мощность от толчка ногами, спина ровная."
+      - "Отдых между интервалами — лёгкая гребля или педалирование."
+    mistakes_ru: ["Тяга руками раньше толчка ногами", "Круглая спина"]
+    cues_ru: ["Ноги — 60 % гребка", "Плавный возврат"]
+    breathing_ru: "Выдох на гребке."
+    contraindications: [lower_back_pain, screening_not_cleared, heart_condition]
+    regressions: [ex-cardio-machine]
+    progressions: []
+    swaps: [ex-cardio-machine]
+    animation:
+      view: side
+      loop: true
+      props: [rower]
+      poses:
+        - {key: catch, ru: "Колени у груди, руки вперёд"}
+        - {key: finish, ru: "Ноги прямые, корпус чуть назад, рукоять у груди"}
+
+  - id: ex-pullup
+    name_ru: "Подтягивания"
+    name_en: "Pull-up"
+    a19: E19
+    level: advanced
+    category: strength
+    pattern: pull_v
+    muscles: {primary: [lats, biceps], secondary: [upper_back, forearms, core]}
+    equipment: [bar]
+    place: [gym, outdoor, home]
+    measure: reps
+    impact: low
+    risk_tags: [grip_hang]
+    default: {sets: 4, reps: "4-8", rest_s: 120, tempo: "1-0-1-2", rpe: "7-8"}
+    technique_ru:
+      - "Вис хватом чуть шире плеч, лопатки активны (плечи от ушей)."
+      - "Тяни локти вниз к рёбрам, пока подбородок не пройдёт перекладину."
+      - "Опускайся 2–3 секунды до прямых рук, без рывков и раскачки."
+    mistakes_ru: ["Раскачка и рывок ногами", "Неполная амплитуда внизу"]
+    cues_ru: ["Грудь к перекладине", "Локти в задние карманы"]
+    breathing_ru: "Выдох — вверх."
+    contraindications: [shoulder_pain, shoulder_injury, elbow_pain, screening_not_cleared]
+    regressions: [ex-inverted-row, ex-lat-pulldown]
+    progressions: [ex-muscle-up, ex-front-lever-tuck]
+    swaps: [ex-lat-pulldown]
+    animation:
+      view: side
+      loop: true
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Вис на прямых руках, лопатки собраны, ноги вместе"}
+        - {key: mid, ru: "Локти под 90°, грудь идёт к перекладине"}
+        - {key: top, ru: "Подбородок над перекладиной, локти у рёбер"}
+
+  - id: ex-dip
+    name_ru: "Отжимания на брусьях"
+    name_en: "Parallel bar dip"
+    level: advanced
+    category: strength
+    pattern: push_v
+    muscles: {primary: [chest, triceps], secondary: [front_delts]}
+    equipment: [parallel_bars]
+    place: [gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 3, reps: "5-10", rest_s: 120, tempo: "2-0-1-0", rpe: "7-8"}
+    technique_ru:
+      - "Упор на брусьях на прямых руках, плечи вниз."
+      - "Опустись, наклоняя корпус слегка вперёд, до плеча чуть ниже локтя, если без боли."
+      - "Выжми себя вверх до прямых рук."
+    mistakes_ru: ["Плечи к ушам внизу", "Слишком глубоко через боль в плече"]
+    cues_ru: ["Плечи от ушей", "Глубина — до комфорта"]
+    breathing_ru: "Выдох — вверх."
+    contraindications: [shoulder_pain, shoulder_injury, wrist_pain, elbow_pain, screening_not_cleared]
+    regressions: [ex-pushup]
+    progressions: [ex-ring-dip]
+    swaps: [ex-pushup]
+    animation:
+      view: side
+      loop: true
+      props: [parallel_bars]
+      poses:
+        - {key: top, ru: "Упор на прямых руках над брусьями"}
+        - {key: bottom, ru: "Локти под 90°, корпус слегка вперёд"}
+
+  - id: ex-pike-pushup
+    name_ru: "Отжимания пайк (уголком)"
+    name_en: "Pike push-up"
+    level: advanced
+    category: strength
+    pattern: push_v
+    muscles: {primary: [front_delts, triceps], secondary: [upper_back, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load, inversion]
+    default: {sets: 3, reps: "6-10", rest_s: 90, tempo: "2-0-1-0", rpe: "7-8"}
+    technique_ru:
+      - "Встань в перевёрнутую V: таз высоко, руки на ширине плеч."
+      - "Опусти макушку к точке перед ладонями, локти назад."
+      - "Выжми себя обратно, сохраняя таз высоко."
+    mistakes_ru: ["Таз опускается и выходит обычное отжимание", "Локти широко в стороны"]
+    cues_ru: ["Голова идёт вперёд, как в стойке", "Таз — вершина горы"]
+    breathing_ru: "Выдох — жим."
+    contraindications: [shoulder_pain, wrist_pain, hypertension, eye_pressure, fainting_dizziness, screening_not_cleared]
+    regressions: [ex-db-press-standing]
+    progressions: [ex-hspu-wall]
+    swaps: [ex-db-press-standing]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: top, ru: "Перевёрнутая V на прямых руках"}
+        - {key: bottom, ru: "Голова у пола перед ладонями, локти согнуты"}
+
+  - id: ex-hollow-hold
+    name_ru: "Лодочка (hollow hold)"
+    name_en: "Hollow body hold"
+    level: advanced
+    category: core
+    pattern: core_anti_ext
+    muscles: {primary: [core], secondary: [hip_flexors]}
+    equipment: [mat]
+    place: [home, gym, hotel]
+    measure: time
+    impact: low
+    risk_tags: []
+    default: {sets: 3, time_s: 25, rest_s: 45, rpe: "7-8"}
+    technique_ru:
+      - "Лёжа на спине, прижми поясницу к полу."
+      - "Подними плечи, прямые ноги и руки над полом — тело как банан."
+      - "Держи, пока поясница прижата; иначе согни колени."
+    mistakes_ru: ["Поясница отрывается", "Подбородок прижат к груди с напряжением шеи"]
+    cues_ru: ["Поясница — в пол", "Длинное тело"]
+    breathing_ru: "Короткие ровные вдохи."
+    contraindications: [lower_back_pain, neck_pain, screening_not_cleared]
+    regressions: [ex-dead-bug]
+    progressions: [ex-l-sit]
+    swaps: [ex-plank]
+    animation:
+      view: side
+      loop: false
+      props: [mat]
+      poses:
+        - {key: tuck, ru: "Колени к груди, плечи приподняты"}
+        - {key: hold, ru: "Ноги и руки вытянуты над полом, поясница прижата"}
+
+  - id: ex-hanging-knee-raise
+    name_ru: "Подъём коленей в висе"
+    name_en: "Hanging knee raise"
+    level: advanced
+    category: core
+    pattern: core_flex
+    muscles: {primary: [core, hip_flexors], secondary: [forearms, lats]}
+    equipment: [bar]
+    place: [gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: [grip_hang]
+    default: {sets: 3, reps: "8-12", rest_s: 60, tempo: "1-1-2-0", rpe: "7-8"}
+    technique_ru:
+      - "Вис на перекладине, лопатки активны."
+      - "Подними колени к груди, подкручивая таз."
+      - "Опусти медленно без раскачки."
+    mistakes_ru: ["Раскачка", "Подъём только бёдер без подкручивания таза"]
+    cues_ru: ["Таз к пупку", "Медленно вниз"]
+    breathing_ru: "Выдох — подъём."
+    contraindications: [shoulder_pain, lower_back_pain, screening_not_cleared]
+    regressions: [ex-dead-bug]
+    progressions: [ex-toes-to-bar]
+    swaps: [ex-hollow-hold]
+    animation:
+      view: side
+      loop: true
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Вис, ноги вниз"}
+        - {key: top, ru: "Колени у груди, таз подкручен"}
+
+  # =====================================================================
+  # EXTREME — advanced calisthenics, gymnastic strength, sprints, eccentric strength
+  # =====================================================================
+
+  - id: ex-muscle-up
+    name_ru: "Выход силой на перекладине"
+    name_en: "Bar muscle-up"
+    level: extreme
+    category: skill
+    pattern: pull_v
+    muscles: {primary: [lats, triceps, chest], secondary: [biceps, core, forearms]}
+    equipment: [bar]
+    place: [gym, outdoor]
+    measure: reps
+    impact: medium
+    risk_tags: [grip_hang, max_speed, fall_risk]
+    default: {sets: 5, reps: "1-3", rest_s: 180, rpe: "8"}
+    technique_ru:
+      - "Вис, лёгкий контролируемый мах; мощная тяга к нижней части груди с лёгким откидыванием назад."
+      - "В верхней точке быстро переведи локти над перекладиной, корпус наклоняется вперёд."
+      - "Дожми до упора на прямых руках; опускайся под контролем в вис."
+    mistakes_ru: ["Курица-крыло: одна рука переходит раньше другой", "Тяга недостаточно высоко — к подбородку, а не к груди"]
+    cues_ru: ["Перекладина к поясу", "Локти — быстро вперёд"]
+    breathing_ru: "Вдох в висе, выдох на переходе."
+    contraindications: [shoulder_pain, shoulder_injury, elbow_pain, wrist_pain, screening_not_cleared]
+    regressions: [ex-pullup, ex-dip]
+    progressions: []
+    swaps: [ex-pullup]
+    animation:
+      view: side
+      loop: true
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Вис на прямых руках, тело слегка позади перекладины"}
+        - {key: pull, ru: "Перекладина у нижней части груди, корпус откинут"}
+        - {key: transition, ru: "Локти над перекладиной, грудь над грифом"}
+        - {key: support, ru: "Упор на прямых руках над перекладиной"}
+
+  - id: ex-wall-handstand
+    name_ru: "Стойка на руках у стены"
+    name_en: "Wall handstand"
+    level: extreme
+    category: skill
+    pattern: inversion
+    muscles: {primary: [front_delts, core], secondary: [triceps, forearms, upper_back]}
+    equipment: [wall]
+    place: [home, gym]
+    measure: time
+    impact: low
+    risk_tags: [inversion, wrist_load, fall_risk]
+    default: {sets: 5, time_s: 30, rest_s: 90, rpe: "7"}
+    technique_ru:
+      - "Начни с прохода по стене: упор лёжа стопами у стены, шагай ногами вверх, руками к стене."
+      - "Руки на ширине плеч, плечи вытолкнуты к ушам, тело — одна линия, грудь к стене."
+      - "Выход — шагами вниз, а не падением; голова не опирается в пол."
+    mistakes_ru: ["Банановый прогиб в пояснице", "Согнутые руки, плечи не вытолкнуты"]
+    cues_ru: ["Толкай пол", "Рёбра внутрь, ягодицы напряжены"]
+    breathing_ru: "Ровное дыхание; при головокружении — сразу вниз."
+    contraindications: [wrist_pain, wrist_injury, shoulder_pain, neck_pain, hypertension, eye_pressure, fainting_dizziness, heart_condition, pregnancy, screening_not_cleared]
+    regressions: [ex-pike-pushup]
+    progressions: [ex-hspu-wall]
+    swaps: [ex-pike-pushup]
+    animation:
+      view: side
+      loop: false
+      props: [wall]
+      poses:
+        - {key: plank_wall, ru: "Упор лёжа, стопы у стены"}
+        - {key: walk_up, ru: "Ноги на стене, корпус под углом ~45°"}
+        - {key: handstand, ru: "Вертикальная стойка лицом к стене, тело — линия"}
+
+  - id: ex-hspu-wall
+    name_ru: "Отжимания в стойке у стены (частичная амплитуда)"
+    name_en: "Wall handstand push-up (partial)"
+    level: extreme
+    category: skill
+    pattern: push_v
+    muscles: {primary: [front_delts, triceps], secondary: [upper_back, core]}
+    equipment: [wall, mat]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: [inversion, wrist_load, fall_risk, overhead_load]
+    default: {sets: 4, reps: "2-5", rest_s: 150, tempo: "3-0-1-0", rpe: "8"}
+    technique_ru:
+      - "Стойка спиной к стене, под головой сложенный коврик — он ограничивает глубину."
+      - "Опускайся медленно, голова и ладони образуют треугольник."
+      - "Выжми вверх до прямых рук; на первом этапе — только негативы."
+    mistakes_ru: ["Падение головой на пол", "Локти разъезжаются широко"]
+    cues_ru: ["Медленно вниз — 3 секунды", "Треугольник: ладони и голова"]
+    breathing_ru: "Без длинной задержки дыхания; при головокружении — вниз."
+    contraindications: [wrist_pain, shoulder_pain, shoulder_injury, neck_pain, hypertension, eye_pressure, fainting_dizziness, heart_condition, pregnancy, screening_not_cleared]
+    regressions: [ex-pike-pushup, ex-wall-handstand]
+    progressions: []
+    swaps: [ex-pike-pushup]
+    animation:
+      view: side
+      loop: true
+      props: [wall, mat]
+      poses:
+        - {key: top, ru: "Стойка у стены на прямых руках"}
+        - {key: bottom, ru: "Голова касается коврика, локти согнуты"}
+
+  - id: ex-front-lever-tuck
+    name_ru: "Передний вис в группировке"
+    name_en: "Tuck front lever"
+    level: extreme
+    category: skill
+    pattern: pull_h
+    muscles: {primary: [lats, core], secondary: [rear_delts, biceps, forearms]}
+    equipment: [bar, rings]
+    place: [gym, outdoor]
+    measure: time
+    impact: low
+    risk_tags: [grip_hang, inversion]
+    default: {sets: 5, time_s: 10, rest_s: 120, rpe: "8"}
+    technique_ru:
+      - "Из виса подтяни колени к груди и откинься назад, руки прямые."
+      - "Дави прямыми руками перекладину к бёдрам, спина параллельна полу."
+      - "Держи 5–10 секунд, выход — контролируемо вниз в вис."
+    mistakes_ru: ["Согнутые руки", "Таз ниже плеч"]
+    cues_ru: ["Перекладину — к бёдрам", "Спина — горизонт"]
+    breathing_ru: "Короткие ровные вдохи, без длинной задержки."
+    contraindications: [shoulder_pain, shoulder_injury, elbow_pain, hypertension, eye_pressure, screening_not_cleared]
+    regressions: [ex-pullup, ex-hollow-hold]
+    progressions: []
+    swaps: [ex-pullup]
+    animation:
+      view: side
+      loop: false
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Вис на прямых руках"}
+        - {key: tuck, ru: "Спина параллельна полу, колени у груди, руки прямые"}
+
+  - id: ex-planche-lean
+    name_ru: "Наклон планша"
+    name_en: "Planche lean"
+    level: extreme
+    category: skill
+    pattern: push_h
+    muscles: {primary: [front_delts, chest], secondary: [core, forearms]}
+    equipment: [none]
+    place: [home, gym, outdoor]
+    measure: time
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 5, time_s: 15, rest_s: 90, rpe: "8"}
+    technique_ru:
+      - "Упор лёжа, пальцы чуть наружу, лопатки разведены."
+      - "Наклонись вперёд, чтобы плечи ушли далеко за ладони, руки прямые."
+      - "Держи, тело прямое, затем вернись назад."
+    mistakes_ru: ["Сгибание локтей", "Провисание поясницы"]
+    cues_ru: ["Плечи вперёд, лопатки круглые", "Руки — прямые прутья"]
+    breathing_ru: "Ровное дыхание."
+    contraindications: [wrist_pain, wrist_injury, shoulder_pain, elbow_pain, screening_not_cleared]
+    regressions: [ex-pushup, ex-scap-pushup]
+    progressions: []
+    swaps: [ex-archer-pushup]
+    animation:
+      view: side
+      loop: false
+      props: []
+      poses:
+        - {key: plank, ru: "Упор лёжа, плечи над ладонями"}
+        - {key: lean, ru: "Плечи далеко впереди ладоней, руки прямые"}
+
+  - id: ex-l-sit
+    name_ru: "Уголок в упоре"
+    name_en: "L-sit"
+    level: extreme
+    category: skill
+    pattern: core_flex
+    muscles: {primary: [core, hip_flexors], secondary: [triceps, front_delts]}
+    equipment: [parallel_bars, none]
+    place: [home, gym, outdoor]
+    measure: time
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 5, time_s: 10, rest_s: 90, rpe: "8"}
+    technique_ru:
+      - "Упор на брусьях или на полу на прямых руках, плечи вниз."
+      - "Подними прямые ноги до параллели с полом."
+      - "Начни с согнутых коленей, если прямые ноги не держатся."
+    mistakes_ru: ["Плечи у ушей", "Согнутые локти"]
+    cues_ru: ["Толкай опору вниз", "Носки на себя"]
+    breathing_ru: "Короткие ровные вдохи."
+    contraindications: [wrist_pain, shoulder_pain, screening_not_cleared]
+    regressions: [ex-hollow-hold, ex-hanging-knee-raise]
+    progressions: []
+    swaps: [ex-hollow-hold]
+    animation:
+      view: side
+      loop: false
+      props: [parallel_bars]
+      poses:
+        - {key: support, ru: "Упор на прямых руках, ноги вниз"}
+        - {key: l, ru: "Ноги прямые параллельно полу"}
+
+  - id: ex-pistol-squat
+    name_ru: "Пистолетик"
+    name_en: "Pistol squat"
+    level: extreme
+    category: skill
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [core, calves, adductors]}
+    equipment: [none, box]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: [deep_knee_flexion, fall_risk]
+    default: {sets: 4, reps: "3-5", rest_s: 120, tempo: "3-0-1-0", rpe: "8"}
+    technique_ru:
+      - "Стоя на одной ноге, вторую вытяни вперёд, руки вперёд."
+      - "Опустись медленно в полный присед на одной ноге, пятка на полу."
+      - "Встань без рывка; регрессия — присед на скамью на одной ноге."
+    mistakes_ru: ["Колено заваливается внутрь", "Отрыв пятки"]
+    cues_ru: ["Колено над пальцами", "Руки — противовес"]
+    breathing_ru: "Вдох — вниз, выдох — вверх."
+    contraindications: [knee_pain, knee_injury, ankle_pain, screening_not_cleared]
+    regressions: [ex-bulgarian-split]
+    progressions: []
+    swaps: [ex-bulgarian-split]
+    animation:
+      view: side
+      loop: true
+      props: []
+      poses:
+        - {key: stand, ru: "Стоя на одной ноге, вторая чуть впереди"}
+        - {key: bottom, ru: "Полный присед на одной ноге, вторая вытянута вперёд параллельно полу"}
+
+  - id: ex-archer-pushup
+    name_ru: "Отжимания лучника"
+    name_en: "Archer push-up"
+    level: extreme
+    category: strength
+    pattern: push_h
+    muscles: {primary: [chest, triceps], secondary: [front_delts, core]}
+    equipment: [none]
+    place: [home, gym, outdoor, hotel]
+    measure: reps_per_side
+    impact: low
+    risk_tags: [wrist_load]
+    default: {sets: 4, reps: "4-6", rest_s: 90, tempo: "2-0-1-0", rpe: "8"}
+    technique_ru:
+      - "Широкая постановка рук, пальцы слегка наружу."
+      - "Опускайся к одной руке, другая выпрямляется в сторону."
+      - "Выжми себя рабочей рукой, тело остаётся прямым."
+    mistakes_ru: ["Поворот таза", "Неполная амплитуда"]
+    cues_ru: ["Вторая рука — лишь помощник", "Тело — доска"]
+    breathing_ru: "Выдох — вверх."
+    contraindications: [wrist_pain, shoulder_pain, elbow_pain, screening_not_cleared]
+    regressions: [ex-pushup]
+    progressions: [ex-planche-lean]
+    swaps: [ex-pushup]
+    animation:
+      view: front
+      loop: true
+      props: []
+      poses:
+        - {key: top, ru: "Упор лёжа, руки широко"}
+        - {key: bottom_left, ru: "Грудь у левой руки, правая прямая в сторону"}
+
+  - id: ex-ring-dip
+    name_ru: "Отжимания на кольцах"
+    name_en: "Ring dip"
+    level: extreme
+    category: skill
+    pattern: push_v
+    muscles: {primary: [chest, triceps], secondary: [front_delts, core, rotator_cuff]}
+    equipment: [rings]
+    place: [gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: [wrist_load, fall_risk]
+    default: {sets: 4, reps: "3-6", rest_s: 150, tempo: "3-0-1-0", rpe: "8"}
+    technique_ru:
+      - "Упор на кольцах на прямых руках, кольца прижаты к корпусу, ладони вперёд."
+      - "Опускайся медленно, удерживая кольца у тела."
+      - "Выжми себя вверх и разверни кольца наверху."
+    mistakes_ru: ["Кольца разъезжаются в стороны", "Слишком глубоко через боль"]
+    cues_ru: ["Кольца — к рёбрам", "Медленно вниз"]
+    breathing_ru: "Выдох — вверх."
+    contraindications: [shoulder_pain, shoulder_injury, wrist_pain, elbow_pain, screening_not_cleared]
+    regressions: [ex-dip]
+    progressions: []
+    swaps: [ex-dip]
+    animation:
+      view: side
+      loop: true
+      props: [rings]
+      poses:
+        - {key: support, ru: "Упор на кольцах на прямых руках"}
+        - {key: bottom, ru: "Локти под 90°, кольца у рёбер"}
+
+  - id: ex-toes-to-bar
+    name_ru: "Носки к перекладине"
+    name_en: "Toes-to-bar"
+    level: extreme
+    category: core
+    pattern: core_flex
+    muscles: {primary: [core, hip_flexors, lats], secondary: [forearms]}
+    equipment: [bar]
+    place: [gym, outdoor]
+    measure: reps
+    impact: low
+    risk_tags: [grip_hang]
+    default: {sets: 4, reps: "5-10", rest_s: 90, rpe: "8"}
+    technique_ru:
+      - "Вис, лопатки активны, прямые руки давят перекладину вниз."
+      - "Подними прямые ноги до касания носками перекладины."
+      - "Опусти под контролем, без раскачки."
+    mistakes_ru: ["Неконтролируемый мах", "Сгибание рук"]
+    cues_ru: ["Дави перекладину вниз", "Таз к рукам"]
+    breathing_ru: "Выдох — подъём."
+    contraindications: [shoulder_pain, lower_back_pain, screening_not_cleared]
+    regressions: [ex-hanging-knee-raise]
+    progressions: []
+    swaps: [ex-hanging-knee-raise]
+    animation:
+      view: side
+      loop: true
+      props: [bar]
+      poses:
+        - {key: hang, ru: "Вис, тело прямое"}
+        - {key: top, ru: "Носки касаются перекладины, ноги прямые"}
+
+  - id: ex-nordic-curl
+    name_ru: "Нордические сгибания (негатив)"
+    name_en: "Nordic hamstring curl (eccentric)"
+    level: extreme
+    category: strength
+    pattern: hinge
+    muscles: {primary: [hamstrings], secondary: [glutes, calves]}
+    equipment: [mat]
+    place: [home, gym]
+    measure: reps
+    impact: low
+    risk_tags: [eccentric_heavy]
+    default: {sets: 3, reps: "3-5", rest_s: 120, tempo: "4-0-x-0", rpe: "8"}
+    technique_ru:
+      - "Стоя на коленях на мягком, пятки зафиксированы (партнёр или опора)."
+      - "Медленно опускай прямой корпус вперёд, сопротивляясь задней поверхностью бедра."
+      - "У пола подстрахуйся руками и вернись, оттолкнувшись."
+    mistakes_ru: ["Сгибание в тазу", "Падение без сопротивления"]
+    cues_ru: ["Тело — прямая от колен до головы", "Тормози как можно дольше"]
+    breathing_ru: "Ровное дыхание на спуске."
+    contraindications: [knee_pain, knee_injury, screening_not_cleared]
+    regressions: [ex-glute-bridge]
+    progressions: []
+    swaps: [ex-db-rdl]
+    animation:
+      view: side
+      loop: true
+      props: [mat]
+      poses:
+        - {key: kneel, ru: "Стоя на коленях, корпус вертикально"}
+        - {key: lower, ru: "Корпус прямой под 45° к полу"}
+        - {key: catch, ru: "Ладони у пола, страховка"}
+
+  - id: ex-hill-sprint
+    name_ru: "Спринт в гору"
+    name_en: "Hill sprint"
+    level: extreme
+    category: conditioning
+    pattern: locomotion
+    muscles: {primary: [cardio, glutes, hamstrings], secondary: [calves, quads]}
+    equipment: [none]
+    place: [outdoor]
+    measure: time
+    impact: high
+    risk_tags: [high_impact, max_speed]
+    default: {sets: 8, time_s: 12, rest_s: 120, rpe: "9"}
+    technique_ru:
+      - "Выбери подъём 5–10 %, разомнись прогрессивными ускорениями."
+      - "Беги 8–15 секунд мощно, высокие колени, наклон корпуса вперёд от голеностопа."
+      - "Отдых — шагом вниз, до полного восстановления дыхания."
+    mistakes_ru: ["Спринт без разминки", "Короткий отдых — превращение в интервалы на выносливость"]
+    cues_ru: ["Толкай землю назад", "Каждый повтор — качественный"]
+    breathing_ru: "Свободно, отдых — до спокойного дыхания."
+    contraindications: [knee_pain, ankle_pain, ankle_injury, hip_pain, heart_condition, chest_pain_exertion, screening_not_cleared, pregnancy]
+    regressions: [ex-rower-intervals]
+    progressions: []
+    swaps: [ex-rower-intervals]
+    animation:
+      view: side
+      loop: true
+      props: [slope]
+      poses:
+        - {key: drive, ru: "Толчок задней ногой, колено передней высоко"}
+        - {key: flight, ru: "Фаза полёта, руки в противоходе"}

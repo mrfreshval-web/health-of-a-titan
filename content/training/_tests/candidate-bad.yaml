@@ -1,0 +1,32 @@
+# Example: must FAIL check_training.py --candidate (deep knee flexion with knee_pain).
+id: gen-0badc0de
+name_ru: "Сила дома"
+level: classic
+method: fitness_strength
+goal: [strength]
+place: [home]
+equipment: [dumbbells, mat, chair]
+duration_min: 30
+intensity: {rpe: "6-7"}
+blocks:
+  - type: warmup
+    min: 6
+    format: flow
+    items:
+      - {ex: ex-cat-cow, reps: "8"}
+      - {ex: ex-glute-bridge, reps: "10"}
+  - type: main
+    min: 18
+    format: straight_sets
+    items:
+      - {ex: ex-db-rdl, sets: 3, reps: "10", rest_s: 75}
+      - {ex: ex-db-floor-press, sets: 3, reps: "10", rest_s: 75}
+      - {ex: ex-goblet-squat, sets: 3, reps: "10", rest_s: 75}
+  - type: cooldown
+    min: 6
+    format: flow
+    items:
+      - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+      - {ex: ex-breath-long-exhale, time_s: 60}
+why_ru: "Негативный пример: гоблет-присед при боли в колене должен быть отклонён."
+contraindications: []

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>HoT · Сегодня</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Cormorant+Garamond:ital,wght@1,500;1,600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0E1A}
+a{color:#E8C47A}a:hover{color:#F3D9A4}
+button{font-family:inherit;color:inherit}
+.hot-scroll::-webkit-scrollbar{width:0;height:0}
+</style>
+</helmet>
+<div style="width: 412px; height: 915px; box-sizing: border-box; background: #0F1220; color: #EDEBE4; font-family: 'Manrope', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+<sc-if value="{{isToday}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; height: 915px">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px 16px">
+    <button aria-label="Наставник Винс" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A3048; background: #171B2E; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #E8C47A; cursor: pointer">В</button>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+      <span style="font-size: 15px; font-weight: 600; letter-spacing: 0.2px">суббота · 7 ноября</span>
+      <span style="font-size: 12px; color: #9AA0B4">{{clock}}</span>
+    </div>
+    <button aria-label="Профиль и настройки" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #2A3048; background: #171B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9CCD8" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+    </button>
+  </header>
+
+  <button onClick="{{openWhy}}" aria-label="Я сегодня. Открыть, почему так" style="margin: 4px 12px 0 12px; padding: 10px 12px 14px 12px; border: 0; border-radius: 24px; background: {{heroBg}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+    <div style="display: flex; width: 100%; justify-content: space-between; align-items: center">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">Я СЕГОДНЯ</span>
+      <span style="font-size: 12px; color: #9AA0B4">почему так ›</span>
+    </div>
+    <svg width="150" height="112" viewBox="0 0 150 112" aria-hidden="true">
+      <path d="M8 34 Q75 -6 142 34" fill="none" stroke="{{accent}}" stroke-width="3" stroke-linecap="round" opacity="0.9"></path>
+      <path d="M20 34 Q75 4 130 34" fill="none" stroke="{{accent}}" stroke-width="1" opacity="0.35"></path>
+      <circle cx="75" cy="44" r="9" fill="{{accent}}"></circle>
+      <path d="{{armsPath}}" fill="none" stroke="{{accent}}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+      <path d="M75 54 L75 82" stroke="{{accent}}" stroke-width="9" stroke-linecap="round"></path>
+      <path d="M75 82 L64 108 M75 82 L86 108" stroke="{{accent}}" stroke-width="6" stroke-linecap="round" fill="none"></path>
+    </svg>
+    <div style="font-size: 30px; font-weight: 800; letter-spacing: 6px; color: {{accent}}; line-height: 1">{{modeUpper}}</div>
+    <div style="font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 500; font-size: 18px; line-height: 1.3; color: #E6E2D6; white-space: pre-line">{{haiku}}</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; border-radius: 14px; background: #151A2C">
+        <span style="font-size: 11px; color: #9AA0B4">Заряд</span>
+        <span style="font-size: 20px; font-weight: 700; line-height: 1">{{charge}}</span>
+        <div style="position: relative; width: 100%; height: 4px; border-radius: 2px; background: #2A3048">
+          <div style="position: absolute; left: 0; top: 0; height: 4px; border-radius: 2px; width: {{chargePct}}; background: {{accent}}"></div>
+          <div style="position: absolute; left: 50%; top: -3px; width: 2px; height: 10px; background: #EDEBE4"></div>
+        </div>
+        <span style="font-size: 10px; color: #9AA0B4">норма 50</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; border-radius: 14px; background: #151A2C">
+        <span style="font-size: 11px; color: #9AA0B4">ночь</span>
+        <span style="font-size: 20px; font-weight: 700; line-height: 1">{{night}}</span>
+        <span style="font-size: 10px; color: #9AA0B4; margin-top: 8px">нужно 7:40</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; border-radius: 14px; background: #151A2C">
+        <span style="font-size: 11px; color: #9AA0B4">ты</span>
+        <span style="font-size: 20px; font-weight: 700; line-height: 1">{{self}}<span style="font-size: 12px; color: #9AA0B4; font-weight: 500"> / 5</span></span>
+        <span style="font-size: 10px; color: #9AA0B4; margin-top: 8px">бодрость утром</span>
+      </div>
+    </div>
+  </button>
+
+  <section aria-label="Опоры" style="padding: 12px 16px 0 16px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">ОПОРЫ</h2>
+      <span style="font-size: 11px; color: #9AA0B4">держу за тебя</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{supports}}" as="s" hint-placeholder-count="5">
+        <button onClick="{{s.tap}}" aria-label="{{s.aria}}" style="border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer">
+          <div style="width: 46px; height: 7px; border-radius: 3px; background: #2F3652"></div>
+          <div style="position: relative; width: 32px; height: 78px; border-radius: 3px; background: #1A1F33; border: 1px solid #2F3652; overflow: hidden">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{s.fill}}; background: {{s.color}}"></div>
+            <div style="position: absolute; left: 7px; top: 0; bottom: 0; width: 1px; background: #0F1220; opacity: 0.35"></div>
+            <div style="position: absolute; right: 7px; top: 0; bottom: 0; width: 1px; background: #0F1220; opacity: 0.35"></div>
+          </div>
+          <div style="width: 46px; height: 6px; border-radius: 3px; background: #2F3652"></div>
+          <span style="font-size: 11px; font-weight: 600; color: #EDEBE4; white-space: nowrap">{{s.label}}</span>
+          <span style="font-size: 11px; color: #B7BCCC; white-space: nowrap">{{s.value}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{hasNudge}}" hint-placeholder-val="{{ true }}">
+      <p style="margin: 8px 0 0 0; padding: 8px 10px; border-radius: 12px; background: #1A1F33; font-size: 12px; line-height: 1.35; color: #D9D4C4">{{nudge}}</p>
+    </sc-if>
+  </section>
+
+  <section aria-label="Дела дня" style="padding: 12px 16px 0 16px; display: flex; flex-direction: column; gap: 6px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">ДЕЛА ДНЯ</h2>
+      <span style="font-size: 11px; color: #9AA0B4">{{tasksHint}}</span>
+    </div>
+    <sc-for list="{{tasks}}" as="t" hint-placeholder-count="3">
+      <div style="display: flex; align-items: center; gap: 10px; padding: {{t.pad}}; border-radius: 16px; background: {{t.bg}}; border: {{t.border}}">
+        <button onClick="{{t.toggle}}" aria-label="{{t.checkAria}}" style="width: 28px; height: 28px; flex: 0 0 28px; border-radius: 14px; border: 2px solid {{t.ring}}; background: {{t.dot}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0">
+          <sc-if value="{{t.done}}" hint-placeholder-val="{{ false }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F1220" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+          </sc-if>
+        </button>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0">
+          <sc-if value="{{t.isNow}}" hint-placeholder-val="{{ false }}">
+            <span style="font-size: 10px; font-weight: 700; letter-spacing: 1.4px; color: {{accent}}">СЕЙЧАС</span>
+          </sc-if>
+          <span style="font-size: 14px; font-weight: 600; color: {{t.titleColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.title}}</span>
+          <span style="font-size: 11px; color: #9AA0B4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.meta}}</span>
+        </div>
+        <sc-if value="{{t.showPlay}}" hint-placeholder-val="{{ false }}">
+          <button aria-label="Начать" style="width: 44px; height: 44px; flex: 0 0 44px; border-radius: 22px; border: 0; background: {{accent}}; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#0F1220" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+          </button>
+        </sc-if>
+      </div>
+    </sc-for>
+  </section>
+
+  <section aria-label="Ритм дня" style="padding: 12px 16px 0 16px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="flex: 1 1 auto; display: flex; align-items: center">
+        <sc-for list="{{rituals}}" as="r" hint-placeholder-count="4">
+          <div style="display: flex; align-items: center; flex: {{r.flex}}">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 62px">
+              <div style="width: 12px; height: 12px; border-radius: 6px; background: {{r.fill}}; border: 2px solid {{r.ring}}; box-sizing: border-box"></div>
+              <span style="font-size: 10px; color: {{r.textColor}}; white-space: nowrap">{{r.label}}</span>
+            </div>
+            <sc-if value="{{r.hasLine}}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 1 1 auto; height: 1px; background: #2F3652; margin-bottom: 16px"></div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <button aria-label="Передышка" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid {{accent}}; background: transparent; color: {{accent}}; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap">Передышка</button>
+    </div>
+    <span style="font-size: 11px; color: #9AA0B4">кофе до 14:00 · ужин до 21:00 · экраны с 22:00 · отбой 23:05</span>
+  </section>
+
+  <div style="flex: 1 1 auto"></div>
+
+  <nav aria-label="Модули" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #22283D; background: #0F1220; padding: 6px 4px 10px 4px">
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; text-decoration: none; color: #EDEBE4; font-size: 12px; font-weight: 700">
+      <div style="width: 56px; height: 4px; border-radius: 2px; background: {{accent}}"></div>Сегодня</a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; text-decoration: none; color: #9AA0B4; font-size: 12px; font-weight: 600">
+      <div style="width: 56px; height: 4px"></div>Неделя</a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; text-decoration: none; color: #9AA0B4; font-size: 12px; font-weight: 600">
+      <div style="width: 56px; height: 4px"></div>Путь</a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; text-decoration: none; color: #9AA0B4; font-size: 12px; font-weight: 600">
+      <div style="width: 56px; height: 4px"></div>За плечами</a>
+  </nav>
+</div>
+</sc-if>
+
+<sc-if value="{{isWhy}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; height: 915px">
+  <header style="display: flex; align-items: center; gap: 8px; padding: 14px 12px 8px 8px">
+    <button onClick="{{openToday}}" aria-label="Назад к Сегодня" style="width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EDEBE4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column">
+      <h1 style="margin: 0; font-size: 20px; font-weight: 800">Почему так</h1>
+      <span style="font-size: 12px; color: #9AA0B4">{{modeWord}} · данные WHOOP 06:41</span>
+    </div>
+  </header>
+  <div class="hot-scroll" style="flex: 1 1 auto; overflow-y: auto; padding: 0 16px 24px 16px; display: flex; flex-direction: column; gap: 12px">
+
+    <section style="padding: 14px; border-radius: 20px; background: {{heroBg}}; display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">ИТОГ</h2>
+      <sc-for list="{{reasons}}" as="rs" hint-placeholder-count="3">
+        <div style="display: flex; gap: 10px; align-items: baseline">
+          <span style="font-size: 13px; font-weight: 800; color: {{accent}}; width: 14px">{{rs.n}}</span>
+          <span style="font-size: 15px; line-height: 1.35">{{rs.text}}</span>
+        </div>
+      </sc-for>
+    </section>
+
+    <sc-for list="{{whySections}}" as="sec" hint-placeholder-count="3">
+      <section style="padding: 14px; border-radius: 20px; background: #151A2C; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">{{sec.title}}</h2>
+        <sc-if value="{{sec.hasStages}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px">
+              <div style="flex: 72 1 0; background: #6D7BD6"></div>
+              <div style="flex: 91 1 0; background: #A89CF0"></div>
+              <div style="flex: 222 1 0; background: #3F4A78"></div>
+              <div style="flex: 23 1 0; background: #8A90A6"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #B7BCCC">
+              <span>глубокий 1:12</span><span>быстрый 1:31</span><span>лёгкий 3:42</span><span>пробужд. 0:23</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-for list="{{sec.rows}}" as="m" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline">
+              <span style="font-size: 14px; color: #D9DCE6">{{m.name}}</span>
+              <span style="font-size: 16px; font-weight: 700; white-space: nowrap">{{m.value}} <span style="font-size: 13px; color: {{m.arrowColor}}">{{m.arrow}}</span></span>
+            </div>
+            <div style="position: relative; height: 8px; border-radius: 4px; background: #222842">
+              <div style="position: absolute; top: 0; height: 8px; border-radius: 4px; left: {{m.bandLeft}}; width: {{m.bandWidth}}; background: #34405F"></div>
+              <div style="position: absolute; top: -3px; width: 14px; height: 14px; border-radius: 7px; margin-left: -7px; left: {{m.dot}}; background: {{m.dotColor}}; border: 2px solid #151A2C; box-sizing: border-box"></div>
+            </div>
+            <span style="font-size: 11px; color: #9AA0B4">{{m.note}}</span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-for>
+
+    <section style="padding: 14px; border-radius: 20px; background: #1C1D2E; border: 1px solid #3A3550; display: flex; flex-direction: column; gap: 6px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">ОТКЛОНЕНИЯ</h2>
+      <span style="font-size: 15px; line-height: 1.4">{{deviationText}}</span>
+      <span style="font-size: 11px; color: #9AA0B4">Это не диагноз. Если плохо — «Помощь» в профиле.</span>
+    </section>
+
+    <section style="padding: 14px; border-radius: 20px; background: #151A2C; display: flex; flex-direction: column; gap: 6px">
+      <h2 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; color: #9AA0B4">ТЫ ↔ WHOOP</h2>
+      <span style="font-size: 15px; line-height: 1.4">{{youVsWhoop}}</span>
+    </section>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <button style="height: 48px; border-radius: 24px; border: 1px solid #2F3652; background: transparent; font-size: 14px; font-weight: 600; cursor: pointer">Не согласен</button>
+      <button style="height: 48px; border-radius: 24px; border: 0; background: {{accent}}; color: #0F1220; font-size: 14px; font-weight: 700; cursor: pointer">Спросить Винса</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["Разгон","Ровно","Бережно"],"default":"Ровно","section":"Сценарий"},"time":{"editor":"enum","options":["Утро","День","Вечер"],"default":"День","section":"Сценарий"},"$preview":{"width":412,"height":915}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen: 'today', water: 0, done: {} };
+  }
+  bar(v, lo, hi, min, max) {
+    const p = (x) => Math.max(0, Math.min(100, ((x - min) / (max - min)) * 100));
+    return { bandLeft: p(lo) + '%', bandWidth: (p(hi) - p(lo)) + '%', dot: p(v) + '%' };
+  }
+  renderVals() {
+    const mode = this.props.mode ?? 'Ровно';
+    const time = this.props.time ?? 'День';
+    const M = {
+      'Разгон': { accent: '#F2A65A', glow: 'rgba(242,166,90,0.22)', charge: 78, night: '7:52', self: 4, corr: [14, 18], arms: 'M75 56 L54 26 M75 56 L96 26',
+        haiku: 'Солнце над плечом —\nнебо сегодня легко\nдержать в ладонях.' },
+      'Ровно': { accent: '#E8C47A', glow: 'rgba(232,196,122,0.16)', charge: 44, night: '6:48', self: 3, corr: [10, 14], arms: 'M75 56 L58 30 M75 56 L92 30',
+        haiku: 'Тихий пульс утра —\nсила не в спешке,\nа в ровном шаге.' },
+      'Бережно': { accent: '#A89CF0', glow: 'rgba(168,156,240,0.18)', charge: 22, night: '5:31', self: 2, corr: [6, 10], arms: 'M75 58 L62 76 M75 58 L90 70',
+        haiku: 'Колонна стоит —\nможно опереться ей\nи перевести дух.' }
+    }[mode];
+    const T = {
+      'Утро': { clock: '08:30', strain: [1.2, 0.1], steps: 900, hours: 1, meals: 1, water: 1, sleep: 0, rit: 1 },
+      'День': { clock: '12:40', strain: [6.0, 0.45], steps: 5200, hours: 5, meals: 2, water: 4, sleep: 1, rit: 1 },
+      'Вечер': { clock: '20:30', strain: [12.4, 0.88], steps: 9100, hours: 11, meals: 4, water: 7, sleep: 3, rit: 2 }
+    }[time];
+    const water = Math.min(8, T.water + this.state.water);
+    const pct = (x) => Math.round(Math.max(0, Math.min(1, x)) * 100) + '%';
+    const lit = M.accent;
+    const strainFill = Math.min(1, T.strain[0] / M.corr[1]);
+    const supports = [
+      { label: 'усердие', value: T.strain[0].toFixed(1) + ' / ' + M.corr[0] + '–' + M.corr[1], fill: pct(strainFill), color: lit, aria: 'Усердие: нагрузка ' + T.strain[0] + ', коридор ' + M.corr[0] + '–' + M.corr[1] },
+      { label: 'движение', value: (T.steps / 1000).toFixed(1) + 'k · ' + T.hours + '/12ч', fill: pct(T.steps / 9000), color: lit, aria: 'Движение: ' + T.steps + ' шагов, часов с движением ' + T.hours + ' из 12' },
+      { label: 'питание', value: T.meals + ' из 4', fill: pct(T.meals / 4), color: lit, aria: 'Питание: ' + T.meals + ' из 4 приёмов' },
+      { label: 'вода', value: water + ' / 8', fill: pct(water / 8), color: '#7FB4E8', aria: 'Вода: ' + water + ' из 8 стаканов. Нажмите, чтобы добавить стакан', tap: () => this.setState({ water: this.state.water + 1 }) },
+      { label: 'сон', value: T.sleep + ' из 4 ✓', fill: pct(T.sleep / 4), color: '#A89CF0', aria: 'Сон сегодня: ' + T.sleep + ' из 4 условий' }
+    ].map((s) => ({ ...s, tap: s.tap || (() => {}) }));
+    let nudge = '';
+    if (time === 'День' && water < 5) nudge = 'Воды пока меньше обычного к обеду — после 14:00 голова может стать тяжелее. Тап по колонне — +1 стакан.';
+    if (time === 'Вечер') nudge = 'Белка сегодня мало — после силовой восстановление пойдёт медленнее. Добавь творог или яйца к ужину.';
+    if (time === 'Утро') nudge = '';
+    const baseTasks = mode === 'Бережно'
+      ? [ { id: 'walk', title: 'Прогулка 30 мин вместо силовой', meta: 'мини · лёгкая зона · неделя 2 из 3' },
+          { id: 'focus', title: 'Фокус 50 мин: презентация', meta: 'мини · только план слайдов · неделя 3 из 4' } ]
+      : [ { id: 'gym', title: mode === 'Разгон' ? 'Силовая, низ тела · 60 мин' : 'Силовая, верх тела · 45 мин', meta: 'полная / мини 20 мин · неделя 2 из 3' },
+          { id: 'focus', title: 'Фокус-блок 90 мин: презентация', meta: 'раздел 2 · мини 25 мин · неделя 3 из 4' },
+          { id: 'blood', title: 'Записаться на анализ крови', meta: 'напоминание · 2 минуты' } ];
+    const autoDone = time === 'Вечер' ? { gym: true, walk: true, focus: true } : {};
+    const done = { ...autoDone, ...this.state.done };
+    const firstOpen = baseTasks.findIndex((t) => !done[t.id]);
+    const tasks = baseTasks.map((t, i) => {
+      const isDone = !!done[t.id];
+      const isNow = i === firstOpen;
+      return {
+        ...t,
+        done: isDone,
+        isNow,
+        showPlay: isNow && t.id !== 'blood',
+        pad: isNow ? '12px 12px' : '8px 12px',
+        bg: isNow ? '#1A1F33' : 'transparent',
+        border: isNow ? '1px solid ' + M.accent : '1px solid #22283D',
+        ring: isDone ? M.accent : '#4A5272',
+        dot: isDone ? M.accent : 'transparent',
+        titleColor: isDone ? '#8A90A6' : '#EDEBE4',
+        checkAria: isDone ? 'Отметка снята: ' + t.title : 'Отметить сделанным: ' + t.title,
+        toggle: () => this.setState({ done: { ...this.state.done, [t.id]: !isDone } })
+      };
+    });
+    const allDone = firstOpen === -1;
+    const rnames = ['Рассвет', 'Переход', 'Закрыть день', 'Приземление'];
+    const rituals = rnames.map((label, i) => {
+      const passed = i < T.rit;
+      const current = i === T.rit && time === 'Вечер';
+      return {
+        label,
+        fill: passed ? M.accent : 'transparent',
+        ring: passed || current ? M.accent : '#4A5272',
+        textColor: passed || current ? '#EDEBE4' : '#9AA0B4',
+        hasLine: i < rnames.length - 1,
+        flex: i < rnames.length - 1 ? '1 1 auto' : '0 0 auto'
+      };
+    });
+    const why = {
+      'Разгон': {
+        reasons: ['Вариабельность пульса 64 мс — выше твоего коридора', 'Сон 7:52 при потребности 7:40', 'Ты: бодрость 4 — совпадает с данными'],
+        rhr: 50, hrv: 64, resp: 14.4, spo2: 97, temp: 0.0, sleepEff: 94, cons: 82,
+        dev: 'Всё в твоём коридоре. День для разгона — можно взять больше обычного.',
+        you: 'Ты: бодрость 4 · WHOOP: Заряд 78. Совпало — тело и ощущения говорят одно.' },
+      'Ровно': {
+        reasons: ['Пульс покоя 58 — на 4 выше твоей нормы', 'Сон 6:48 при потребности 7:40', 'Ты: бодрость 3 — ровно посередине'],
+        rhr: 58, hrv: 41, resp: 15.2, spo2: 96, temp: 0.3, sleepEff: 91, cons: 74,
+        dev: 'Сразу три показателя вне коридора: пульс покоя выше, вариабельность ниже, дыхание чуть чаще. Тело, похоже, тратит силы на что-то ещё — прислушайся к самочувствию.',
+        you: 'Ты: бодрость 3 · WHOOP: Заряд 44. Почти совпало: данные чуть строже, чем ощущения.' },
+      'Бережно': {
+        reasons: ['Сон 5:31 при потребности 7:40 — долг 2:09', 'Вариабельность пульса 33 мс — ниже коридора', 'Ты: бодрость 2 — совпадает с данными'],
+        rhr: 61, hrv: 33, resp: 15.6, spo2: 95, temp: 0.6, sleepEff: 84, cons: 58,
+        dev: 'Сон короткий, вариабельность ниже, температура кожи выше обычного. Это повод беречь силы сегодня, а не повод для тревоги. Если плохо себя чувствуешь — отдых важнее плана.',
+        you: 'Ты: бодрость 2 · WHOOP: Заряд 22. Совпало — день на восстановление.' }
+    }[mode];
+    const row = (name, value, v, lo, hi, min, max, note, dir) => {
+      const b = this.bar(v, lo, hi, min, max);
+      const inBand = v >= lo && v <= hi;
+      return { name, value, note, ...b,
+        arrow: inBand ? '· в норме' : (v > hi ? '↑' : '↓'),
+        arrowColor: inBand ? '#8FBF9A' : '#E8B86A',
+        dotColor: inBand ? '#EDEBE4' : '#E8B86A' };
+    };
+    const whySections = [
+      { title: 'СОН', hasStages: true, rows: [
+        row('Длительность', M.night, parseFloat(M.night.replace(':', '.')), 7.4, 8.2, 5, 9.5, 'потребность 7:40 · коридор 7:24–8:12'),
+        row('Эффективность', why.sleepEff + ' %', why.sleepEff, 88, 96, 70, 100, 'доля сна от времени в кровати'),
+        row('Регулярность', why.cons + ' %', why.cons, 70, 90, 40, 100, 'насколько похоже время засыпания и подъёма')
+      ] },
+      { title: 'СЕРДЦЕ И СОСУДЫ', hasStages: false, rows: [
+        row('Пульс покоя', why.rhr + ' уд/мин', why.rhr, 50, 54, 44, 66, 'твой коридор за 30 дней: 50–54'),
+        row('Вариабельность пульса', why.hrv + ' мс', why.hrv, 45, 62, 25, 80, 'твой коридор за 30 дней: 45–62')
+      ] },
+      { title: 'ДЫХАНИЕ', hasStages: false, rows: [
+        row('Частота дыхания ночью', why.resp.toFixed(1) + ' /мин', why.resp, 14.1, 15.0, 12, 18, 'коридор 14,1–15,0'),
+        row('Кислород крови', why.spo2 + ' %', why.spo2, 95, 98, 90, 100, 'коридор 95–98'),
+        row('Температура кожи', (why.temp >= 0 ? '+' : '') + why.temp.toFixed(1) + '°', why.temp, -0.4, 0.4, -1.5, 1.5, 'отклонение от твоей нормы')
+      ] }
+    ];
+    return {
+      isToday: this.state.screen === 'today',
+      isWhy: this.state.screen === 'why',
+      openWhy: () => this.setState({ screen: 'why' }),
+      openToday: () => this.setState({ screen: 'today' }),
+      clock: T.clock,
+      accent: M.accent,
+      heroBg: 'radial-gradient(120% 90% at 50% 18%, ' + M.glow + ', rgba(21,26,44,0.6) 60%, #151A2C 100%)',
+      armsPath: M.arms,
+      modeUpper: mode.toUpperCase(),
+      modeWord: mode,
+      haiku: M.haiku,
+      charge: M.charge,
+      chargePct: Math.min(100, M.charge) + '%',
+      night: M.night,
+      self: M.self,
+      supports,
+      hasNudge: nudge !== '',
+      nudge,
+      tasks,
+      tasksHint: allDone ? 'на сегодня всё' : (mode === 'Бережно' ? 'бережный день · мини' : 'из твоей недели'),
+      rituals,
+      reasons: why.reasons.map((text, i) => ({ n: String(i + 1), text })),
+      whySections,
+      deviationText: why.dev,
+      youVsWhoop: why.you
+    };
+  }
+}
+</script>
+</body>
+</html>

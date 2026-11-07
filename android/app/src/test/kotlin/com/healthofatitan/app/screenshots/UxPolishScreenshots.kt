@@ -69,7 +69,7 @@ import java.time.LocalDateTime
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35], application = Application::class, qualifiers = "w448dp-h1700dp-xxhdpi")
+@Config(sdk = [35], application = Application::class, qualifiers = "w448dp-h1700dp-xhdpi")
 class UxPolishScreenshots {
 
     @get:Rule

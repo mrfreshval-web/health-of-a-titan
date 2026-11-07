@@ -324,7 +324,7 @@ flowchart TD
 
 ## 12. Макеты («Титаниум», A37)
 
-`/mnt/project-files/brand/nutrition/` (412×915 @2x), исходник `docs/design/nutrition/src/build.js` (стили A37):
+`/mnt/project-files/brand/nutrition/` и копия в `docs/design/nutrition/` (412×915 @2x), исходник `docs/design/nutrition/src/build.js` (стили и пиктограммы A37 + 16 пиктограмм аллергенов и 4 порции ладонью):
 
 | Файл | Экран |
 |---|---|

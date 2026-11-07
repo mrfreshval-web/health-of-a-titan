@@ -17,6 +17,22 @@ ANGLES = ["torso", "head", "uaN", "faN", "uaF", "faF", "thN", "shN", "ftN", "thF
 LINEAR = ["rx", "ry", "spine", "breath", "belly", "armLenN", "armLenF", "nod"]
 CHANNELS = ANGLES + LINEAR
 
+# 3/4 view (v3): the figure faces right and has turned a little towards the viewer, so the near
+# shoulder and hip sit behind the spine line (−x) and the far ones ahead of it, half hidden by the
+# chest. The frontal drawing of the mark is narrowed the same way (threeq.py): the near half by
+# Q_NEAR, the far half by Q_FAR, the whole shifted by Q_SHIFT so the silhouette stays centred.
+Q_NEAR, Q_FAR, Q_SHIFT = 0.88, 0.62, 1.1
+
+
+def side_offsets(front, side: str) -> tuple[float, float]:
+    """(shoulder, hip) x offsets of a side ("N" or "F") from the spine line for a view —
+    front: True = the frontal view, False = profile, "3q" = three-quarter."""
+    sgn = 1 if side == "N" else -1
+    if front == "3q":
+        k = Q_NEAR if side == "N" else Q_FAR
+        return -sgn * FRONT_SHOULDER * k + Q_SHIFT, -sgn * FRONT_HIP * k + Q_SHIFT
+    return (sgn * FRONT_SHOULDER, sgn * FRONT_HIP) if front else (0.0, 0.0)
+
 
 def step(o, a, length):
     r = math.radians(a)
@@ -63,16 +79,15 @@ def joints(p: dict, front: bool = False) -> dict:
     sh = step(hip, p["torso"], L["torso"])
     neck = step(sh, p["head"], L["neck"])
     head = step(neck, p["head"], L["head"])
-    sw = FRONT_SHOULDER if front else 0.0
-    hw = FRONT_HIP if front else 0.0
     out = dict(hip=hip, shoulder=sh, neck=neck, head=head)
-    for side, sgn in (("N", 1), ("F", -1)):
-        s0 = (sh[0] + sgn * sw, sh[1])
+    for side in "NF":
+        sw, hw = side_offsets(front, side)
+        s0 = (sh[0] + sw, sh[1])
         e = step(s0, p["ua" + side], L["ua"] * p.get("armLen" + side, 1.0))
         out["shoulder" + side] = s0
         out["elbow" + side] = e
         out["hand" + side] = step(e, p["fa" + side], L["fa"] * p.get("armLen" + side, 1.0))
-        h0 = (hip[0] + sgn * hw, hip[1])
+        h0 = (hip[0] + hw, hip[1])
         k = step(h0, p["th" + side], L["th"])
         a = step(k, p["sh" + side], L["sh"])
         out["hip" + side] = h0

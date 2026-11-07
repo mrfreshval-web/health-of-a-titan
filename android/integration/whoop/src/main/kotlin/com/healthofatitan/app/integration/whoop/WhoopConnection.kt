@@ -118,6 +118,7 @@ class WhoopConnection(
                 store.save(WhoopCredentials(result.session, result.whoopUserId))
                 tokens.prime(result.accessToken, result.expiresAt)
                 scheduler.ensurePeriodic()
+                scheduler.ensureMorningWatch()
                 launchSync(SyncTrigger.LOGIN)
                 LoginOutcome.Connected
             }
@@ -155,6 +156,7 @@ class WhoopConnection(
     suspend fun onAppOpen() {
         if (store.credentials.value == null) return
         scheduler.ensurePeriodic()
+        scheduler.ensureMorningWatch()
         val last = dao.syncState(WhoopSyncer.SOURCE)?.lastSuccessAt ?: 0L
         if (clock.millis() - last > FRESH_MS || syncer.glance.value == null) syncNow(SyncTrigger.APP_OPEN)
     }

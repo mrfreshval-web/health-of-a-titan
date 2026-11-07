@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -124,12 +125,19 @@ class TodayViewModel @Inject constructor(
 @Composable
 private fun TodayRoute(onConnectWhoop: () -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    TodayScreen(state, onConnectWhoop, onSync = viewModel::sync)
+    TodayScreen(state, onConnectWhoop, onSync = viewModel::sync, day = { DayRoute() })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodayScreen(state: TodayUiState, onConnectWhoop: () -> Unit, modifier: Modifier = Modifier, onSync: () -> Unit = {}) {
+fun TodayScreen(
+    state: TodayUiState,
+    onConnectWhoop: () -> Unit,
+    modifier: Modifier = Modifier,
+    onSync: () -> Unit = {},
+    /** Slice 2: the day block (regime, plan, evening), see DaySection.kt. */
+    day: @Composable ColumnScope.() -> Unit = {},
+) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
     val refreshing = connected && state.progress is SyncProgress.Running
@@ -153,6 +161,7 @@ fun TodayScreen(state: TodayUiState, onConnectWhoop: () -> Unit, modifier: Modif
                 NotConnectedCard(onConnectWhoop)
             } else {
                 StateCard(whoop!!, state, onSync)
+                day()
                 Tiles(state)
             }
         }

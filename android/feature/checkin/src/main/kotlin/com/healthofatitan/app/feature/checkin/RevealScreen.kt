@@ -71,6 +71,7 @@ fun RevealScreen(ui: RevealUi, persona: MentorPersona, onDone: () -> Unit) {
     val ctx = MentorLine.morning(ui.you, ui.data, ui.gentle, ui.quick, ui.whoopConnected)
     val lines = CheckinTexts.line(persona, ctx)
     HotBackground {
+      NightContent {
         Column(
             Modifier
                 .fillMaxSize()
@@ -115,6 +116,7 @@ fun RevealScreen(ui: RevealUi, persona: MentorPersona, onDone: () -> Unit) {
             Spacer(Modifier.height(22.dp))
             HotPrimaryButton(CheckinTexts.TO_DAY, onClick = onDone, trailingArrow = true, modifier = Modifier.fillMaxWidth().testTag(REVEAL_DONE_TAG))
         }
+      }
     }
 }
 

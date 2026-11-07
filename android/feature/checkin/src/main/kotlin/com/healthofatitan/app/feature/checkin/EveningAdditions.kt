@@ -181,6 +181,7 @@ fun EveningRowFrame(title: String, modifier: Modifier = Modifier, content: @Comp
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(1.dp, HotThemeTokens.colors.hairline),
         modifier = modifier.fillMaxWidth(),
     ) {

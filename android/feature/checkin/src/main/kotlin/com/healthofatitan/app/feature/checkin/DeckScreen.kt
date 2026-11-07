@@ -155,6 +155,7 @@ fun DeckScreen(ui: DeckUi, persona: MentorPersona = MentorPersona.DEFAULT, actio
     val card = ui.deck.current
     SecureScreen(enabled = card?.private == true) {
         HotBackground {
+          NightContent {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -220,6 +221,7 @@ fun DeckScreen(ui: DeckUi, persona: MentorPersona = MentorPersona.DEFAULT, actio
                     }
                 }
             }
+          }
         }
     }
 }
@@ -492,7 +494,7 @@ private fun RitualDelta(ui: DeckUi, persona: MentorPersona, onDone: () -> Unit) 
     val wake = ui.wakeCharge
     val now = ui.deck.answers[CardId.CHARGE_AFTER]?.takeIf { !it.skipped }?.level
     val fmt = DateTimeFormatter.ofPattern("H:mm")
-    val after = ui.deck.answers[CardId.CHARGE_AFTER]?.atMs?.let { java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(it), java.time.ZoneId.systemDefault()) }
+    val after = ui.deck.answers[CardId.CHARGE_AFTER]?.atMs?.takeIf { it > 0 }?.let { java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(it), java.time.ZoneId.systemDefault()) }
     Column(Modifier.fillMaxWidth().testTag(DELTA_TAG), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {

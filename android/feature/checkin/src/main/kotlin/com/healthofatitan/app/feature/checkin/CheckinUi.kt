@@ -1,5 +1,7 @@
 package com.healthofatitan.app.feature.checkin
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -126,3 +128,8 @@ fun AnswerToken(spoken: String, content: @Composable (Color) -> Unit) {
         }
     }
 }
+
+/** Text straight on the night sky (no card around it) takes the ivory of the background. */
+@Composable
+internal fun NightContent(content: @Composable () -> Unit) =
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground, content = content)

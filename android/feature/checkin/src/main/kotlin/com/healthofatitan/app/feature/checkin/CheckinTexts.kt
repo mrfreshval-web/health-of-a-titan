@@ -329,9 +329,9 @@ object CheckinTexts {
         val n = String.format(Locale.forLanguageTag("ru"), "%.1f", abs(effect))
         val dir = if (up) "выше" else "ниже"
         return when (p) {
-            Link.SHOWER_CHARGE -> if (up) "В утра с холодным душем Заряд вырос на $n ${levels(abs(effect))} больше" else "В утра с холодным душем Заряд рос на $n ${levels(abs(effect))} меньше"
-            Link.LIGHT_CHARGE -> if (up) "В утра со светом Заряд вырос на $n ${levels(abs(effect))} больше" else "В утра со светом Заряд рос на $n ${levels(abs(effect))} меньше"
-            Link.BREATH_CHARGE -> if (up) "В утра с дыханием Заряд вырос на $n ${levels(abs(effect))} больше" else "В утра с дыханием Заряд рос на $n ${levels(abs(effect))} меньше"
+            Link.SHOWER_CHARGE -> "В утра с холодным душем Заряд $dir на $n ${levels(abs(effect))}, чем без него"
+            Link.LIGHT_CHARGE -> "В утра со светом Заряд $dir на $n ${levels(abs(effect))}, чем без него"
+            Link.BREATH_CHARGE -> "В утра с дыханием Заряд $dir на $n ${levels(abs(effect))}, чем без него"
             Link.STACK_HEAD -> "На следующее утро после стека Голова $dir на $n ${levels(abs(effect))}"
             Link.SCREENS_SLEEP -> "После вечеров с экранами после 23 сон по WHOOP $dir твоей нормы на $n"
             Link.SCREENS_CHARGE -> "После вечеров с экранами после 23 Заряд утром $dir на $n ${levels(abs(effect))}"
@@ -344,7 +344,7 @@ object CheckinTexts {
         }
     }
 
-    fun counts(n1: Int, n0: Int): String = "$n1 и $n0 ${plural(n0, "утро", "утра", "утр")} · $LINK_NOT_CAUSE"
+    fun counts(n1: Int, n0: Int): String = "с — $n1 · без — $n0 · $LINK_NOT_CAUSE"
 
     /** ⚑ Agent 9: the method in plain words. */
     fun howCounted(n1: Int, n0: Int, lo: Double, hi: Double): String {

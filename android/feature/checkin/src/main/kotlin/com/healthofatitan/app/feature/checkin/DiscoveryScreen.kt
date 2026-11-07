@@ -78,6 +78,7 @@ fun DiscoveryRoute(onClose: () -> Unit, viewModel: CheckinViewModel = hiltViewMo
 fun DiscoveryScreen(d: Discovery?, tiles: List<Tile>, persona: MentorPersona, onClose: () -> Unit) {
     var how by remember { mutableStateOf(false) }
     HotBackground {
+      NightContent {
         Column(
             Modifier
                 .fillMaxSize()
@@ -117,6 +118,7 @@ fun DiscoveryScreen(d: Discovery?, tiles: List<Tile>, persona: MentorPersona, on
             Spacer(Modifier.height(20.dp))
             HotPrimaryButton(CheckinTexts.CLOSE, onClick = onClose, modifier = Modifier.fillMaxWidth())
         }
+      }
     }
 }
 
@@ -145,6 +147,7 @@ private fun TileView(t: Tile, modifier: Modifier) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = if (open) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(1.dp, if (open) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else tokens.rule),
         modifier = modifier.aspectRatio(0.9f).semantics(mergeDescendants = true) { contentDescription = spoken },
     ) {

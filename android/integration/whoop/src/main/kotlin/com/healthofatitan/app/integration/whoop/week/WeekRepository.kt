@@ -613,8 +613,10 @@ class WeekRepository(
     private suspend fun experimentResult(monday: LocalDate, g: WhoopGlance?): ExperimentResult? {
         val row = runCatching { weekDao.experiment(user, monday.toString()) }.getOrNull() ?: return null
         if (row.status != ExperimentStatus.TAKEN.name) return null
-        if (row.outcome != null && row.resultText != null) {
-            return ExperimentResult(runCatching { ExperimentOutcome.valueOf(row.outcome) }.getOrDefault(ExperimentOutcome.TOO_FEW), WeekCopy.EXP_LEARNED, row.resultText, row.points ?: 0)
+        val outcome = row.outcome
+        val text = row.resultText
+        if (outcome != null && text != null) {
+            return ExperimentResult(runCatching { ExperimentOutcome.valueOf(outcome) }.getOrDefault(ExperimentOutcome.TOO_FEW), WeekCopy.EXP_LEARNED, text, row.points ?: 0)
         }
         val e = experimentOf(monday) ?: return null
         val end = monday.plusDays(ExperimentRules.DAYS.toLong() - 1)

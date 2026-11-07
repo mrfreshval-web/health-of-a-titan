@@ -101,8 +101,11 @@ fun NavGraphBuilder.todayScreen(
     pathStep: @Composable () -> Unit = {},
     /** One card from another module (stream C «Тарелка дня»); the app passes it in. */
     plateOfDay: @Composable () -> Unit = {},
+    /** Stream B: «Тренировка дня», a card from another module put in by :app. */
+    trainingCard: @Composable () -> Unit = {},
 ) {
     val slots = TodaySlots(
+        training = { trainingCard() },
         afterPlan = {
             plateOfDay()
             pathStep()
@@ -124,6 +127,8 @@ fun NavGraphBuilder.todayScreen(
 class TodaySlots(
     val afterNow: @Composable ColumnScope.() -> Unit = {},
     val afterPlan: @Composable ColumnScope.() -> Unit = {},
+    /** Stream B «Тренировка дня»: above the plan, or alone when the day has no plan yet. */
+    val training: @Composable ColumnScope.() -> Unit = {},
     val evening: @Composable ColumnScope.() -> Unit = {},
 )
 
@@ -287,6 +292,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
             HotOverline(TitanTexts.DAY_LINE)
             DayLine(plan, nowMin, mode!!)
         }
+        slots.training(this)
         PlanCard(plan, actions.onToggle)
         ActivityCard(plan, day?.steps ?: PhoneSteps.Unavailable, mode!!, onPermission = actions.onSteps)
         slots.afterPlan(this)
@@ -294,6 +300,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     } else {
         if (day != null) DayPending()
         Tiles(state)
+        slots.training(this)
         if (day != null) ActivityCard(null, day.steps, HotMode.ROVNO, onPermission = actions.onSteps)
     }
     SyncFooter(whoop, state, onSync)

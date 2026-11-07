@@ -139,5 +139,29 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+    /**
+     * Stream B «Тренировка» (A40 §7): the log of workouts done in the HoT player and their sets.
+     * New tables only, prefixed `training_`; nothing existing changes.
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `training_workout` (`user_id` TEXT NOT NULL, `workout_id` TEXT NOT NULL, " +
+                    "`day_key` TEXT NOT NULL, `template_ref` TEXT NOT NULL, `mode` TEXT NOT NULL, `lighter` INTEGER NOT NULL, " +
+                    "`started_at` INTEGER NOT NULL, `finished_at` INTEGER NOT NULL, `active_s` INTEGER NOT NULL, " +
+                    "`sets_done` INTEGER NOT NULL, `sets_skipped` INTEGER NOT NULL, `sets_planned` INTEGER NOT NULL, " +
+                    "`rpe_median` INTEGER, `felt_bad` INTEGER NOT NULL, `stretch_done` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`user_id`, `workout_id`))",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_training_workout_user_id_day_key` ON `training_workout` (`user_id`, `day_key`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `training_set` (`user_id` TEXT NOT NULL, `workout_id` TEXT NOT NULL, " +
+                    "`step_index` INTEGER NOT NULL, `exercise_id` TEXT NOT NULL, `block_type` TEXT NOT NULL, " +
+                    "`set_no` INTEGER NOT NULL, `side` TEXT, `reps` TEXT, `seconds` INTEGER NOT NULL, " +
+                    "`skipped` INTEGER NOT NULL, `rpe` INTEGER, PRIMARY KEY(`user_id`, `workout_id`, `step_index`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 }

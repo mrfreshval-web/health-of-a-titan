@@ -55,3 +55,6 @@ include(":feature:path")
 // Stream C «Еда» (A41): nutrition engine and screens.
 include(":domain:nutrition")
 include(":feature:nutrition")
+// Stream B «Тренировка» (A40 §12): configurator, player, TitanPose.
+include(":domain:training")
+include(":feature:training")

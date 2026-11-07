@@ -14,6 +14,7 @@ import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.PathDao
+import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -78,4 +79,7 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao())
+
+    @Provides
+    fun provideTrainingLogDao(db: HotDatabase): TrainingLogDao = db.trainingLogDao()
 }

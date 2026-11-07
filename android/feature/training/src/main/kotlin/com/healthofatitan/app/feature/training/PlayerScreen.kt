@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -80,6 +82,7 @@ fun PlayerScreen(run: WorkoutRun, now: Long, actions: PlayerActions, animate: Bo
     val mode = run.session.mode.hotMode()
     val state = run.state
     HotBackground(aura = mode.color()) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -109,6 +112,7 @@ fun PlayerScreen(run: WorkoutRun, now: Long, actions: PlayerActions, animate: Bo
                 Spacer(Modifier.height(10.dp))
             }
             if (!state.paused) Controls(state.phase, actions)
+        }
         }
     }
 }

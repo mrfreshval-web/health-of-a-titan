@@ -11,14 +11,18 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.ui.component.SOS_BUTTON_TAG
+import com.healthofatitan.app.core.ui.component.STATUS_RINGS_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
+import com.healthofatitan.app.core.ui.component.TOP_BAR_GLYPH_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.ui.theme.HotTheme
+import com.healthofatitan.app.feature.me.ME_HELP_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.ME_WHOOP_ROW_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_CONNECT_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_SCREEN_TAG
+import com.healthofatitan.app.feature.mentor.MENTOR_HELP_TAG
+import com.healthofatitan.app.feature.mentor.MENTOR_MENU_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_SCREEN_TAG
 import com.healthofatitan.app.feature.sos.SOS_CALL_911_TAG
 import com.healthofatitan.app.feature.sos.SOS_CALL_988_TAG
@@ -34,8 +38,9 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 
 /**
- * A14 §9 step 6 acceptance: 4 tabs open; SOS is 1 tap away from every tab; the SOS buttons
- * open the dialer with 988 / 911 (the user confirms the call).
+ * A14 §9 step 6 acceptance with D-029: 4 tabs open; the header is the glyph and three rings, no
+ * SOS button; help is at most 2 taps from every tab («Я › Помощь», «⋮ › Помощь» in the mentor);
+ * the tile and the shortcut open it at once; 988 / 911 open the dialer (the user confirms).
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -68,16 +73,39 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `sos is one tap away from every tab and closes back`() {
+    fun `header is the glyph and the rings, without an sos button`() {
         launch()
-        screens.forEach { (tab, screenTag) ->
+        screens.keys.forEach { tab ->
             compose.onNodeWithTag(tab.testTag).performClick()
-            compose.onNodeWithTag(SOS_BUTTON_TAG).performClick() // the single tap
+            compose.onNodeWithTag(TOP_BAR_GLYPH_TAG).assertExists()
+            compose.onNodeWithTag(STATUS_RINGS_TAG).assertExists()
+            compose.onNodeWithTag("sos_button").assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun `help is at most two taps from every tab and closes back`() {
+        launch()
+        screens.keys.forEach { tab ->
+            compose.onNodeWithTag(tab.testTag).performClick()
+            compose.onNodeWithTag(HotTab.ME.testTag).performClick() // tap 1 (none on «Я» itself)
+            compose.onNodeWithTag(ME_HELP_ROW_TAG).performClick() // tap 2
             compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
             compose.onNodeWithTag(SOS_CALL_988_TAG).assertExists()
             compose.onNodeWithContentDescription("Закрыть").performClick()
-            compose.onNodeWithTag(screenTag).assertExists()
+            compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
         }
+    }
+
+    @Test
+    fun `mentor menu opens help in two taps`() {
+        launch()
+        compose.onNodeWithTag(HotTab.MENTOR.testTag).performClick()
+        compose.onNodeWithTag(MENTOR_MENU_TAG).performClick() // tap 1
+        compose.onNodeWithTag(MENTOR_HELP_TAG).performClick() // tap 2
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+        compose.onNodeWithContentDescription("Закрыть").performClick()
+        compose.onNodeWithTag(MENTOR_SCREEN_TAG).assertExists()
     }
 
     @Test
@@ -111,7 +139,7 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(WHOOP_CONNECT_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals("WHOOP")
         compose.onNodeWithTag(HotTab.ME.testTag).assertIsSelected()
-        compose.onNodeWithTag(SOS_BUTTON_TAG).assertExists() // SOS stays one tap away
+        compose.onNodeWithTag(STATUS_RINGS_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }

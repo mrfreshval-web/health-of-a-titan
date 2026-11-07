@@ -50,9 +50,9 @@ import javax.inject.Inject
  * @param stateful false renders the screens from default state without ViewModels (navigation
  *   tests run without Hilt).
  */
-fun NavGraphBuilder.meScreen(onOpenWhoop: () -> Unit, stateful: Boolean = true) {
+fun NavGraphBuilder.meScreen(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit = {}, stateful: Boolean = true) {
     composable(route = HotRoute.ME) {
-        if (stateful) MeRoute(onOpenWhoop) else MeScreen(whoop = null, onOpenWhoop = onOpenWhoop)
+        if (stateful) MeRoute(onOpenWhoop, onOpenHelp) else MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
     }
 }
 
@@ -64,6 +64,7 @@ fun NavGraphBuilder.whoopScreen(stateful: Boolean = true) {
 
 const val ME_SCREEN_TAG = "screen_me"
 const val ME_WHOOP_ROW_TAG = "me_whoop_row"
+const val ME_HELP_ROW_TAG = "me_help_row"
 
 @HiltViewModel
 class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel() {
@@ -72,13 +73,13 @@ class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel()
 }
 
 @Composable
-private fun MeRoute(onOpenWhoop: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
+private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop)
+    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
 }
 
 @Composable
-fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = Modifier) {
+fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = Modifier, onOpenHelp: () -> Unit = {}) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -92,6 +93,17 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
                 "HoT — wellness-приложение, не медицинское изделие: не ставит диагнозов и не назначает лечение.",
                 style = HotType.quote,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        // D-029: the way to help moved from the header to «Я › Помощь» (≤ 2 taps from any tab);
+        // the quick settings tile and the launcher shortcut still open it in one.
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = "Помощь",
+                onClick = onOpenHelp,
+                caption = "988 · 911",
+                divider = false,
+                modifier = Modifier.testTag(ME_HELP_ROW_TAG),
             )
         }
         Section("Подключения")

@@ -30,7 +30,7 @@ object TabHeaders {
     }
 
     fun overline(tab: HotTab, date: LocalDate): String? = when (tab) {
-        HotTab.TODAY -> today(date)
+        HotTab.TODAY -> null // the date stands over the hero on the screen itself (A37 s2)
         HotTab.MENTOR -> "Винс · ИИ"
         HotTab.WEEK -> week(date)
         HotTab.ME -> null

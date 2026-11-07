@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -27,10 +28,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -60,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -79,9 +81,12 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.Titanium
 import com.healthofatitan.app.domain.engine.Body
+import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.DayTexts
+import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
+import com.healthofatitan.app.domain.engine.RuleSet
 import com.healthofatitan.app.integration.whoop.day.DayItemView
 import com.healthofatitan.app.integration.whoop.day.DayView
 import java.time.LocalDate
@@ -94,6 +99,9 @@ const val DAY_EVENING_TAG = "today_day_evening"
 const val DAY_NOW_TAG = "today_day_now"
 const val DAY_LINE_TAG = "today_day_line"
 const val TODAY_HERO_TAG = "today_hero"
+const val DAY_SAFETY_TAG = "today_day_safety"
+const val DAY_SUMMARY_TAG = "today_day_summary"
+const val DAY_WHY_TAG = "today_day_why"
 
 /** What the day block does on a tap (slice 2 logic, unchanged). */
 class DayActions(
@@ -116,6 +124,8 @@ fun TodayHero(
     normNights: Int?,
     tokens: List<String>,
     modifier: Modifier = Modifier,
+    summary: String? = null,
+    flags: Set<DayFlag> = emptySet(),
 ) {
     val reduce = rememberReduceMotion()
     val fraction = when {
@@ -135,7 +145,7 @@ fun TodayHero(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val side = minOf(maxWidth, 380.dp)
+            val side = minOf(maxWidth, 320.dp)
             var box by remember { mutableStateOf(IntSize.Zero) }
             val density = LocalDensity.current
             Box(
@@ -189,6 +199,24 @@ fun TodayHero(
         if (mode != null) {
             ModeWord(mode, style = HotType.headline, color = MaterialTheme.colorScheme.onSurface, glyphSize = 44.dp, modifier = Modifier.testTag(DAY_REGIME_TAG))
         }
+        if (!summary.isNullOrBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                summary,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(DAY_SUMMARY_TAG),
+            )
+        }
+        if (flags.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                flags.sortedBy { it.ordinal }.forEach { FlagGlyph(it, MaterialTheme.colorScheme.onSurfaceVariant, size = 28.dp) }
+            }
+        }
         if (tokens.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -214,34 +242,87 @@ fun DataToken(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** «Почему так» under the hero: the summary, the rules that fired and the day's flags (A09, A35). */
+/** Where a fired rule stands in «Почему так» (A39 §7): safety → data → regime → context. */
+internal enum class WhyKind { SAFETY, DATA, REGIME, CONTEXT }
+
+internal fun whyKind(id: String): WhyKind? = when {
+    id.startsWith("SAF-") -> WhyKind.SAFETY
+    id == "REG-05" -> WhyKind.DATA
+    id.startsWith("REG-") -> WhyKind.REGIME
+    // SLP, NUT, WRK repeat the plan: hidden here (A39 §7)
+    id.startsWith("SLP-") || id.startsWith("NUT-") || id.startsWith("WRK-") -> null
+    else -> WhyKind.CONTEXT
+}
+
+/** The lines of «Почему так»: at most 4, one per rule, in the A39 §7 order; SAF lines stay on the safety card. */
+internal fun whyLines(fired: List<FiredRule>, max: Int = 4): List<FiredRule> =
+    fired.filter { r -> whyKind(r.ref.id).let { it != null && it != WhyKind.SAFETY } }
+        .distinctBy { it.ref.id }
+        .sortedBy { whyKind(it.ref.id)!!.ordinal }
+        .take(max)
+
+/** The sphere of a «почему» line as a pictogram (sleep, body, food, work, travel, data). */
+@Composable
+private fun WhyGlyph(rule: FiredRule, color: Color) {
+    val id = rule.ref.id
+    when {
+        whyKind(id) == WhyKind.DATA -> FlagGlyph(DayFlag.MANUAL, color, size = 24.dp)
+        id == "CTX-03" || id == "CTX-04" -> FlagGlyph(DayFlag.TRAVEL, color, size = 24.dp)
+        id == "REG-06" -> FlagGlyph(DayFlag.LIGHT_WEEK, color, size = 24.dp)
+        id == "REG-02" -> KindBadge(ItemKind.SLEEP, color, sizeDp = 24)
+        id == "CTX-01" || id.startsWith("EVE-") -> KindBadge(ItemKind.NUTRITION, color, sizeDp = 24)
+        id == "CTX-02" -> KindBadge(ItemKind.WORK, color, sizeDp = 24)
+        else -> KindBadge(ItemKind.TRAINING, color, sizeDp = 24)
+    }
+}
+
+/**
+ * Safety first (A39 §7.1): only when a SAF rule fired. Glass with no glow and no alarm colour
+ * (red is SOS and SAF-01 only); one line of `why`, and for SAF-03@2 «Что делать» opens the rest.
+ */
+@Composable
+fun SafetyCard(plan: DayView) {
+    val saf = plan.fired.filter { whyKind(it.ref.id) == WhyKind.SAFETY }
+    if (saf.isEmpty()) return
+    var more by rememberSaveable(plan.dayKey) { mutableStateOf(false) }
+    HotCard(modifier = Modifier.fillMaxWidth().testTag(DAY_SAFETY_TAG)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FlagGlyph(if (DayFlag.SICK in plan.flags) DayFlag.SICK else DayFlag.DATA_LIMITED, MaterialTheme.colorScheme.onSurface, size = 28.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(saf.first().why, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        }
+        val rest = saf.drop(1)
+        if (rest.isNotEmpty() && saf.any { it.ref == RuleSet.SAF_03 }) {
+            AnimatedVisibility(more) {
+                Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    rest.forEach { Text(it.why, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
+            if (!more) HotTextButton(TitanTexts.SAFETY_MORE, onClick = { more = true })
+        }
+    }
+}
+
+/** «Почему так» under the hero: folded; at most 4 lines with a sphere pictogram each (A39 §7.3). */
 @Composable
 fun RegimeWhy(plan: DayView) {
     var why by rememberSaveable(plan.dayKey) { mutableStateOf(false) }
-    val tokens = HotThemeTokens.colors
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+    val lines = whyLines(plan.fired)
+    if (lines.isEmpty()) return
+    val ink = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(Modifier.fillMaxWidth().testTag(DAY_WHY_TAG), horizontalAlignment = Alignment.CenterHorizontally) {
         HotTextButton(if (why) DayUiTexts.WHY_HIDE else DayUiTexts.WHY, onClick = { why = !why })
         AnimatedVisibility(why) {
             HotCard(modifier = Modifier.fillMaxWidth()) {
-                Text(plan.summary, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                if (plan.flags.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    HotOverline(plan.flags.joinToString(" · ") { DayUiTexts.flag(it) })
-                }
-                if (plan.fired.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        plan.fired.forEach { rule ->
-                            Text(rule.why, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    lines.forEach { rule ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            WhyGlyph(rule, ink)
+                            Spacer(Modifier.width(12.dp))
+                            Text(rule.why, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    DayUiTexts.markers(plan.caffeineCutoffMin, plan.windDownMin, plan.bedtimeMin),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = tokens.textTertiary,
-                )
             }
         }
     }
@@ -456,12 +537,35 @@ fun DayLine(plan: DayView, nowMin: Int, mode: HotMode, modifier: Modifier = Modi
 @Composable
 fun PlanCard(plan: DayView, onToggle: (LocalDate, String) -> Unit) {
     HotCard(modifier = Modifier.fillMaxWidth().testTag(DAY_PLAN_TAG)) {
-        HotOverline(DayUiTexts.PLAN)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HotOverline(DayUiTexts.PLAN, modifier = Modifier.weight(1f))
+            Markers(plan)
+        }
         Spacer(Modifier.height(4.dp))
-        plan.items.forEachIndexed { i, item ->
+        plan.items.sortedWith(compareBy(nullsLast()) { it.startMin }).forEachIndexed { i, item ->
             if (i > 0) HorizontalDivider(color = HotThemeTokens.colors.hairline)
             PlanRow(item, onClick = { onToggle(plan.dayKey, item.id) })
         }
+    }
+}
+
+/** «кофе до · экраны в сторону с» as two pictograms with times; the words stay for TalkBack (A39 §7.4). */
+@Composable
+private fun Markers(plan: DayView) {
+    val ink = HotThemeTokens.colors.textTertiary
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clearAndSetSemantics {
+            contentDescription = DayUiTexts.markers(plan.caffeineCutoffMin, plan.windDownMin, plan.bedtimeMin)
+        },
+    ) {
+        CupGlyph("", ink)
+        Spacer(Modifier.width(4.dp))
+        Text(DayTexts.time(plan.caffeineCutoffMin), style = MaterialTheme.typography.labelSmall, color = ink)
+        Spacer(Modifier.width(12.dp))
+        ScreenGlyph("", ink)
+        Spacer(Modifier.width(4.dp))
+        Text(DayTexts.time(plan.windDownMin), style = MaterialTheme.typography.labelSmall, color = ink)
     }
 }
 
@@ -493,30 +597,17 @@ private fun PlanRow(item: DayItemView, onClick: () -> Unit) {
             item.detail?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = tokens.textTertiary)
             }
-            DayUiTexts.status(item.status)?.let {
-                Spacer(Modifier.height(2.dp))
-                HotOverline(it, color = tokens.modeRovno)
-            }
         }
         Spacer(Modifier.width(10.dp))
-        Spacer(
-            Modifier
-                .size(22.dp)
-                .drawBehind {
-                    val r = size.minDimension / 2f
-                    if (done) {
-                        drawCircle(tokens.modeRovno.copy(alpha = 0.9f), r)
-                        val p = androidx.compose.ui.graphics.Path().apply {
-                            moveTo(r * 0.55f, r * 1.02f)
-                            lineTo(r * 0.88f, r * 1.32f)
-                            lineTo(r * 1.45f, r * 0.72f)
-                        }
-                        drawPath(p, Titanium.Depth, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round))
-                    } else {
-                        drawCircle(tokens.rule, r - 0.5.dp.toPx(), style = Stroke(1.dp.toPx()))
-                    }
-                },
-        )
+        if (done) {
+            StatusGlyph(item.status, tokens.modeRovno, Titanium.Depth, size = 24.dp)
+        } else {
+            Spacer(
+                Modifier
+                    .size(24.dp)
+                    .drawBehind { drawCircle(tokens.rule, size.minDimension / 2f - 0.5.dp.toPx(), style = Stroke(1.dp.toPx())) },
+            )
+        }
     }
 }
 
@@ -552,64 +643,103 @@ fun NotificationAsk() {
     }
 }
 
-/** The evening deck (D-027): only what WHOOP does not know — alcohol and how the body feels. */
+/**
+ * The evening deck (D-027, A39 §7.5): first «Как тело?» as three Titans-feelings, then «Алкоголь
+ * сегодня» — the evening never opens with drinking (Agent 10). «Пропустить» is an equal button.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EveningDeckCard(day: LocalDate, onEvening: (LocalDate, Int?, Body?) -> Unit) {
-    var alcohol by rememberSaveable(day) { mutableStateOf<Int?>(null) }
-    var alcoholDone by rememberSaveable(day) { mutableStateOf(false) }
-    val tokens = HotThemeTokens.colors
-    val chipColors = FilterChipDefaults.filterChipColors(
-        containerColor = Color.Transparent,
-        labelColor = MaterialTheme.colorScheme.onSurface,
-        selectedContainerColor = MaterialTheme.colorScheme.primary,
-        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-    )
+    var body by rememberSaveable(day) { mutableStateOf<Body?>(null) }
+    var bodyDone by rememberSaveable(day) { mutableStateOf(false) }
     HotCard(modifier = Modifier.fillMaxWidth().testTag(DAY_EVENING_TAG)) {
         HotOverline(DayUiTexts.EVENING)
         Spacer(Modifier.height(8.dp))
-        if (!alcoholDone) {
-            Text(DayUiTexts.ALCOHOL_Q, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DayUiTexts.ALCOHOL_OPTIONS.forEach { (value, label) ->
-                    FilterChip(
-                        selected = alcohol == value,
-                        onClick = {
-                            alcohol = value
-                            alcoholDone = true
-                        },
-                        label = { Text(label, style = MaterialTheme.typography.labelLarge) },
-                        shape = CircleShape,
-                        colors = chipColors,
-                        border = FilterChipDefaults.filterChipBorder(true, alcohol == value, borderColor = tokens.rule),
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    )
-                }
-            }
-            HotTextButton(DayUiTexts.SKIP, onClick = { alcoholDone = true })
-        } else {
+        if (!bodyDone) {
             Text(DayUiTexts.BODY_Q, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DayUiTexts.BODY_OPTIONS.forEach { (value, label) ->
-                    FilterChip(
-                        selected = false,
-                        onClick = { onEvening(day, alcohol, value) },
-                        label = { Text(label, style = MaterialTheme.typography.labelLarge) },
-                        shape = CircleShape,
-                        colors = chipColors,
-                        border = FilterChipDefaults.filterChipBorder(true, false, borderColor = tokens.rule),
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    )
+                    EveningOption(
+                        label = label,
+                        onClick = {
+                            body = value
+                            bodyDone = true
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { BodyGlyph(value, label, MaterialTheme.colorScheme.onSurface) }
+                }
+                EveningOption(label = DayUiTexts.SKIP, onClick = { bodyDone = true }, modifier = Modifier.weight(1f), muted = true) {
+                    Spacer(Modifier.size(40.dp))
                 }
             }
-            HotTextButton(DayUiTexts.SKIP, onClick = { onEvening(day, alcohol, null) })
+        } else {
+            Text(DayUiTexts.ALCOHOL_Q, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                DayUiTexts.ALCOHOL_OPTIONS.forEach { (value, label) ->
+                    EveningChip(label, onClick = { onEvening(day, value, body) })
+                }
+                EveningChip(DayUiTexts.SKIP, onClick = { onEvening(day, null, body) }, muted = true)
+            }
         }
     }
 }
 
-/** «Принято. Учту утром.» after the deck. */
+@Composable
+private fun EveningOption(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    muted: Boolean = false,
+    glyph: @Composable () -> Unit,
+) {
+    val tokens = HotThemeTokens.colors
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, tokens.rule),
+        modifier = modifier.heightIn(min = 96.dp),
+    ) {
+        Column(
+            Modifier.padding(vertical = 12.dp, horizontal = 4.dp).semantics(mergeDescendants = true) { },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.clearAndSetSemantics { }) { glyph() }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EveningChip(label: String, onClick: () -> Unit, muted: Boolean = false) {
+    val tokens = HotThemeTokens.colors
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, tokens.rule),
+        modifier = Modifier.heightIn(min = 48.dp).widthIn(min = 56.dp),
+    ) {
+        Box(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/** «Принято. Утро это учтёт.» after the deck. */
 @Composable
 fun EveningSaved() {
     HotPendingCard(title = DayUiTexts.DONE, modifier = Modifier.fillMaxWidth())

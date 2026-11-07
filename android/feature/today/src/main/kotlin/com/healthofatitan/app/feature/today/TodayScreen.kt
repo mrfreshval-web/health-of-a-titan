@@ -195,11 +195,15 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     )
 
     HotOverline(TitanTexts.date(today), modifier = Modifier.align(Alignment.CenterHorizontally))
+    // A39 §7 order: safety → mode → «Почему так» → plan → evening
+    plan?.let { SafetyCard(it) }
     TodayHero(
         mode = mode,
         charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
         normNights = whoop.baselineNights.coerceAtMost(TodayTexts.NORM_NIGHTS).takeIf { !normReady },
         tokens = tokens,
+        summary = plan?.summary,
+        flags = plan?.flags.orEmpty(),
         modifier = Modifier.testTag(TODAY_STATE_TAG),
     )
     if (plan != null) {

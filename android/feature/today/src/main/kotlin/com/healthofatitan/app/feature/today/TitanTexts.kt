@@ -1,7 +1,9 @@
 package com.healthofatitan.app.feature.today
 
 import com.healthofatitan.app.core.ui.component.HotMode
+import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.domain.engine.Regime
+import com.healthofatitan.app.integration.whoop.day.HeaderRings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -36,6 +38,9 @@ object TitanTexts {
     const val MINUTES = "мин"
     const val BEDTIME = "отбой"
 
+    /** A39 §7.1: the link on the safety card (SAF-03@2); wording pending Agent 7. */
+    const val SAFETY_MORE = "Что делать"
+
     /** «среда · 11 ноября». */
     fun date(day: LocalDate): String = dayMonth.format(day)
 
@@ -65,6 +70,18 @@ object TitanTexts {
         charge?.let { "Заряд $it из 100, 50 — твоя норма" },
     ).joinToString(", ").ifEmpty { "Титан ждёт данные WHOOP" }
 }
+
+/** The D-029 header rings as the top bar draws them. */
+fun HeaderRings.toStatusRings(): StatusRings = StatusRings(
+    strain = strain,
+    strainCeiling = strainCeiling,
+    steps = steps,
+    stepsGoal = stepsGoal,
+    untilBedMin = untilBedMin,
+    dayFraction = dayFraction,
+    bedtimeMin = bedtimeMin,
+    mode = regime?.mode(),
+)
 
 fun Regime.mode(): HotMode = when (this) {
     Regime.BOOST -> HotMode.RAZGON

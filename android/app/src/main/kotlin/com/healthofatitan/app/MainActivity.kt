@@ -20,8 +20,18 @@ import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.navigation.HotApp
+import com.healthofatitan.app.core.ui.component.StatusRings
+import com.healthofatitan.app.feature.today.toStatusRings
+import com.healthofatitan.app.integration.whoop.day.DawnRepository
+import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.day.HeaderRingsMapper
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -29,6 +39,19 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var whoop: WhoopConnection
+
+    @Inject
+    lateinit var plans: DayPlanRepository
+
+    @Inject
+    lateinit var dawn: DawnRepository
+
+    /** D-029 header rings: the plan, the WHOOP glance (memory only) and the clock, once a minute. */
+    private val rings by lazy {
+        combine(plans.latest, whoop.glance, minuteTicks()) { plan, glance, now ->
+            HeaderRingsMapper.of(plan, glance, now, ZoneId.systemDefault()).toStatusRings()
+        }
+    }
 
     private var pendingRoute by mutableStateOf<String?>(null)
 
@@ -60,10 +83,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             HotTheme {
                 val syncProgress by whoop.progress.collectAsStateWithLifecycle()
+                val headerRings by rings.collectAsStateWithLifecycle(StatusRings.Empty)
+                val dawnDue by dawn.due.collectAsStateWithLifecycle(false)
                 HotApp(
                     pendingRoute = pendingRoute,
                     onPendingRouteConsumed = { pendingRoute = null },
                     syncProgress = syncProgress,
+                    rings = headerRings,
+                    dawnDue = dawnDue,
                 )
             }
         }
@@ -83,6 +110,13 @@ class MainActivity : ComponentActivity() {
 
     private fun routeOf(intent: Intent?): String? =
         intent?.data?.let { DeepLinks.routeFor(it.scheme, it.host) }
+
+    private fun minuteTicks() = flow {
+        while (true) {
+            emit(LocalDateTime.now())
+            delay(60_000L - System.currentTimeMillis() % 60_000L)
+        }
+    }
 
     private companion object {
         const val SPLASH_ICON_MS = 1_000L

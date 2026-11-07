@@ -43,7 +43,9 @@ import kotlin.test.assertEquals
  * the tile and the shortcut open it at once; 988 / 911 open the dialer (the user confirms).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [35], application = Application::class)
+// Pixel 9 Pro XL in dp: the floating tab bar and the hero leave the default 320 × 470 dp screen
+// too short for the rows below the fold (a click off screen goes nowhere).
+@Config(sdk = [35], application = Application::class, qualifiers = "w448dp-h998dp-xxhdpi")
 class HotAppNavigationTest {
 
     @get:Rule

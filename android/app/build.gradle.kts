@@ -78,6 +78,8 @@ dependencies {
     implementation(project(":domain:path"))
     implementation(project(":feature:nutrition"))
     implementation(project(":feature:training"))
+    implementation(project(":feature:checkin"))
+    implementation(project(":domain:checkin"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

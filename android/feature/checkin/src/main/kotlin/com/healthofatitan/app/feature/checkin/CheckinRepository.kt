@@ -17,6 +17,7 @@ import com.healthofatitan.app.domain.checkin.CardId
 import com.healthofatitan.app.domain.checkin.Codec
 import com.healthofatitan.app.domain.checkin.DayRecord
 import com.healthofatitan.app.domain.checkin.DeckContext
+import com.healthofatitan.app.domain.checkin.DeckEngine
 import com.healthofatitan.app.domain.checkin.DeckSettings
 import com.healthofatitan.app.domain.checkin.Discoveries
 import com.healthofatitan.app.domain.checkin.Discovery
@@ -87,6 +88,9 @@ data class MorningState(
     val revealReady: Boolean get() = wakeDone && day?.revealSeenAt == null && dataLevel != null
 }
 
+/** The morning screen the app opens by itself, if any. */
+enum class MorningDue { NONE, WAKE, REVEAL }
+
 /** What the reveal shows besides the two Titans. */
 data class RevealFacts(val matched: Int, val total: Int, val mornings: Int)
 
@@ -145,6 +149,18 @@ class CheckinRepository @Inject constructor(
             )
         }
     }
+
+    /**
+     * What the app opens by itself (D-036): the blind deck in the wake window until it is done,
+     * then the reveal once WHOOP has scored the night. «Рассвет» waits while this is not NONE.
+     */
+    val due: Flow<MorningDue> = state.map { s ->
+        when {
+            !s.wakeDone && DeckEngine.wakeWindow(s.now) -> MorningDue.WAKE
+            s.revealReady -> MorningDue.REVEAL
+            else -> MorningDue.NONE
+        }
+    }.distinctUntilChanged()
 
     /** HoT Заряд (ECAP@1) level of the night → 1…5; never a raw WHOOP value. */
     suspend fun dataLevel(day: LocalDate): Int? =

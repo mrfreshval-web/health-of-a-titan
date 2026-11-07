@@ -13,4 +13,17 @@
             android:targetClass="com.healthofatitan.app.MainActivity"
             android:targetPackage="com.healthofatitan.app" />
     </shortcut>
+    <!-- A44 / D-036: «Утро» opens the blind deck (hot://checkin). -->
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_morning"
+        android:shortcutId="morning"
+        android:shortcutLongLabel="@string/shortcut_morning_long"
+        android:shortcutShortLabel="@string/shortcut_morning_short">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="hot://checkin"
+            android:targetClass="com.healthofatitan.app.MainActivity"
+            android:targetPackage="com.healthofatitan.app" />
+    </shortcut>
 </shortcuts>

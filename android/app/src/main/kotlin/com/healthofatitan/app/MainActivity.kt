@@ -24,6 +24,8 @@ import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.navigation.HotApp
 import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.feature.today.toStatusRings
+import com.healthofatitan.app.feature.checkin.CheckinRepository
+import com.healthofatitan.app.feature.checkin.MorningDue
 import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
@@ -59,6 +61,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var mentor: MentorSettings
+
+    /** State cards (A44, D-036): which morning screen is due. */
+    @Inject
+    lateinit var checkin: CheckinRepository
 
     /**
      * D-029 header rings: the plan, the WHOOP glance (memory only), the phone's steps (Health
@@ -106,6 +112,7 @@ class MainActivity : ComponentActivity() {
                 val headerRings by rings.collectAsStateWithLifecycle(StatusRings.Empty)
                 val dawnDue by dawn.due.collectAsStateWithLifecycle(false)
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
+                val morningDue by checkin.due.collectAsStateWithLifecycle(MorningDue.NONE)
                 HotApp(
                     pendingRoute = pendingRoute,
                     onPendingRouteConsumed = { pendingRoute = null },
@@ -113,6 +120,7 @@ class MainActivity : ComponentActivity() {
                     rings = headerRings,
                     dawnDue = dawnDue,
                     persona = mentorPrefs.persona,
+                    morningDue = morningDue,
                 )
             }
         }

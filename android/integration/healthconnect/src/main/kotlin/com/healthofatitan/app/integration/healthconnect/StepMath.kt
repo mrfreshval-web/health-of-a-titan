@@ -61,6 +61,10 @@ object StepMath {
     private val STEP: Duration = Duration.ofMinutes(5)
 
     /** Steps per local day (the day of each record's start), for the personal goal. */
+    /** Steps in each of the 24 hours from [dayStart] (A46 «часы с движением»), shares of overlapping records. */
+    fun hourly(chunks: List<StepChunk>, dayStart: Instant): List<Int> =
+        (0 until 24).map { h -> within(chunks, dayStart.plusSeconds(h * 3_600L), dayStart.plusSeconds((h + 1) * 3_600L)) }
+
     fun daily(chunks: List<StepChunk>, zone: ZoneId): Map<LocalDate, Int> =
         chunks.groupBy { it.start.atZone(zone).toLocalDate() }.mapValues { (_, list) -> list.sumOf { it.count }.toInt() }
 }

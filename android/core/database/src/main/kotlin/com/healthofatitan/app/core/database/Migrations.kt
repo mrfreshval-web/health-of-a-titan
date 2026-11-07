@@ -198,5 +198,19 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+    /**
+     * «Сегодня» v3 (A46 v0.3, D-042): water, meals and the tasks of the day as marked by hand.
+     * One new table; nothing existing changes; no WHOOP values.
+     */
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `today_mark` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                    "`ref` TEXT NOT NULL, `count` INTEGER NOT NULL, `goal` TEXT, `at` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`user_id`, `day_key`, `kind`, `ref`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
 }

@@ -29,6 +29,11 @@ import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
 import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
+import com.healthofatitan.app.integration.whoop.day.LegacyWeekPlanSource
+import com.healthofatitan.app.integration.whoop.day.TodayMarksRepository
+import com.healthofatitan.app.integration.whoop.day.TodayMorning
+import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
+import com.healthofatitan.app.core.database.dao.TodayDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -148,4 +153,18 @@ object WhoopModule {
     @Singleton
     fun provideMorning(syncer: WhoopSyncer, plans: DayPlanRepository, notifier: DayNotifier): MorningCoordinator =
         MorningCoordinator(syncer, plans, notifier, SystemZoneClock)
+
+    /** «Сегодня» v3 (A46): water, meals and tasks marked by hand (Room 10). */
+    @Provides
+    @Singleton
+    fun provideTodayMarks(dao: TodayDao): TodayMarksRepository = TodayMarksRepository(dao, SystemZoneClock)
+
+    /** Tasks of the day come from the week; «Неделя» (A52) replaces the legacy source here. */
+    @Provides
+    @Singleton
+    fun provideWeekPlan(plans: DayPlanRepository, dayDao: DayDao): WeekPlanSource = LegacyWeekPlanSource(plans, dayDao)
+
+    @Provides
+    @Singleton
+    fun provideTodayMorning(checkin: CheckinDao, dawn: DawnRepository): TodayMorning = TodayMorning(CheckinMorningSelf(checkin), dawn)
 }

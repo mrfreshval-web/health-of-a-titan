@@ -109,6 +109,21 @@ class PhoneStepsTest {
     }
 
     @Test
+    fun `hours with movement are split by the hour of the day`() {
+        val start = java.time.Instant.parse("2026-11-07T00:00:00Z")
+        val chunks = listOf(
+            StepChunk("android", start.plusSeconds(8 * 3_600L), start.plusSeconds(9 * 3_600L), 2_500),
+            StepChunk("android", start.plusSeconds(13 * 3_600L + 1_800), start.plusSeconds(14 * 3_600L + 1_800), 600),
+        )
+        val hourly = StepMath.hourly(chunks, start)
+        assertEquals(24, hourly.size)
+        assertEquals(2_500, hourly[8])
+        assertEquals(300, hourly[13])
+        assertEquals(300, hourly[14])
+        assertEquals(0, hourly[20])
+    }
+
+    @Test
     fun `a failing read degrades to unavailable, never crashes`() = runTest {
         val broken = object : PhoneStepsSource {
             override fun available() = true

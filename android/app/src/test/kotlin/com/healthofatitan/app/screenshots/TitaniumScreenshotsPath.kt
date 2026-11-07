@@ -21,7 +21,6 @@ import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotTopBar
 import com.healthofatitan.app.core.ui.component.ModeWord
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
@@ -94,7 +93,6 @@ class TitaniumScreenshotsPath {
 
     private val today = LocalDate.now()
     private val start = today.minusDays(37) // week 6, stage 2
-    private val rings = StatusRings(strain = 8.4, strainCeiling = 12.0, untilBedMin = 12 * 60 + 20, dayFraction = 0.28f, bedtimeMin = 23 * 60, mode = HotMode.ROVNO)
 
     /** Weeks 1–4 lit (5 nights of 7 h), week 5 «мимо» (3 of 5), week 6 under way (2 so far). */
     private val evidence: PathEvidence = run {
@@ -123,7 +121,6 @@ class TitaniumScreenshotsPath {
             title = title,
             overline = if (back) null else "Путь",
             onBack = if (back) ({}) else null,
-            rings = rings.copy(mode = mode),
             avatar = { AvatarMenu(persona, onHelp = {}, onMentor = {}, onSettings = {}) },
         )
     }
@@ -171,13 +168,12 @@ class TitaniumScreenshotsPath {
     private fun shootToday(regime: Regime) = shoot("22-today-step-${regime.name.lowercase()}") {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = rings.copy(mode = regime.mode()), avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
+                HotTopBar(title = null, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
                 val metrics = TodayMetrics(today, charge = facet(31.0), balance = facet(0.1), recovery = facet(-1.2), sleepHours = facet(5.2), sleepDebt = facet(2.4))
                 TodayScreen(
                     TodayUiState(whoop = whoop, metrics = metrics),
                     onConnectWhoop = {},
                     day = DayUiState(plan = plan(regime), now = LocalDateTime.now().withHour(20).withMinute(5), loaded = true),
-                    slots = TodaySlots(afterPlan = { PathTodayStepContent(pathView(regime.toPath()).copy(bedtimeMin = 22 * 60 + 30), onToggle = {}, onOpenPath = {}) }),
                 )
             }
         }
@@ -196,7 +192,7 @@ class TitaniumScreenshotsPath {
         val none = pathView(PathRegime.STEADY, goals = emptyList())
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = rings, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
+                HotTopBar(title = null, avatar = { AvatarMenu(MentorPersona.SENSEI, {}, {}, {}) })
                 Column(
                     Modifier.padding(horizontal = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),

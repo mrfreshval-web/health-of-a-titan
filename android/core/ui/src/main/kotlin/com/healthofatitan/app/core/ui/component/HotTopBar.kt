@@ -74,7 +74,7 @@ fun HotTopBar(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
-                BackButton(onBack, overline)
+                BackButton(onBack, overline, Modifier.weight(1f, fill = false))
             } else {
                 TitanGlyph(sync)
                 Spacer(Modifier.width(12.dp))
@@ -138,13 +138,13 @@ private fun TitanGlyph(sync: SyncMarkState?) {
 }
 
 @Composable
-private fun BackButton(onBack: () -> Unit, label: String?) {
+private fun BackButton(onBack: () -> Unit, label: String?, modifier: Modifier = Modifier) {
     Surface(
         onClick = onBack,
         shape = CircleShape,
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+        modifier = modifier
             .heightIn(min = 48.dp)
             .semantics { contentDescription = "Назад" + (label?.let { ": $it" } ?: "") }
             .testTag(TOP_BAR_BACK_TAG),

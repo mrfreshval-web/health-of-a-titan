@@ -356,7 +356,7 @@ fun SleepFact(hours: Double, needHours: Double?, stages: SleepStages?) {
                         },
                 )
                 Spacer(Modifier.width(10.dp))
-                HotNumber(HeroTexts.hm(min), style = HotType.ringValue, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(64.dp), textAlign = TextAlign.End)
+                HotNumber(HeroTexts.hm(min), style = HotType.ringValue, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(84.dp), textAlign = TextAlign.End)
             }
         }
     }

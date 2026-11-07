@@ -223,9 +223,9 @@ fun HotStatusRings(
             .testTag(STATUS_RINGS_TAG),
     ) {
         Row(
-            Modifier.padding(start = 10.dp, end = 14.dp, top = 7.dp, bottom = 7.dp).animateContentSize(),
+            Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp).animateContentSize(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             RingValue(RingKind.LOAD, rings.strainFraction, rings.strain?.let(StatusRingsTexts::strain), strainColor)
             RingValue(RingKind.STEPS, rings.stepsFraction, rings.steps?.let(StatusRingsTexts::steps), stepsColor)
@@ -238,7 +238,7 @@ fun HotStatusRings(
 private fun RingValue(kind: RingKind, fraction: Float?, value: String?, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clearAndSetSemantics { }) {
         RingGlyph(kind, fraction, color, dashed = value == null)
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(4.dp))
         HotNumber(
             value ?: StatusRingsTexts.NO_VALUE,
             style = HotType.ringValue,
@@ -252,7 +252,7 @@ private fun RingValue(kind: RingKind, fraction: Float?, value: String?, color: C
  * for the time until bedtime. The pictogram stays when there is no data, so the ring is named.
  */
 @Composable
-fun RingGlyph(kind: RingKind, fraction: Float?, color: Color, modifier: Modifier = Modifier, size: Dp = 24.dp, dashed: Boolean = fraction == null) {
+fun RingGlyph(kind: RingKind, fraction: Float?, color: Color, modifier: Modifier = Modifier, size: Dp = 22.dp, dashed: Boolean = fraction == null) {
     val ink = if (dashed) HotThemeTokens.colors.textTertiary else MaterialTheme.colorScheme.onSurface
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         MiniRing(fraction, color, size = size, dashed = dashed)

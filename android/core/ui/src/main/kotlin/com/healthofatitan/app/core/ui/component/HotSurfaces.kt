@@ -199,5 +199,5 @@ fun HotPendingCard(
 /** Telemetry line «ВТ · 10 НОЯБРЯ», «WHOOP · 06:41»: Geist Mono, tracked capitals, graphite. */
 @Composable
 fun HotOverline(text: String, modifier: Modifier = Modifier, color: Color = HotThemeTokens.colors.textTertiary) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = color, modifier = modifier, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = color, modifier = modifier)
 }

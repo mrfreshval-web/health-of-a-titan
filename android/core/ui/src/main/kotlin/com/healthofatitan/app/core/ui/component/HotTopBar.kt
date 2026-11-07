@@ -73,15 +73,7 @@ fun HotTopBar(
             .padding(start = HotSpacing.edge - 4.dp, end = HotSpacing.edge - 8.dp, top = 10.dp, bottom = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) {
-                BackButton(onBack, overline, Modifier.weight(1f, fill = false))
-            } else {
-                TitanGlyph(sync)
-                Spacer(Modifier.width(12.dp))
-                if (overline != null) {
-                    HotOverline(overline, modifier = Modifier.weight(1f, fill = false))
-                }
-            }
+            if (onBack != null) BackButton(onBack, overline) else TitanGlyph(sync)
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             HotStatusRings(rings, onClick = { why = !why }, expanded = why)
@@ -100,8 +92,14 @@ fun HotTopBar(
                     .testTag(TOP_BAR_WHY_TAG),
             )
         }
+        // The telemetry line («Винс · ИИ», the week, «Настройки · Подключения») under the row: the
+        // rings with their pictograms (Y1) need the width, and a breadcrumb must not wrap per letter.
+        if (overline != null) {
+            Spacer(Modifier.size(12.dp))
+            HotOverline(overline, modifier = Modifier.padding(start = 4.dp).clearAndSetSemantics { })
+        }
         if (title != null) {
-            Spacer(Modifier.size(18.dp))
+            Spacer(Modifier.size(if (overline != null) 6.dp else 18.dp))
             Text(
                 title,
                 style = MaterialTheme.typography.displaySmall,
@@ -138,23 +136,20 @@ private fun TitanGlyph(sync: SyncMarkState?) {
 }
 
 @Composable
-private fun BackButton(onBack: () -> Unit, label: String?, modifier: Modifier = Modifier) {
+private fun BackButton(onBack: () -> Unit, label: String?) {
     Surface(
         onClick = onBack,
         shape = CircleShape,
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier
+        modifier = Modifier
             .heightIn(min = 48.dp)
             .semantics { contentDescription = "Назад" + (label?.let { ": $it" } ?: "") }
             .testTag(TOP_BAR_BACK_TAG),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, end = 12.dp)) {
             Icon(painterResource(R.drawable.core_ui_ic_back), contentDescription = null, modifier = Modifier.size(24.dp))
-            if (label != null) {
-                Spacer(Modifier.width(10.dp))
-                HotOverline(label, modifier = Modifier.clearAndSetSemantics { })
-            }
+            // the label is said by TalkBack and drawn as the overline under the row
         }
     }
 }

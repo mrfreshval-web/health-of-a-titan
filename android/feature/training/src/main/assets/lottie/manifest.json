@@ -1,0 +1,327 @@
+{
+ "version": 1,
+ "fps": 60,
+ "files": {
+  "ex-ankle-knee-wall": {
+   "file": "lottie/ex-ankle-knee-wall.json",
+   "kind": "reps",
+   "frames": 180,
+   "markers": {
+    "start": 0,
+    "touch": 60,
+    "poster": 60
+   },
+   "bytes": 58115
+  },
+  "ex-arm-circles": {
+   "file": "lottie/ex-arm-circles.json",
+   "kind": "reps",
+   "frames": 120,
+   "markers": {
+    "side": 0,
+    "poster": 0,
+    "up": 30
+   },
+   "bytes": 50622
+  },
+  "ex-band-dislocate": {
+   "file": "lottie/ex-band-dislocate.json",
+   "kind": "reps",
+   "frames": 240,
+   "markers": {
+    "front": 0,
+    "overhead": 60,
+    "poster": 60,
+    "behind": 120
+   },
+   "bytes": 56175
+  },
+  "ex-breath-long-exhale": {
+   "file": "lottie/ex-breath-long-exhale.json",
+   "kind": "time",
+   "frames": 600,
+   "markers": {
+    "exhale": 0,
+    "inhale": 240,
+    "poster": 240
+   },
+   "bytes": 44993
+  },
+  "ex-cat-cow": {
+   "file": "lottie/ex-cat-cow.json",
+   "kind": "reps",
+   "frames": 480,
+   "markers": {
+    "neutral": 0,
+    "cat": 90,
+    "poster": 90,
+    "cow": 330
+   },
+   "bytes": 56066
+  },
+  "ex-deep-squat-hold": {
+   "file": "lottie/ex-deep-squat-hold.json",
+   "kind": "time",
+   "frames": 846,
+   "markers": {
+    "stand": 0,
+    "enter": 0,
+    "hold": 120,
+    "hold_loop_start": 120,
+    "poster": 120,
+    "hold_loop_end": 720,
+    "exit": 720
+   },
+   "bytes": 75924
+  },
+  "ex-goblet-squat": {
+   "file": "lottie/ex-goblet-squat.json",
+   "kind": "reps",
+   "frames": 270,
+   "markers": {
+    "stand": 0,
+    "bottom": 180,
+    "poster": 180
+   },
+   "bytes": 74316
+  },
+  "ex-leg-swings": {
+   "file": "lottie/ex-leg-swings.json",
+   "kind": "reps",
+   "frames": 96,
+   "markers": {
+    "back": 0,
+    "front": 48,
+    "poster": 48
+   },
+   "bytes": 49196
+  },
+  "ex-pullup": {
+   "file": "lottie/ex-pullup.json",
+   "kind": "reps",
+   "frames": 240,
+   "markers": {
+    "hang": 0,
+    "mid": 33,
+    "top": 72,
+    "poster": 72
+   },
+   "bytes": 65690
+  },
+  "ex-scap-pushup": {
+   "file": "lottie/ex-scap-pushup.json",
+   "kind": "reps",
+   "frames": 240,
+   "markers": {
+    "retract": 0,
+    "protract": 60,
+    "poster": 60
+   },
+   "bytes": 46340
+  },
+  "ex-stretch-calf": {
+   "file": "lottie/ex-stretch-calf.json",
+   "kind": "time",
+   "frames": 810,
+   "markers": {
+    "set": 0,
+    "enter": 0,
+    "stretch": 90,
+    "hold_loop_start": 90,
+    "poster": 90,
+    "hold_loop_end": 690,
+    "exit": 690
+   },
+   "bytes": 58617
+  },
+  "ex-stretch-chest-doorway": {
+   "file": "lottie/ex-stretch-chest-doorway.json",
+   "kind": "time",
+   "frames": 810,
+   "markers": {
+    "set": 0,
+    "enter": 0,
+    "stretch": 96,
+    "hold_loop_start": 96,
+    "poster": 96,
+    "hold_loop_end": 696,
+    "exit": 696
+   },
+   "bytes": 68072
+  },
+  "ex-stretch-child": {
+   "file": "lottie/ex-stretch-child.json",
+   "kind": "time",
+   "frames": 846,
+   "markers": {
+    "kneel": 0,
+    "enter": 0,
+    "rest": 120,
+    "hold_loop_start": 120,
+    "poster": 120,
+    "hold_loop_end": 720,
+    "exit": 720
+   },
+   "bytes": 73814
+  },
+  "ex-stretch-hamstring": {
+   "file": "lottie/ex-stretch-hamstring.json",
+   "kind": "time",
+   "frames": 846,
+   "markers": {
+    "start": 0,
+    "enter": 0,
+    "stretch": 120,
+    "hold_loop_start": 120,
+    "poster": 120,
+    "hold_loop_end": 720,
+    "exit": 720
+   },
+   "bytes": 52263
+  },
+  "ex-stretch-hip-flexor": {
+   "file": "lottie/ex-stretch-hip-flexor.json",
+   "kind": "time",
+   "frames": 810,
+   "markers": {
+    "start": 0,
+    "enter": 0,
+    "stretch": 90,
+    "hold_loop_start": 90,
+    "poster": 90,
+    "hold_loop_end": 690,
+    "exit": 690
+   },
+   "bytes": 63200
+  },
+  "ex-stretch-lat-wall": {
+   "file": "lottie/ex-stretch-lat-wall.json",
+   "kind": "time",
+   "frames": 810,
+   "markers": {
+    "start": 0,
+    "enter": 0,
+    "stretch": 90,
+    "hold_loop_start": 90,
+    "poster": 90,
+    "hold_loop_end": 690,
+    "exit": 690
+   },
+   "bytes": 68519
+  },
+  "ex-stretch-pigeon": {
+   "file": "lottie/ex-stretch-pigeon.json",
+   "kind": "time",
+   "frames": 846,
+   "markers": {
+    "set": 0,
+    "enter": 0,
+    "fold": 120,
+    "hold_loop_start": 120,
+    "poster": 120,
+    "hold_loop_end": 720,
+    "exit": 720
+   },
+   "bytes": 57266
+  },
+  "ex-stretch-quad": {
+   "file": "lottie/ex-stretch-quad.json",
+   "kind": "time",
+   "frames": 810,
+   "markers": {
+    "start": 0,
+    "enter": 0,
+    "stretch": 90,
+    "hold_loop_start": 90,
+    "poster": 90,
+    "hold_loop_end": 690,
+    "exit": 690
+   },
+   "bytes": 51958
+  },
+  "ex-worlds-greatest": {
+   "file": "lottie/ex-worlds-greatest.json",
+   "kind": "reps",
+   "frames": 360,
+   "markers": {
+    "lunge": 0,
+    "elbow_down": 120,
+    "reach_up": 240,
+    "poster": 240
+   },
+   "bytes": 71706
+  },
+  "ex-wrist-prep": {
+   "file": "lottie/ex-wrist-prep.json",
+   "kind": "reps",
+   "frames": 180,
+   "markers": {
+    "center": 0,
+    "forward": 48,
+    "poster": 48,
+    "back": 132
+   },
+   "bytes": 68882
+  },
+  "hero-first-skill": {
+   "file": "lottie/hero-first-skill.json",
+   "kind": "hero",
+   "frames": 180,
+   "markers": {
+    "hang": 0,
+    "pull": 54,
+    "turn": 78,
+    "top": 108,
+    "pause": 108,
+    "poster": 179
+   },
+   "bytes": 99262
+  },
+  "hero-level-up": {
+   "file": "lottie/hero-level-up.json",
+   "kind": "hero",
+   "frames": 210,
+   "markers": {
+    "mark": 0,
+    "rise": 100,
+    "level": 100,
+    "poster": 209
+   },
+   "bytes": 68271
+  },
+  "hero-record": {
+   "file": "lottie/hero-record.json",
+   "kind": "hero",
+   "frames": 105,
+   "markers": {
+    "impulse": 4,
+    "poster": 104
+   },
+   "bytes": 3396
+  },
+  "hero-seal": {
+   "file": "lottie/hero-seal.json",
+   "kind": "hero",
+   "frames": 165,
+   "markers": {
+    "rest": 0,
+    "mark": 66,
+    "seal": 66,
+    "poster": 164
+   },
+   "bytes": 70050
+  },
+  "hero-test-passed": {
+   "file": "lottie/hero-test-passed.json",
+   "kind": "hero",
+   "frames": 135,
+   "markers": {
+    "stand": 0,
+    "nod": 60,
+    "mark": 120,
+    "poster": 134
+   },
+   "bytes": 68659
+  }
+ }
+}

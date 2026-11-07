@@ -1,0 +1,759 @@
+# Session templates for the training system (A40 §4, content/training/SCHEMA.md).
+# Layer chain: level → goal → method → template → blocks → exercises → parameters.
+# Every template has a warm-up with mobility and a cool-down with stretching (rule M-ALL, A40 §2.4);
+# check_training.py rejects a template without them.
+# modes: what the template becomes in each day regime (A09 §2: BOOST = Разгон, STEADY = Ровно, GENTLE = Бережно).
+# Rules in rules.yaml can only make a template lighter, never heavier (A19 §1.2 step 3).
+# Validate: python3 content/training/scripts/check_training.py
+version: 1
+reviewedBy: []   # draft: Agent 12 with in-session review of Agent 3 (A40 §11)
+status: draft
+
+templates:
+
+  # ===================================================================== CLASSIC
+
+  - id: tpl-cl-functional-home
+    version: 1
+    name_ru: "Функциональная база"
+    level: classic
+    method: functional
+    goal: [general, strength]
+    place: [home, hotel, outdoor]
+    equipment: [none, mat, wall, chair]
+    duration_min: 30
+    intensity: {rpe: "6-7", note_ru: "3 повтора в запасе, ни одного подхода до отказа"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {sets_delta: -1, rpe_max: 6, drop_blocks: []}
+    blocks:
+      - type: warmup
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-arm-circles, reps: "10"}
+          - {ex: ex-squat-bw, reps: "8", note_ru: "в полтемпа"}
+      - type: main
+        min: 18
+        format: circuit
+        rounds: 3
+        rest_between_rounds_s: 60
+        items:
+          - {ex: ex-squat-bw, reps: "12-15", alt: [ex-box-squat]}
+          - {ex: ex-pushup, reps: "6-12", alt: [ex-incline-pushup]}
+          - {ex: ex-reverse-lunge, reps: "8", per_side: true, alt: [ex-step-up]}
+          - {ex: ex-glute-bridge, reps: "12-15"}
+          - {ex: ex-plank, time_s: 30, alt: [ex-dead-bug]}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
+          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Все шесть движений человека за 30 минут без инвентаря: присед, толчок, выпад, наклон, кор — и растяжка."
+    contraindications: []
+
+  - id: tpl-cl-db-strength
+    version: 1
+    name_ru: "Сила с гантелями"
+    level: classic
+    method: fitness_strength
+    goal: [strength, general]
+    place: [home, gym]
+    equipment: [dumbbells, kettlebell, mat, chair, wall]
+    duration_min: 40
+    intensity: {rpe: "6-8", note_ru: "2–3 повтора в запасе; последний подход — до RPE 8"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {sets_delta: -1, rpe_max: 7, drop_blocks: [finisher]}
+    blocks:
+      - type: warmup
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-glute-bridge, reps: "10"}
+      - type: main
+        min: 24
+        format: superset
+        items:
+          - {ex: ex-goblet-squat, sets: 3, reps: "8-12", rest_s: 0, tempo: "3-0-1-0", pair: A}
+          - {ex: ex-db-row, sets: 3, reps: "10", per_side: true, rest_s: 75, pair: A}
+          - {ex: ex-db-rdl, sets: 3, reps: "10", rest_s: 0, tempo: "3-0-1-0", pair: B}
+          - {ex: ex-db-floor-press, sets: 3, reps: "8-12", rest_s: 75, pair: B}
+      - type: finisher
+        min: 4
+        format: superset
+        items:
+          - {ex: ex-farmer-carry, sets: 2, distance_m: 30, rest_s: 0, pair: C}
+          - {ex: ex-dead-bug, sets: 2, reps: "6", per_side: true, rest_s: 45, pair: C}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-lat-wall, time_s: 40}
+          - {ex: ex-stretch-calf, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Суперсеты антагонистов экономят время: пока отдыхают ноги, работает спина."
+    contraindications: []
+
+  - id: tpl-cl-gym-circuit
+    version: 1
+    name_ru: "Фитнес-круг в зале"
+    level: classic
+    method: fitness_circuit
+    goal: [general, endurance]
+    place: [gym]
+    equipment: [machine_cable, dumbbells, kettlebell, bike, rower, band, box, mat, wall]
+    duration_min: 45
+    intensity: {rpe: "6-7", note_ru: "ровный темп круга, дыхание под контролем"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {rounds_delta: -1, rpe_max: 6, drop_blocks: [finisher]}
+    blocks:
+      - type: warmup
+        min: 8
+        format: flow
+        items:
+          - {ex: ex-cardio-machine, time_s: 300, note_ru: "легко, Z1"}
+          - {ex: ex-band-dislocate, reps: "10"}
+          - {ex: ex-leg-swings, reps: "10", per_side: true}
+          - {ex: ex-cat-cow, reps: "8"}
+      - type: main
+        min: 22
+        format: circuit
+        rounds: 3
+        rest_between_rounds_s: 90
+        items:
+          - {ex: ex-lat-pulldown, reps: "10-12"}
+          - {ex: ex-goblet-squat, reps: "10-12"}
+          - {ex: ex-db-press-standing, reps: "10"}
+          - {ex: ex-step-up, reps: "8", per_side: true}
+          - {ex: ex-pallof-press, reps: "10", per_side: true}
+      - type: finisher
+        min: 8
+        format: steady
+        items:
+          - {ex: ex-cardio-machine, time_s: 480, zone: Z2}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-quad, time_s: 30, per_side: true}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Круг по залу: тренажёры дают безопасную траекторию, а финиш в зоне 2 добирает кардио."
+    contraindications: []
+
+  - id: tpl-cl-zone2
+    version: 1
+    name_ru: "Ровное кардио"
+    level: classic
+    method: zone2
+    goal: [endurance, general]
+    place: [outdoor, gym, hotel]
+    equipment: [none, treadmill, bike, rower, mat, wall]
+    duration_min: 40
+    intensity: {rpe: "3-4", zone: Z2, note_ru: "разговорный тест: говоришь предложениями, но не поёшь"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: full}
+      GENTLE: {use: lighter}
+    lighter: {duration_pct: -40, zone_max: Z1, rpe_max: 3}
+    blocks:
+      - type: warmup
+        min: 5
+        format: flow
+        items:
+          - {ex: ex-leg-swings, reps: "10", per_side: true}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-brisk-walk, time_s: 180, note_ru: "легко, разгон до зоны 2"}
+      - type: main
+        min: 30
+        format: steady
+        items:
+          - {ex: ex-brisk-walk, time_s: 1800, zone: Z2, alt: [ex-cardio-machine]}
+      - type: cooldown
+        min: 5
+        format: flow
+        items:
+          - {ex: ex-stretch-calf, time_s: 30, per_side: true}
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
+          - {ex: ex-stretch-quad, time_s: 30, per_side: true}
+    why_ru: "Длинная спокойная нагрузка — фундамент выносливости; в Бережно превращается в прогулку в Z1."
+    contraindications: []
+
+  # ===================================================================== ADVANCED
+
+  - id: tpl-ad-strength-emom
+    version: 1
+    name_ru: "Сила по EMOM"
+    level: advanced
+    method: strength_periodized
+    goal: [strength]
+    place: [gym]
+    equipment: [barbell, trap_bar, kettlebell, dumbbells, bar, parallel_bars, band, box, mat, wall]
+    duration_min: 55
+    intensity: {rpe: "7-8", note_ru: "волна 3+1: недели 1–3 растём, неделя 4 — разгрузка −40 %"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {sets_delta: -1, rpe_max: 7, drop_blocks: [finisher]}
+    blocks:
+      - type: warmup
+        min: 9
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-band-dislocate, reps: "10"}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-goblet-squat, sets: 2, reps: "5", note_ru: "лёгкая гиря, подводка"}
+      - type: main
+        min: 30
+        format: emom
+        minutes: 10
+        items:
+          - {ex: ex-back-squat, reps: "3", rpe: "7-8", alt: [ex-trap-bar-deadlift, ex-goblet-squat], note_ru: "каждую минуту 3 повтора, 10 минут"}
+      - type: main
+        min: 14
+        format: superset
+        items:
+          - {ex: ex-pullup, sets: 4, reps: "4-8", rest_s: 0, pair: B, alt: [ex-lat-pulldown]}
+          - {ex: ex-dip, sets: 4, reps: "5-10", rest_s: 120, pair: B, alt: [ex-pushup]}
+      - type: finisher
+        min: 4
+        format: straight_sets
+        items:
+          - {ex: ex-farmer-carry, sets: 3, distance_m: 30, rest_s: 60}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-lat-wall, time_s: 40}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Тяжёлые повторы короткими сериями каждую минуту: много качественных повторов без отказа."
+    contraindications: [screening_not_cleared, hypertension, heart_condition]
+
+  - id: tpl-ad-metcon-amrap
+    version: 1
+    name_ru: "Функциональный AMRAP"
+    level: advanced
+    method: crossfit_style
+    goal: [general, endurance]
+    place: [gym, outdoor]
+    equipment: [kettlebell, dumbbells, bar, mat, wall, none]
+    duration_min: 40
+    intensity: {rpe: "7-8", note_ru: "темп, при котором каждый круг занимает ±15 с от первого; без отказа"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {swap: tpl-ad-strength-emom, note_ru: "AMRAP в Ровно не делаем: интенсивность выше потолка"}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {duration_pct: -25, rpe_max: 7, format_change: {amrap: emom}}
+    blocks:
+      - type: warmup
+        min: 9
+        format: flow
+        items:
+          - {ex: ex-wrist-prep, reps: "10"}
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-scap-pushup, reps: "10"}
+          - {ex: ex-kb-swing, sets: 2, reps: "10", note_ru: "лёгкая гиря"}
+      - type: main
+        min: 16
+        format: amrap
+        minutes: 16
+        items:
+          - {ex: ex-kb-swing, reps: "12"}
+          - {ex: ex-pushup, reps: "10"}
+          - {ex: ex-db-thruster, reps: "8"}
+          - {ex: ex-hanging-knee-raise, reps: "8", alt: [ex-dead-bug]}
+      - type: finisher
+        min: 6
+        format: intervals
+        items:
+          - {ex: ex-mountain-climber, sets: 4, time_s: 30, rest_s: 30}
+      - type: cooldown
+        min: 7
+        format: flow
+        items:
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 90}
+    why_ru: "Функциональный круг в стиле кроссфита, но с потолком RPE 8 и ровным темпом вместо гонки до отказа."
+    contraindications: [screening_not_cleared]
+
+  - id: tpl-ad-hiit-4x4
+    version: 1
+    name_ru: "ВИИТ 4×4"
+    level: advanced
+    method: hiit
+    goal: [endurance]
+    place: [gym]
+    equipment: [rower, bike, treadmill, none, mat, wall]
+    duration_min: 42
+    intensity: {rpe: "8", zone: Z4, note_ru: "4 минуты в Z4 (тяжело, говорить отдельными словами), 3 минуты легко"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {swap: tpl-cl-zone2, note_ru: "интервалы только в Разгон (A19 §1.2)"}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {sets_delta: -1, rpe_max: 7}
+    blocks:
+      - type: warmup
+        min: 9
+        format: flow
+        items:
+          - {ex: ex-cardio-machine, time_s: 360, note_ru: "от Z1 к нижней Z3"}
+          - {ex: ex-leg-swings, reps: "10", per_side: true}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-worlds-greatest, reps: "2", per_side: true}
+      - type: main
+        min: 27
+        format: intervals
+        items:
+          - {ex: ex-rower-intervals, sets: 4, time_s: 240, rest_s: 180, rpe: "8", zone: Z4, note_ru: "отдых — лёгкая работа в Z1–Z2"}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-calf, time_s: 30, per_side: true}
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
+          - {ex: ex-stretch-quad, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Классический протокол 4×4 для VO₂max: мало минут — большой отклик, но только в Разгон."
+    contraindications: [screening_not_cleared, heart_condition, chest_pain_exertion]
+
+  - id: tpl-ad-calisthenics
+    version: 1
+    name_ru: "Калистеника: база"
+    level: advanced
+    method: calisthenics
+    goal: [strength, skill]
+    place: [outdoor, gym]
+    equipment: [bar, parallel_bars, mat, none, wall]
+    duration_min: 45
+    intensity: {rpe: "7-8", note_ru: "1–2 повтора в запасе, чистая амплитуда важнее числа"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter}
+      GENTLE: {swap: tpl-mob-calisthenics-prep}
+    lighter: {sets_delta: -1, rpe_max: 7, drop_blocks: [finisher]}
+    blocks:
+      - type: warmup
+        min: 9
+        format: flow
+        items:
+          - {ex: ex-wrist-prep, reps: "10"}
+          - {ex: ex-scap-pushup, reps: "10"}
+          - {ex: ex-arm-circles, reps: "10"}
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-deep-squat-hold, time_s: 30}
+          - {ex: ex-inverted-row, sets: 1, reps: "8", note_ru: "подводка"}
+      - type: main
+        min: 22
+        format: superset
+        items:
+          - {ex: ex-pullup, sets: 4, reps: "4-8", rest_s: 0, pair: A, alt: [ex-inverted-row]}
+          - {ex: ex-dip, sets: 4, reps: "5-10", rest_s: 120, pair: A, alt: [ex-pushup]}
+          - {ex: ex-pike-pushup, sets: 3, reps: "6-10", rest_s: 0, pair: B}
+          - {ex: ex-hanging-knee-raise, sets: 3, reps: "8-12", rest_s: 90, pair: B}
+      - type: finisher
+        min: 5
+        format: straight_sets
+        items:
+          - {ex: ex-hollow-hold, sets: 3, time_s: 25, rest_s: 45}
+      - type: cooldown
+        min: 7
+        format: flow
+        items:
+          - {ex: ex-stretch-lat-wall, time_s: 40}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-stretch-child, time_s: 60}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Турник и брусья — база для Экстрима: тяга, жим, жим над головой и кор."
+    contraindications: [screening_not_cleared]
+
+  # ===================================================================== EXTREME
+
+  - id: tpl-ex-street-skill
+    version: 1
+    name_ru: "Стрит-воркаут: навык и сила"
+    level: extreme
+    method: street_skill
+    goal: [skill, strength]
+    place: [outdoor, gym]
+    equipment: [bar, parallel_bars, wall, mat, none]
+    duration_min: 60
+    intensity: {rpe: "8", note_ru: "навык — свежим и в начале; ни одного повтора «через грязь»"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter, note_ru: "только техника навыка на 50 % объёма, без отказа"}
+      GENTLE: {swap: tpl-mob-calisthenics-prep}
+    lighter: {sets_delta: -2, rpe_max: 7, drop_blocks: [finisher]}
+    blocks:
+      - type: warmup
+        min: 12
+        format: flow
+        items:
+          - {ex: ex-wrist-prep, reps: "12"}
+          - {ex: ex-scap-pushup, reps: "10"}
+          - {ex: ex-arm-circles, reps: "10"}
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-deep-squat-hold, time_s: 30}
+          - {ex: ex-pullup, sets: 2, reps: "3", note_ru: "подводка"}
+      - type: main
+        min: 20
+        format: skill_practice
+        items:
+          - {ex: ex-muscle-up, sets: 5, reps: "1-3", rest_s: 180, alt: [ex-pullup]}
+          - {ex: ex-front-lever-tuck, sets: 5, time_s: 10, rest_s: 120}
+      - type: main
+        min: 14
+        format: superset
+        items:
+          - {ex: ex-l-sit, sets: 4, time_s: 10, rest_s: 0, pair: B}
+          - {ex: ex-archer-pushup, sets: 4, reps: "4-6", per_side: true, rest_s: 120, pair: B}
+      - type: finisher
+        min: 5
+        format: straight_sets
+        items:
+          - {ex: ex-toes-to-bar, sets: 3, reps: "5-8", rest_s: 90}
+      - type: cooldown
+        min: 8
+        format: flow
+        items:
+          - {ex: ex-stretch-lat-wall, time_s: 45}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-child, time_s: 60}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Навыки калистеники требуют свежей нервной системы: сначала выход силой и передний вис, потом объём."
+    contraindications: [screening_not_cleared, extreme_not_consented]
+
+  - id: tpl-ex-handstand-legs
+    version: 1
+    name_ru: "Стойка и одна нога"
+    level: extreme
+    method: gymnastics_strength
+    goal: [skill, strength]
+    place: [home, gym]
+    equipment: [wall, mat, none, box]
+    duration_min: 55
+    intensity: {rpe: "8", note_ru: "в стойке — выход шагами, голова не опирается"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: lighter, note_ru: "стойка без отжиманий, пистолет — на скамью"}
+      GENTLE: {swap: tpl-mob-deep-stretch}
+    lighter: {sets_delta: -1, rpe_max: 7, drop_exercises: [ex-hspu-wall, ex-nordic-curl]}
+    blocks:
+      - type: warmup
+        min: 11
+        format: flow
+        items:
+          - {ex: ex-wrist-prep, reps: "12"}
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-arm-circles, reps: "10"}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-deep-squat-hold, time_s: 40}
+          - {ex: ex-pike-pushup, sets: 2, reps: "5", note_ru: "подводка"}
+      - type: main
+        min: 18
+        format: skill_practice
+        items:
+          - {ex: ex-wall-handstand, sets: 5, time_s: 30, rest_s: 90}
+          - {ex: ex-hspu-wall, sets: 4, reps: "2-5", rest_s: 150, alt: [ex-pike-pushup]}
+      - type: main
+        min: 16
+        format: straight_sets
+        items:
+          - {ex: ex-pistol-squat, sets: 4, reps: "3-5", per_side: true, rest_s: 120, alt: [ex-bulgarian-split]}
+          - {ex: ex-nordic-curl, sets: 3, reps: "3-5", rest_s: 120}
+      - type: cooldown
+        min: 8
+        format: flow
+        items:
+          - {ex: ex-stretch-quad, time_s: 30, per_side: true}
+          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Перевёрнутая сила и односторонние ноги: максимум контроля, минимум инвентаря."
+    contraindications: [screening_not_cleared, extreme_not_consented, hypertension, eye_pressure, fainting_dizziness, heart_condition]
+
+  - id: tpl-ex-hill-sprints
+    version: 1
+    name_ru: "Спринты в гору"
+    level: extreme
+    method: sprint
+    goal: [endurance, power]
+    place: [outdoor]
+    equipment: [none, wall, mat]
+    duration_min: 45
+    intensity: {rpe: "9", note_ru: "короткие максимальные ускорения, полный отдых между ними"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {swap: tpl-cl-zone2}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {sets_delta: -3, rpe_max: 8}
+    blocks:
+      - type: warmup
+        min: 13
+        format: flow
+        items:
+          - {ex: ex-brisk-walk, time_s: 300}
+          - {ex: ex-leg-swings, reps: "12", per_side: true}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-high-march, sets: 2, time_s: 20, rest_s: 20}
+      - type: main
+        min: 20
+        format: intervals
+        items:
+          - {ex: ex-hill-sprint, sets: 8, time_s: 12, rest_s: 120, rpe: "9", note_ru: "отдых — шагом вниз"}
+      - type: cooldown
+        min: 10
+        format: flow
+        items:
+          - {ex: ex-brisk-walk, time_s: 240, note_ru: "легко"}
+          - {ex: ex-stretch-calf, time_s: 30, per_side: true}
+          - {ex: ex-stretch-quad, time_s: 30, per_side: true}
+          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Спринт в гору даёт максимальную мощность при меньшей ударной нагрузке, чем по ровному."
+    contraindications: [screening_not_cleared, extreme_not_consented, heart_condition, chest_pain_exertion]
+
+  - id: tpl-ex-titan-chipper
+    version: 1
+    name_ru: "Чиппер Титана"
+    level: extreme
+    method: metcon
+    goal: [endurance, general]
+    place: [gym]
+    equipment: [bar, dumbbells, kettlebell, box, rower, bike, jump_rope, mat, wall, none]
+    duration_min: 55
+    intensity: {rpe: "8-9", time_cap_min: 25, note_ru: "лимит 25 минут; дробить подходы заранее, а не до отказа"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {swap: tpl-ad-strength-emom}
+      GENTLE: {swap: tpl-mob-recovery}
+    lighter: {volume_pct: -40, rpe_max: 7}
+    blocks:
+      - type: warmup
+        min: 12
+        format: flow
+        items:
+          - {ex: ex-cardio-machine, time_s: 300}
+          - {ex: ex-wrist-prep, reps: "10"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-leg-swings, reps: "10", per_side: true}
+          - {ex: ex-scap-pushup, reps: "10"}
+          - {ex: ex-kb-swing, sets: 2, reps: "10", note_ru: "лёгкая гиря"}
+      - type: main
+        min: 25
+        format: for_time
+        minutes: 25
+        items:
+          - {ex: ex-jump-rope, time_s: 90}
+          - {ex: ex-kb-swing, reps: "40"}
+          - {ex: ex-db-thruster, reps: "30"}
+          - {ex: ex-toes-to-bar, reps: "20", alt: [ex-hanging-knee-raise]}
+          - {ex: ex-box-jump, reps: "20", alt: [ex-step-up]}
+          - {ex: ex-burpee, reps: "15"}
+          - {ex: ex-muscle-up, reps: "5", alt: [ex-pullup]}
+      - type: cooldown
+        min: 10
+        format: flow
+        items:
+          - {ex: ex-cardio-machine, time_s: 180, note_ru: "легко, Z1"}
+          - {ex: ex-stretch-lat-wall, time_s: 45}
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-hip-flexor, time_s: 45, per_side: true}
+          - {ex: ex-stretch-child, time_s: 60}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Длинная лестница упражнений на время — испытание характера, но с лимитом и без отказа."
+    contraindications: [screening_not_cleared, extreme_not_consented, heart_condition, hypertension, chest_pain_exertion]
+
+  # ===================================================================== MOBILITY (all levels)
+
+  - id: tpl-mob-morning
+    version: 1
+    name_ru: "Утренний разворот"
+    level: all
+    method: mobility
+    goal: [mobility]
+    place: [home, hotel, gym, outdoor]
+    equipment: [mat, wall, none]
+    duration_min: 10
+    intensity: {rpe: "2-3"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: full}
+      GENTLE: {use: full}
+    lighter: {duration_pct: -50}
+    blocks:
+      - type: warmup
+        min: 1
+        format: flow
+        items:
+          - {ex: ex-breath-long-exhale, time_s: 60}
+      - type: main
+        min: 7
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-worlds-greatest, reps: "3", per_side: true}
+          - {ex: ex-hip-90-90, time_s: 30, per_side: true}
+          - {ex: ex-open-book, reps: "6", per_side: true}
+          - {ex: ex-ankle-knee-wall, reps: "8", per_side: true}
+          - {ex: ex-arm-circles, reps: "10"}
+      - type: cooldown
+        min: 2
+        format: flow
+        items:
+          - {ex: ex-stretch-child, time_s: 60}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Десять минут, чтобы тело проснулось: позвоночник, таз, плечи, голеностоп."
+    contraindications: []
+
+  - id: tpl-mob-recovery
+    version: 1
+    name_ru: "Восстановление"
+    level: all
+    method: mobility
+    goal: [mobility, recovery]
+    place: [home, outdoor, hotel, gym]
+    equipment: [none, mat, wall, band]
+    duration_min: 25
+    intensity: {rpe: "2-3", zone: Z1}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: full}
+      GENTLE: {use: full}
+    lighter: {drop_blocks: [warmup]}
+    blocks:
+      - type: warmup
+        min: 10
+        format: steady
+        items:
+          - {ex: ex-brisk-walk, time_s: 600, zone: Z1, note_ru: "спокойная прогулка, лучше на улице"}
+      - type: main
+        min: 9
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-hip-90-90, time_s: 45, per_side: true}
+          - {ex: ex-open-book, reps: "6", per_side: true}
+          - {ex: ex-deep-squat-hold, time_s: 30, note_ru: "с опорой"}
+          - {ex: ex-band-dislocate, reps: "10"}
+      - type: cooldown
+        min: 6
+        format: flow
+        items:
+          - {ex: ex-stretch-hamstring, time_s: 45, per_side: true}
+          - {ex: ex-stretch-pigeon, time_s: 45, per_side: true}
+          - {ex: ex-stretch-child, time_s: 60}
+          - {ex: ex-breath-long-exhale, time_s: 90}
+    why_ru: "День Бережно: движение без нагрузки, чтобы кровь шла, а нервная система отдыхала."
+    contraindications: []
+
+  - id: tpl-mob-deep-stretch
+    version: 1
+    name_ru: "Глубокая растяжка вечером"
+    level: all
+    method: stretching
+    goal: [mobility, recovery]
+    place: [home, hotel, gym]
+    equipment: [mat, wall, band, none]
+    duration_min: 20
+    intensity: {rpe: "2-3", note_ru: "растяжение 5–6 из 10, без боли; можно за час до сна"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: full}
+      GENTLE: {use: full}
+    lighter: {duration_pct: -50}
+    blocks:
+      - type: warmup
+        min: 3
+        format: flow
+        items:
+          - {ex: ex-cat-cow, reps: "8"}
+          - {ex: ex-arm-circles, reps: "10"}
+      - type: main
+        min: 13
+        format: flow
+        items:
+          - {ex: ex-stretch-hip-flexor, time_s: 60, per_side: true}
+          - {ex: ex-stretch-hamstring, time_s: 60, per_side: true}
+          - {ex: ex-stretch-quad, time_s: 45, per_side: true}
+          - {ex: ex-stretch-pigeon, time_s: 60, per_side: true}
+          - {ex: ex-stretch-chest-doorway, time_s: 45, per_side: true}
+          - {ex: ex-stretch-lat-wall, time_s: 45}
+      - type: cooldown
+        min: 4
+        format: flow
+        items:
+          - {ex: ex-stretch-child, time_s: 90}
+          - {ex: ex-breath-long-exhale, time_s: 120}
+    why_ru: "Отдельная сессия растяжки: свет в интерфейсе теплеет, темп замедляется — подготовка ко сну."
+    contraindications: []
+
+  - id: tpl-mob-calisthenics-prep
+    version: 1
+    name_ru: "Суставы к калистенике"
+    level: all
+    method: mobility
+    goal: [mobility, skill]
+    place: [home, gym, outdoor, hotel]
+    equipment: [mat, wall, band, none]
+    duration_min: 15
+    intensity: {rpe: "3"}
+    modes:
+      BOOST: {use: full}
+      STEADY: {use: full}
+      GENTLE: {use: lighter}
+    lighter: {duration_pct: -30}
+    blocks:
+      - type: warmup
+        min: 3
+        format: flow
+        items:
+          - {ex: ex-arm-circles, reps: "10"}
+          - {ex: ex-cat-cow, reps: "8"}
+      - type: main
+        min: 8
+        format: flow
+        items:
+          - {ex: ex-wrist-prep, reps: "15"}
+          - {ex: ex-scap-pushup, reps: "10"}
+          - {ex: ex-band-dislocate, reps: "12"}
+          - {ex: ex-deep-squat-hold, time_s: 45}
+          - {ex: ex-ankle-knee-wall, reps: "10", per_side: true}
+      - type: cooldown
+        min: 4
+        format: flow
+        items:
+          - {ex: ex-stretch-lat-wall, time_s: 45}
+          - {ex: ex-stretch-chest-doorway, time_s: 30, per_side: true}
+          - {ex: ex-breath-long-exhale, time_s: 60}
+    why_ru: "Запястья, лопатки, плечи и голеностоп — то, что ломается первым у калистеников."
+    contraindications: []

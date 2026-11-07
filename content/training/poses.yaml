@@ -1,0 +1,89 @@
+# TitanPose keyframes (A40 §6.2–6.3): the skeleton of the Titan in Compose, «линия света».
+# One entry per exercise of exercises.yaml; frame keys = animation.poses[].key of that exercise.
+# Convention (same as docs/design/training/src/pose.js and TitanPose.kt):
+#   100 × 100 box, y grows down, floor at y = 92; the figure faces right in the side view;
+#   root = hip [x, y]; every angle is ABSOLUTE, in degrees, clockwise from «up»
+#   (0 = up, 90 = forward, 180 = down, 270 = back);
+#   12 joints: torso, head, arm_n [upper arm, forearm], arm_f, leg_n [thigh, shin, foot], leg_f;
+#   n = near side (bright), f = far side (dim); spine = optional bend of the back (+ arch, − sag).
+#   Front view (animation.view: front | top): n limbs hang from the right shoulder and hip.
+# Exercises without keyframes show the Titan in a calm standing pose (A40 §12).
+# Angles: draft by Agent 13 for the first slice; Agent 4 sets them in the pose editor, Agent 12
+# checks every pose by screenshot (A40 §6.3). Validate: python3 content/training/scripts/check_training.py
+version: 1
+reviewedBy: []   # draft: stream B slice 1 (Agent 13); review by Agents 4 (style) and 12 (technique)
+status: draft
+
+poses:
+  ex-squat-bw:
+    stand: {root: [50, 48.8], torso: 0, head: 0, arm_n: [178, 182], arm_f: [182, 178], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    bottom: {root: [42, 67.9], torso: 40, head: 28, arm_n: [92, 90], arm_f: [95, 92], leg_n: [100, 215, 90], leg_f: [104, 212, 92]}
+  ex-goblet-squat:
+    stand: {root: [50, 48.8], torso: 0, head: 0, arm_n: [170, 15], arm_f: [172, 18], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    bottom: {root: [41.3, 67.9], torso: 40, head: 28, arm_n: [165, 10], arm_f: [168, 14], leg_n: [100, 215, 90], leg_f: [104, 212, 92]}
+  ex-deep-squat-hold:
+    stand: {root: [50, 48.9], torso: 0, head: 0, arm_n: [178, 182], arm_f: [182, 178], leg_n: [178, 180, 90], leg_f: [185, 180, 92]}
+    hold: {root: [44, 76.3], torso: 24, head: 10, spine: 0.1, arm_n: [150, 70], arm_f: [154, 74], leg_n: [78, 216, 90], leg_f: [82, 214, 92]}
+  ex-pushup:
+    top: {root: [47.6, 68.7], torso: 66.6, head: 72, arm_n: [180, 180], arm_f: [182, 181], leg_n: [246.6, 246.6, 160], leg_f: [247.5, 247, 162]}
+    bottom: {root: [50.9, 82], torso: 85.8, head: 90, arm_n: [295, 150], arm_f: [297, 152], leg_n: [265.8, 265.8, 170], leg_f: [266.5, 266, 172]}
+  ex-glute-bridge:
+    down: {root: [55, 88.5], torso: 270, head: 272, arm_n: [92, 90], arm_f: [94, 90], leg_n: [45, 150, 92], leg_f: [47, 152, 94]}
+    up: {root: [55.2, 79.4], torso: 250, head: 268, arm_n: [110, 92], arm_f: [112, 94], leg_n: [70, 165, 92], leg_f: [72, 167, 94]}
+  ex-plank:
+    set: {root: [45, 67.8], torso: 102.7, head: 98, arm_n: [180, 90], arm_f: [182, 92], leg_n: [200, 270, 235], leg_f: [202, 270, 237]}
+    hold: {root: [45, 80.8], torso: 78, head: 82, arm_n: [180, 90], arm_f: [182, 92], leg_n: [258.1, 258.1, 255], leg_f: [258.5, 258.5, 257]}
+  ex-reverse-lunge:
+    stand: {root: [55, 48.8], torso: 0, head: 0, arm_n: [178, 182], arm_f: [182, 178], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    bottom: {root: [55, 66.8], torso: 2, head: 0, arm_n: [176, 184], arm_f: [184, 176], leg_n: [95, 180, 90], leg_f: [212, 262, 235]}
+  ex-cat-cow:
+    neutral: {root: [38, 65.1], torso: 76.6, head: 96, arm_n: [180, 180], arm_f: [182, 182], leg_n: [180, 270, 215], leg_f: [182, 270, 217]}
+    cat: {root: [38, 65.1], torso: 76.6, head: 150, spine: 0.3, arm_n: [180, 180], arm_f: [182, 182], leg_n: [180, 270, 215], leg_f: [182, 270, 217]}
+    cow: {root: [38, 65.1], torso: 76.6, head: 58, spine: -0.2, arm_n: [180, 180], arm_f: [182, 182], leg_n: [180, 270, 215], leg_f: [182, 270, 217]}
+  ex-breath-long-exhale:
+    inhale: {root: [56, 88.5], torso: 270, head: 272, spine: -0.1, arm_n: [96, 58], arm_f: [98, 60], leg_n: [45, 150, 92], leg_f: [47, 152, 94]}
+    exhale: {root: [56, 88.5], torso: 270, head: 272, arm_n: [94, 62], arm_f: [96, 64], leg_n: [45, 150, 92], leg_f: [47, 152, 94]}
+  ex-arm-circles:
+    side: {root: [50, 44.8], torso: 0, head: 0, arm_n: [90, 90], arm_f: [270, 270], leg_n: [176, 180, 135], leg_f: [184, 180, 225]}
+    up: {root: [50, 44.8], torso: 0, head: 0, arm_n: [22, 14], arm_f: [338, 346], leg_n: [176, 180, 135], leg_f: [184, 180, 225]}
+  ex-stretch-hamstring:
+    start: {root: [58, 88.5], torso: 270, head: 272, arm_n: [40, 20], arm_f: [42, 22], leg_n: [335, 32, 110], leg_f: [90, 90, 0]}
+    stretch: {root: [58, 88.5], torso: 270, head: 272, arm_n: [28, 12], arm_f: [30, 14], leg_n: [358, 358, 88], leg_f: [90, 90, 0]}
+  ex-ankle-knee-wall:
+    start: {root: [48, 66.6], torso: 4, head: 4, arm_n: [70, 66], arm_f: [72, 68], leg_n: [90, 180, 90], leg_f: [180, 270, 235]}
+    touch: {root: [55.2, 66.6], torso: 8, head: 8, arm_n: [62, 58], arm_f: [64, 60], leg_n: [86.5, 200, 90], leg_f: [180, 270, 235]}
+  ex-worlds-greatest:
+    lunge: {root: [46, 65.7], torso: 55, head: 70, arm_n: [176, 180], arm_f: [170, 176], leg_n: [102, 175, 90], leg_f: [242, 242, 250]}
+    elbow_down: {root: [46, 64.4], torso: 72, head: 88, spine: 0.1, arm_n: [160, 140], arm_f: [172, 178], leg_n: [106, 172, 90], leg_f: [243, 243, 250]}
+    reach_up: {root: [46, 65.7], torso: 48, head: 12, arm_n: [2, 0], arm_f: [176, 180], leg_n: [102, 175, 90], leg_f: [242, 242, 250]}
+  ex-stretch-hip-flexor:
+    start: {root: [42, 66.6], torso: 0, head: 0, arm_n: [176, 184], arm_f: [184, 176], leg_n: [90, 180, 90], leg_f: [180, 270, 235]}
+    stretch: {root: [47, 65.5], torso: 356, head: 0, arm_n: [10, 5], arm_f: [350, 355], leg_n: [104, 166, 90], leg_f: [166, 270, 235]}
+  ex-stretch-quad:
+    start: {root: [50, 48.8], torso: 0, head: 0, arm_n: [92, 92], arm_f: [182, 178], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    stretch: {root: [50, 48.8], torso: 0, head: 0, arm_n: [92, 92], arm_f: [200, 140], leg_n: [192, 346, 30], leg_f: [182, 178, 92]}
+  ex-stretch-calf:
+    set: {root: [46, 49.3], torso: 8, head: 8, arm_n: [72, 82], arm_f: [74, 84], leg_n: [168, 182, 90], leg_f: [200, 200, 112]}
+    stretch: {root: [52, 52.6], torso: 22, head: 22, arm_n: [58, 56], arm_f: [60, 58], leg_n: [150, 196, 90], leg_f: [214, 214, 124]}
+  ex-leg-swings:
+    front: {root: [50, 48.8], torso: 356, head: 0, arm_n: [95, 100], arm_f: [200, 190], leg_n: [118, 118, 30], leg_f: [182, 178, 92]}
+    back: {root: [50, 48.8], torso: 8, head: 4, arm_n: [95, 100], arm_f: [200, 190], leg_n: [218, 222, 150], leg_f: [182, 178, 92]}
+  ex-brisk-walk:
+    contact: {root: [50, 50.5], torso: 4, head: 4, arm_n: [205, 190], arm_f: [152, 118], leg_n: [156, 168, 70], leg_f: [205, 212, 128]}
+    pass: {root: [50, 48.9], torso: 4, head: 4, arm_n: [182, 160], arm_f: [178, 150], leg_n: [178, 184, 92], leg_f: [164, 232, 168]}
+  ex-stretch-child:
+    kneel: {root: [40, 66.1], torso: 0, head: 0, arm_n: [178, 182], arm_f: [182, 178], leg_n: [180, 270, 230], leg_f: [182, 270, 232]}
+    rest: {root: [30, 80.8], torso: 95, head: 118, spine: 0.2, arm_n: [92, 90], arm_f: [94, 90], leg_n: [104, 268, 230], leg_f: [106, 268, 232]}
+  ex-stretch-lat-wall:
+    start: {root: [44, 48.8], torso: 0, head: 0, arm_n: [80, 86], arm_f: [82, 88], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    stretch: {root: [38, 48.9], torso: 86, head: 96, arm_n: [88, 88], arm_f: [90, 90], leg_n: [182, 180, 90], leg_f: [184, 178, 92]}
+  ex-stretch-pigeon:
+    set: {root: [44, 68.3], torso: 12, head: 8, arm_n: [176, 180], arm_f: [184, 180], leg_n: [100, 220, 240], leg_f: [262, 268, 265]}
+    fold: {root: [44, 68.3], torso: 70, head: 80, spine: 0.1, arm_n: [160, 95], arm_f: [162, 97], leg_n: [100, 220, 240], leg_f: [262, 268, 265]}
+  ex-dead-bug:
+    start: {root: [56, 88.5], torso: 270, head: 272, arm_n: [2, 0], arm_f: [4, 2], leg_n: [2, 92, 20], leg_f: [4, 94, 22]}
+    extend: {root: [56, 88.5], torso: 270, head: 272, arm_n: [300, 296], arm_f: [4, 2], leg_n: [2, 92, 20], leg_f: [80, 82, 10]}
+  ex-band-dislocate:
+    front: {root: [50, 48.8], torso: 0, head: 0, arm_n: [95, 95], arm_f: [97, 97], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    overhead: {root: [50, 48.8], torso: 0, head: 0, arm_n: [6, 6], arm_f: [8, 8], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}
+    behind: {root: [50, 48.8], torso: 2, head: 0, arm_n: [222, 222], arm_f: [224, 224], leg_n: [180, 180, 90], leg_f: [183, 178, 92]}

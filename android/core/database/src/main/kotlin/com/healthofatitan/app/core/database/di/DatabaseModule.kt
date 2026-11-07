@@ -10,6 +10,7 @@ import com.healthofatitan.app.core.database.dao.ConsentDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -60,4 +61,7 @@ object DatabaseModule {
 
     @Provides
     fun provideDawnDao(db: HotDatabase): DawnDao = db.dawnDao()
+
+    @Provides
+    fun provideTrainingLogDao(db: HotDatabase): TrainingLogDao = db.trainingLogDao()
 }

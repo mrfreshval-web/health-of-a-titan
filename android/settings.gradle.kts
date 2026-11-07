@@ -46,3 +46,6 @@ include(":domain:metrics")
 include(":integration:whoop")
 // Slice 2 (day rules A09, plan, morning push):
 include(":domain:engine")
+// Stream B «Тренировка» (A40 §12): configurator, player, TitanPose.
+include(":domain:training")
+include(":feature:training")

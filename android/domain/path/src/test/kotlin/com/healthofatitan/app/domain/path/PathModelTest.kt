@@ -38,11 +38,12 @@ class PathModelTest {
     @Test
     fun `R1 a template by the dictionary, no hit is a goal of one's own`() {
         assertEquals(PathTemplates.RACE, PathTemplates.match("Полумарафон весной")?.id)
-        assertEquals(PathTemplates.PROMOTION, PathTemplates.match("Стать руководителем отдела к концу года")?.id)
-        assertEquals(PathTemplates.LANGUAGE, PathTemplates.match("Английский до B2")?.id)
+        assertEquals(PathTemplates.PROMOTION, PathTemplates.match("Стать руководителем отдела к концу года", PathFixtures.ALL_TEMPLATES)?.id)
+        assertEquals(PathTemplates.LANGUAGE, PathTemplates.match("Английский до B2", PathFixtures.ALL_TEMPLATES)?.id)
         assertEquals(PathTemplates.ENERGY, PathTemplates.match("чтобы хватало сил на детей вечером")?.id)
-        assertEquals(PathTemplates.CLOSER, PathTemplates.match("ближе с семьёй")?.id)
-        assertNull(PathTemplates.match("научиться играть на гитаре"))
+        assertEquals(PathTemplates.CLOSER, PathTemplates.match("ближе с семьёй", PathFixtures.ALL_TEMPLATES)?.id)
+        assertNull(PathTemplates.match("научиться играть на гитаре", PathFixtures.ALL_TEMPLATES))
+        assertNull(PathTemplates.match("Английский до B2"), "D-051: only the 3 of the MVP by default")
         // «вес» is a word, not the start of «весной»
         assertEquals(GoalGate.OK, GoalGuard.check("марафон весной"))
     }
@@ -216,5 +217,17 @@ class PathModelTest {
         val crit = listOf(Criterion("талия", -6.0, -4.0, "см", PathMetric.WAIST), Criterion("a|b", 1.0, 2.0, "", null))
         assertEquals(crit, GoalCodec.decodeCriteria(GoalCodec.encodeCriteria(crit)))
         assertNull(GoalCodec.decode("garbage", 1, 1))
+    }
+
+    @Test
+    fun `D-051 holds come through one safety seam, the local one reads the goal and the week`() {
+        assertEquals(SafetyHold.NONE, PathSafety.LOCAL.hold(goal(), heavyWeek = false))
+        assertTrue(PathSafety.LOCAL.hold(goal(status = GoalStatus.PAUSED), heavyWeek = false).paused)
+        assertTrue(PathSafety.LOCAL.hold(goal(), heavyWeek = true).heavy)
+        val bus = PathSafety { _, _ -> SafetyHold(held = true) }
+        val o = PathOverviewBuilder.build(TODAY, goal(), emptyMap(), emptySet(), GivenLayer.NONE, safety = bus)
+        assertTrue(o.paused)
+        assertFalse(o.whyVisible)
+        assertEquals(BalanceKind.HELD, o.balance.kind)
     }
 }

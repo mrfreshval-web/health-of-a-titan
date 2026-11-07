@@ -105,7 +105,7 @@ fun WorldSlice(
 ) {
     val colors = PathColors.current
     val reduce = rememberReduceMotion()
-    val animate = !still && !reduce && !overview.paused
+    val animate = PathFeatureFlags.LIVING_SLICE && !still && !reduce && !overview.paused
     val ms by produceState<Long?>(null, animate) {
         value = null
         if (!animate) return@produceState
@@ -181,7 +181,7 @@ fun WorldSlice(
 /** One TalkBack node of the slice. */
 private data class A11yNode(val rect: ArtRect, val text: String, val tag: String, val action: (() -> Unit)?)
 
-/** The 16 nodes of §1.6 in reading order: star, 4 arcs, 5 slabs, 5 currents, «Дано», the horizon. */
+/** The 17 nodes of §1.6 in reading order: star, 4 arcs, 5 slabs, 5 currents, «Дано», the horizon. */
 @Composable
 private fun A11yNodes(
     overview: PathOverview,

@@ -39,6 +39,13 @@ object PathTemplates {
     const val CLOSER = "closer"
     const val STRONG = "strong"
 
+    /**
+     * D-051: the three templates of the MVP. «Силы на вечер», «Полумарафон» and «Спокойнее в работе»
+     * need no weight, strength or a second person and touch no medical goal; the
+     * rest (incl. «Ближе с близкими», phase 2) are behind [PathFlags.allTemplates].
+     */
+    val MVP: Set<String> = setOf(ENERGY, RACE, CALM)
+
     /** The template of a goal assembled by hand (A56 §2.1 «Своя цель»). */
     const val CUSTOM = "custom"
 
@@ -135,9 +142,13 @@ object PathTemplates {
 
     fun byId(id: String?): GoalTemplate? = ALL.firstOrNull { it.id == id }
 
-    /** The templates the ritual offers (Э1): weight and strength behind the flag, «Форма» closed in ed_care. */
+    /**
+     * The templates the ritual offers (Э1): the 3 of the MVP unless [PathFlags.allTemplates]; weight
+     * and strength behind the flag, «Форма» closed in ed_care.
+     */
     fun offered(flags: PathFlags, given: GivenLayer): List<GoalTemplate> = ALL.filter { t ->
-        (flags.weightAndStrength || !t.weightOrStrength) && !(given.closesWeight && t.touchesWeight)
+        (flags.allTemplates || t.id in MVP) &&
+            (flags.weightAndStrength || !t.weightOrStrength) && !(given.closesWeight && t.touchesWeight)
     }
 
     /**

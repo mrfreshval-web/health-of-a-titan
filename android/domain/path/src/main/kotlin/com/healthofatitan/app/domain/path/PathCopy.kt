@@ -265,6 +265,9 @@ object PathCopy {
     const val APPLY = "Применить"
     const val KEEP = "Не менять"
     const val UNDO = "Вернуть как было"
+
+    /** D-051: «За плечами» is the reverse plan of the Path, opened from here. */
+    const val LOOK_BACK = "Оглянуться ›"
     const val SOFT_LIMIT = "На этой неделе цель уже пересобрана. Посмотрим в воскресенье?"
     const val SOFT_OVERRIDE = "Всё равно поменять"
     const val TALK = "Срок двигается третий раз. Может, цель другая? Можно обсудить с наставником."
@@ -391,7 +394,7 @@ object PathCopy {
         E5_TITLE, E5_FROM_CARRYING, E5_OWN, E5_IF_THEN, e5IfThen("в 21:00 тянет к холодильнику"), E5_FIRST_WEEK, E6_TITLE,
         E6_ON_TRACK, E6_NO_PACE, E6_PROCESS_ONLY, E6_NOT_CEILING, E6_BY_DATE, E6_FULL, E6_BY_DATE_SUB, E6_FULL_SUB, E7_COMING,
         E7_LETTER, E7_LETTER_HINT, e7FirstFire("Сила"), GATE_MEDICAL, GATE_HARMFUL, GATE_WEIGHT_CLOSED, GATE_WEIGHT_LATER,
-        WAS, WILL, APPLY, KEEP, UNDO, SOFT_LIMIT, SOFT_OVERRIDE, TALK, WEEK_NOW, EFFECT_TODAY_SAME, EFFECT_TODAY_SAFETY,
+        WAS, WILL, APPLY, KEEP, UNDO, LOOK_BACK, SOFT_LIMIT, SOFT_OVERRIDE, TALK, WEEK_NOW, EFFECT_TODAY_SAME, EFFECT_TODAY_SAFETY,
         EFFECT_TODAY_PAUSE, EFFECT_WEEK_NEXT, EFFECT_WEEK_NOW, EFFECT_WEEK_NONE, EFFECT_EXPERIMENT_SAME, UPDATED_TODAY,
         PAUSE_TITLE, PAUSE_TERM, PAUSE_NO_TERM, RETURN_TITLE, PUSH_RETURN, CROSSROADS, CROSSROADS_LAG, CROSSROADS_RETURN,
         CROSSROADS_UNDO, RELEASE_TITLE, RELEASE_KEEP, RELEASE_TO_QUEUE, RELEASE_UNDO, A11Y_OPEN, A11Y_OUTSIDE,

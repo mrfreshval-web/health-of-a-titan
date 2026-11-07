@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -39,7 +40,7 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** «Путь» v1 on screen: the slice and its 16 nodes, the empty path, the ritual with help on every screen. */
+/** «Путь» v1 on screen: the slice and its 17 nodes, the empty path, the ritual with help on every screen. */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class, qualifiers = "w412dp-h1900dp-xxhdpi")
 class PathScreenTest {
@@ -77,11 +78,19 @@ class PathScreenTest {
     }
 
     @Test
-    fun `the slice has 16 talkback nodes and never names a colour`() {
+    fun `behind is the reverse plan of the path, one tap on look back`() {
+        var back = false
+        compose.setContent { HotTheme { PathScreen(PathUi(data(goal())), PathActions(onLookBack = { back = true }), still = true) } }
+        compose.onNodeWithTag(PATH_LOOK_BACK_TAG).performScrollTo().assertTextEquals(PathCopy.LOOK_BACK).performClick()
+        assertTrue(back)
+    }
+
+    @Test
+    fun `the slice has 17 talkback nodes and never names a colour`() {
         compose.setContent { HotTheme { PathScreen(PathUi(data(goal())), PathActions(), still = true) } }
         val tags = listOf("path_star") + (SliceGeometry.ARCS + SliceGeometry.SLABS + SliceGeometry.CURRENTS).map(::partTag) +
             listOf("path_given", PATH_HORIZON_TAG)
-        assertEquals(16, tags.size)
+        assertEquals(17, tags.size)
         val colours = listOf("красн", "зелён", "зелен", "синий", "синяя", "синего", "жёлт", "желт", "янтар", "цвет")
         tags.forEach { t ->
             val node = compose.onNodeWithTag(t, useUnmergedTree = true).assertExists().fetchSemanticsNode()

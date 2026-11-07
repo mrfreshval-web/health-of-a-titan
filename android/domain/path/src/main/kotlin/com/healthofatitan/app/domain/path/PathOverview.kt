@@ -59,6 +59,7 @@ object PathOverviewBuilder {
      * @param marks the marks taken so far per component (from `path_mark`)
      * @param transferred fires that moved to the person (never taken back, P-14)
      * @param heavy a hard week («Бережно» or StormNet): one hand, Water «держим»
+     * @param safety where the holds come from (D-051: one SafetyState later; the goal and the week now)
      */
     fun build(
         today: LocalDate,
@@ -68,6 +69,7 @@ object PathOverviewBuilder {
         given: GivenLayer,
         sufficiency: List<Sufficiency> = emptyList(),
         heavy: Boolean = false,
+        safety: PathSafety = PathSafety.LOCAL,
     ): PathOverview {
         val live = goal?.takeIf { GoalLifecycle.layer(it.status) == GoalLayer.PATH }
         val parts = ComponentKey.entries.map { key ->
@@ -83,15 +85,16 @@ object PathOverviewBuilder {
                 else -> SlicePart(key, PartState.PRACTICE, c.role, lever = c.isLever, safeVersion = c.safeVersion)
             }
         }
-        val paused = live?.status == GoalStatus.PAUSED
-        val held = live?.status == GoalStatus.HELD
+        val hold = safety.hold(live, heavy)
+        val paused = hold.paused
+        val held = hold.held
         val lever = live?.lever
         val leverDeficit = lever?.let { l -> sufficiency.firstOrNull { it.key == l.key }?.deficit } ?: 0.0
         val balance = when {
             live == null -> Balance(BalanceKind.NO_GOAL, PathCopy.EMPTY_TITLE, PathCopy.EMPTY_LINE, null)
             held -> Balance(BalanceKind.HELD, PathCopy.HELD_TITLE, PathCopy.HELD_SUB, null)
             paused -> Balance(BalanceKind.PAUSED, PathCopy.PAUSED_TITLE, PathCopy.PAUSED_SUB, null)
-            heavy -> Balance(BalanceKind.HEAVY, PathCopy.HEAVY_TITLE, PathCopy.HEAVY_SUB, null)
+            hold.heavy -> Balance(BalanceKind.HEAVY, PathCopy.HEAVY_TITLE, PathCopy.HEAVY_SUB, null)
             lever != null && leverDeficit > 0.0 -> PathLexicon.name(lever.key).let {
                 Balance(BalanceKind.LEVER, PathCopy.lever(it), PathCopy.leverSub(it), lever.key)
             }
@@ -101,7 +104,7 @@ object PathOverviewBuilder {
             val mine = parts.filter { it.key.element == e && it.role != null }
             val status = when {
                 live == null -> PathLexicon.motto(e)
-                heavy || paused || held -> if (e == Element.WATER) PathCopy.STATUS_HOLDS else PathCopy.STATUS_KEPT
+                hold.any -> if (e == Element.WATER) PathCopy.STATUS_HOLDS else PathCopy.STATUS_KEPT
                 balance.kind == BalanceKind.LEVER && lever?.key?.element == e -> PathCopy.leverStatus(PathLexicon.name(lever.key))
                 mine.any { it.role == Role.LEAD } -> PathCopy.STATUS_LEADS
                 mine.isNotEmpty() && e != Element.WATER -> PathCopy.STATUS_PROPS
@@ -120,7 +123,7 @@ object PathOverviewBuilder {
             stagesTotal = live?.let { StageRules.stagesTotal(it) } ?: 0,
             nextMilestone = live?.let { StageRules.nextMilestone(it, today) },
             given = given.constraints.map { it.label },
-            whyVisible = !heavy && !paused && !held,
+            whyVisible = !hold.any,
             lightOnly = given.edCare || live?.has(ComponentKey.BODY) == true,
             paused = paused || held,
         )

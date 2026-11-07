@@ -570,29 +570,32 @@ private fun TakeStep(ui: RitualUi, actions: RitualActions, still: Boolean) {
         Spacer(Modifier.height(4.dp))
         Text(PathCopy.e7FirstFire(PathLexicon.name(it)), style = PathText.caption, color = materialOf(it.element))
     }
-    Spacer(Modifier.height(16.dp))
-    var writing by remember { mutableStateOf(d.letter.isNotEmpty()) }
-    if (!writing) {
-        val rule = HotThemeTokens.colors.rule
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .clickable { writing = true }
-                .padding(horizontal = 4.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(Modifier.fillMaxWidth().height(48.dp)) {
-                drawRoundRect(
-                    rule, size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()),
-                    style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))),
-                )
+    // D-051 (tech §6.4): «Письмо — позже». The letter to oneself is built and waits behind the flag.
+    if (PathFeatureFlags.LETTER) {
+        Spacer(Modifier.height(16.dp))
+        var writing by remember { mutableStateOf(d.letter.isNotEmpty()) }
+        if (!writing) {
+            val rule = HotThemeTokens.colors.rule
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clickable { writing = true }
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(Modifier.fillMaxWidth().height(48.dp)) {
+                    drawRoundRect(
+                        rule, size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()),
+                        style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx()))),
+                    )
+                }
+                Text(PathCopy.E7_LETTER, style = PathText.body, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
             }
-            Text(PathCopy.E7_LETTER, style = PathText.body, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+        } else {
+            Text(PathCopy.E7_LETTER_HINT, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Field(d.letter, PathCopy.E7_LETTER_HINT, { v -> actions.onText(v) { dr, t -> dr.copy(letter = t) } }, max = 300, single = false)
         }
-    } else {
-        Text(PathCopy.E7_LETTER_HINT, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        Field(d.letter, PathCopy.E7_LETTER_HINT, { v -> actions.onText(v) { dr, t -> dr.copy(letter = t) } }, max = 300, single = false)
     }
 }

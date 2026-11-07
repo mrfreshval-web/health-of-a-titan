@@ -95,6 +95,7 @@ const val PATH_BALANCE_TAG = "path_balance"
 const val PATH_TRAIL_TAG = "path_trail"
 const val PATH_MENU_TAG = "path_menu"
 const val PATH_UNDO_TAG = "path_undo"
+const val PATH_LOOK_BACK_TAG = "path_look_back"
 
 fun elementTag(e: Element) = "path_element_${e.name.lowercase()}"
 
@@ -108,13 +109,17 @@ fun elementTag(e: Element) = "path_element_${e.name.lowercase()}"
 fun NavGraphBuilder.pathScreen(
     stateful: Boolean = true,
     onOpenRitual: () -> Unit = {},
+    onLookBack: () -> Unit = {},
     onHelp: () -> Unit = {},
 ) {
     composable(route = HotRoute.PATH) {
         if (stateful) {
-            PathRoute(onOpenRitual, onHelp)
+            PathRoute(onOpenRitual, onLookBack, onHelp)
         } else {
-            PathScreen(PathUi(PathData.empty(LocalDate.now())), PathActions(onNameGoal = onOpenRitual, onFromCarrying = onOpenRitual))
+            PathScreen(
+                PathUi(PathData.empty(LocalDate.now())),
+                PathActions(onNameGoal = onOpenRitual, onFromCarrying = onOpenRitual, onLookBack = onLookBack),
+            )
         }
     }
 }
@@ -138,6 +143,8 @@ class PathActions(
     val onKeep: () -> Unit = {},
     val onUndo: () -> Unit = {},
     val onHelp: () -> Unit = {},
+    /** D-051: «Оглянуться ›» opens «За плечами», the reverse plan of the Path. */
+    val onLookBack: () -> Unit = {},
 )
 
 @HiltViewModel
@@ -185,7 +192,7 @@ class PathViewModel @Inject constructor(private val repository: PathRepository) 
 }
 
 @Composable
-private fun PathRoute(onOpenRitual: () -> Unit, onHelp: () -> Unit, viewModel: PathViewModel = hiltViewModel()) {
+private fun PathRoute(onOpenRitual: () -> Unit, onLookBack: () -> Unit, onHelp: () -> Unit, viewModel: PathViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     PathScreen(
         ui = ui ?: PathUi(PathData.empty(LocalDate.now())),
@@ -198,6 +205,7 @@ private fun PathRoute(onOpenRitual: () -> Unit, onHelp: () -> Unit, viewModel: P
             onKeep = viewModel::keep,
             onUndo = viewModel::undo,
             onHelp = onHelp,
+            onLookBack = onLookBack,
         ),
     )
 }
@@ -289,6 +297,7 @@ fun PathScreen(ui: PathUi, actions: PathActions, modifier: Modifier = Modifier, 
                 Spacer(Modifier.height(16.dp))
                 Milestones(goal, ov.today)
             }
+            HotTextButton(PathCopy.LOOK_BACK, onClick = actions.onLookBack, modifier = Modifier.testTag(PATH_LOOK_BACK_TAG))
         }
     }
     PathSheets(ui, actions, sheet, onSheet = { sheet = it })

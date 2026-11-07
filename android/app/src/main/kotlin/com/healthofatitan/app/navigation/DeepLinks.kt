@@ -8,7 +8,7 @@ import com.healthofatitan.app.core.model.nav.HotRoute
  */
 object DeepLinks {
     private val known = HotRoute.tabs.toSet() + HotRoute.SOS + HotRoute.ME + HotRoute.TRAINING_PLAYER + HotRoute.CHECKIN +
-        HotRoute.MENTOR + HotRoute.BREATHER
+        HotRoute.MENTOR + HotRoute.BREATHER + HotRoute.BEHIND
 
     fun routeFor(scheme: String?, host: String?): String? =
         if (scheme == HotRoute.DEEP_LINK_SCHEME && host != null && host in known) host else null

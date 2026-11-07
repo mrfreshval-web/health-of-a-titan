@@ -7,7 +7,8 @@ object PathFixtures {
     val TODAY: LocalDate = LocalDate.of(2026, 11, 7)
     const val NOW: Long = 1_794_000_000_000L
     const val DAY: Long = 24L * 3600_000L
-    val FLAGS_ON = PathFlags(weightAndStrength = true)
+    val FLAGS_ON = PathFlags(weightAndStrength = true, allTemplates = true)
+    val ALL_TEMPLATES = PathFlags(allTemplates = true)
 
     val knee = GivenConstraint("knee", "колено: без прыжков", setOf(ComponentKey.MOBILITY, ComponentKey.CARDIO), "без прыжков")
 

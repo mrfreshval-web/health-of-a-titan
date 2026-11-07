@@ -94,7 +94,6 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
     TODAY(HotRoute.TODAY, "Сегодня", R.drawable.core_ui_ic_today),
     WEEK(HotRoute.WEEK, "Неделя", R.drawable.core_ui_ic_week),
     PATH(HotRoute.PATH, "Путь", R.drawable.core_ui_ic_path),
-    BEHIND(HotRoute.BEHIND, "За плечами", R.drawable.core_ui_ic_behind),
     ;
 
     val testTag: String get() = "tab_$route"
@@ -154,7 +153,7 @@ fun HotApp(
             navController.currentBackStackEntryFlow.first() // wait until NavHost has set the graph
             when (pendingRoute) {
                 HotRoute.SOS -> navController.openSos()
-                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR ->
+                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR, HotRoute.BEHIND ->
                     navController.navigate(pendingRoute) { launchSingleTop = true }
                 else -> navController.openTab(pendingRoute)
             }
@@ -276,7 +275,12 @@ fun HotApp(
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
-                pathScreen(stateful = stateful, onOpenRitual = { open(HotRoute.PATH_RITUAL) }, onHelp = { navController.openSos() })
+                pathScreen(
+                    stateful = stateful,
+                    onOpenRitual = { open(HotRoute.PATH_RITUAL) },
+                    onLookBack = { open(HotRoute.BEHIND) },
+                    onHelp = { navController.openSos() },
+                )
                 pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
                 behindScreen()
                 meScreen(
@@ -360,6 +364,8 @@ private class NestedScreen(val tab: HotTab, val title: String, val backLabel: St
 
 private val NESTED = mapOf(
     HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
+    // D-051: «За плечами» is the reverse plan of the Path, not a tab.
+    HotRoute.BEHIND to NestedScreen(HotTab.PATH, "За плечами", "Путь"),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
     HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),

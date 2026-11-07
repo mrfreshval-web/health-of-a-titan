@@ -251,7 +251,11 @@ data class TakenItem(val key: ComponentKey, val mark: Int?, val since: String, v
 data class CarryingItem(val text: String, val key: ComponentKey? = null)
 
 /** Feature flags of the path. Weight and strength goals stay off until the safe pace tables (R7, D-047). */
-data class PathFlags(val weightAndStrength: Boolean = false) {
+data class PathFlags(
+    val weightAndStrength: Boolean = false,
+    /** D-051: the MVP offers [PathTemplates.MVP] (3); the other 7 stay built and wait behind this flag. */
+    val allTemplates: Boolean = false,
+) {
     companion object {
         val DEFAULT = PathFlags()
     }

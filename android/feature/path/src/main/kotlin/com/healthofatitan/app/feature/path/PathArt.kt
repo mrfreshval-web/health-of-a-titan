@@ -62,7 +62,7 @@ fun PathDayTitan(pose: DayPose, mode: HotMode?, modifier: Modifier = Modifier, s
         glow = light.glow,
         accent = light.line.last(),
         modifier = modifier,
-        animate = !reduce && !still,
+        animate = PathFeatureFlags.LIVING_SLICE && !reduce && !still,
         section = section,
     )
 }
@@ -86,7 +86,7 @@ fun PathTitan(key: String, modifier: Modifier = Modifier, once: Boolean = false,
         glow = light.glow,
         accent = light.line.last(),
         modifier = modifier,
-        animate = !reduce && !still,
+        animate = PathFeatureFlags.LIVING_SLICE && !reduce && !still,
         section = section,
     )
 }

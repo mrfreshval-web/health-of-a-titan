@@ -33,6 +33,5 @@ object TabHeaders {
         HotTab.TODAY -> null // the date stands in the middle of the header (A46 §2.1)
         HotTab.WEEK -> week(date)
         HotTab.PATH -> "Путь"
-        HotTab.BEHIND -> null
     }
 }

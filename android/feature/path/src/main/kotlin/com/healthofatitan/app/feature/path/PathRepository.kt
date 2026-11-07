@@ -59,7 +59,16 @@ import javax.inject.Inject
  * exist (R7 blocker, D-047); switching the flag is a code change with the review of Agents 3 and 12.
  */
 object PathFeatureFlags {
-    val current: PathFlags = PathFlags(weightAndStrength = false)
+    val current: PathFlags = PathFlags(weightAndStrength = false, allTemplates = false)
+
+    /**
+     * D-051 (tech §6.4): the slice of the MVP is static and the Lottie of the elements become their
+     * posters. The breathing, the looks and the halo of the lever are built and wait behind this flag.
+     */
+    const val LIVING_SLICE: Boolean = false
+
+    /** D-051: the letter of Э7 comes later; the screen and the table are ready. */
+    const val LETTER: Boolean = false
 }
 
 /** Everything the screen «Путь» and the ritual read. */

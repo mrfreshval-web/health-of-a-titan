@@ -43,6 +43,7 @@ import com.healthofatitan.app.feature.mentor.MENTOR_HELP_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_MENU_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PATH_EMPTY_TAG
+import com.healthofatitan.app.feature.path.PATH_LOOK_BACK_TAG
 import com.healthofatitan.app.feature.path.PATH_NAME_GOAL_TAG
 import com.healthofatitan.app.feature.path.PATH_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PATH_SLICE_TAG
@@ -86,7 +87,6 @@ class HotAppNavigationTest {
         HotTab.TODAY to TODAY_SCREEN_TAG,
         HotTab.WEEK to WEEK_SCREEN_TAG,
         HotTab.PATH to PATH_SCREEN_TAG,
-        HotTab.BEHIND to BEHIND_SCREEN_TAG,
     )
 
     private lateinit var nav: NavHostController
@@ -109,12 +109,21 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `the four modules are Today, Week, Path and Behind`() {
-        assertEquals(listOf(HotTab.TODAY, HotTab.WEEK, HotTab.PATH, HotTab.BEHIND), HotTab.entries.toList())
+    fun `the three modules are Today, Week and Path`() {
+        assertEquals(listOf(HotTab.TODAY, HotTab.WEEK, HotTab.PATH), HotTab.entries.toList())
     }
 
     @Test
-    fun `starts on Today and all four tabs open`() {
+    fun `behind opens from the path by look back, the path stays selected`() {
+        launch()
+        compose.onNodeWithTag(HotTab.PATH.testTag).performClick()
+        compose.onNodeWithTag(PATH_LOOK_BACK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(BEHIND_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+    }
+
+    @Test
+    fun `starts on Today and all three tabs open`() {
         launch()
         compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
         screens.forEach { (tab, screenTag) ->

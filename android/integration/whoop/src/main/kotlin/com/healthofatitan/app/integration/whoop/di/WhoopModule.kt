@@ -24,6 +24,8 @@ import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DayNotifier
 import com.healthofatitan.app.integration.whoop.day.HaikuLibrary
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.day.CheckinMorningSelf
+import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
 import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
@@ -107,8 +109,13 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource, loop: DailyLoopRepository): DayPlanRepository =
-        DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock, loop)
+    fun provideDayPlans(
+        metricDao: MetricDao,
+        dayDao: DayDao,
+        alarms: NextAlarmSource,
+        loop: DailyLoopRepository,
+        checkin: CheckinDao,
+    ): DayPlanRepository = DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock, loop, CheckinMorningSelf(checkin))
 
     /** Return after a pause (A18 И4.4) and the crisis log without text (A07 §4.7). */
     @Provides

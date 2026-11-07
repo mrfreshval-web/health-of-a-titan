@@ -163,5 +163,40 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+    /**
+     * State cards (A44 v0.2, D-036): answers of the decks, the S5 «Только ты» layer in its own
+     * table (payload encrypted with K_field), the morning (wake, reveal, ritual), the discoveries
+     * and local usage metrics. New tables only, prefixed `checkin_`; no raw WHOOP values.
+     */
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `checkin_answer` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `card` TEXT NOT NULL, " +
+                    "`phase` TEXT NOT NULL, `level` INTEGER, `choices` TEXT NOT NULL, `count` INTEGER, `skipped` INTEGER NOT NULL, " +
+                    "`answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`, `card`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `checkin_private` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `card` TEXT NOT NULL, " +
+                    "`payload` BLOB NOT NULL, `answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`, `card`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `checkin_day` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `wake_done_at` INTEGER, " +
+                    "`quick` INTEGER NOT NULL, `you_level` INTEGER, `data_level` INTEGER, `reveal_seen_at` INTEGER, " +
+                    "`ritual_done_at` INTEGER, PRIMARY KEY(`user_id`, `day_key`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `checkin_discovery` (`user_id` TEXT NOT NULL, `pair_id` TEXT NOT NULL, `n1` INTEGER NOT NULL, " +
+                    "`n0` INTEGER NOT NULL, `effect` REAL NOT NULL, `ci_low` REAL NOT NULL, `ci_high` REAL NOT NULL, `method` TEXT NOT NULL, " +
+                    "`shown_at` INTEGER NOT NULL, `sensitivity` TEXT NOT NULL, PRIMARY KEY(`user_id`, `pair_id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `checkin_event` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`day_key` TEXT NOT NULL, `phase` TEXT NOT NULL, `card` TEXT, `kind` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL, " +
+                    "`at` INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_checkin_event_user_id_day_key` ON `checkin_event` (`user_id`, `day_key`)")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
 }

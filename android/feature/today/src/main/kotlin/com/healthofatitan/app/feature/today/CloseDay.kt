@@ -92,6 +92,7 @@ fun CloseDayCard(
     onCrisis: (CrisisAssessment) -> Unit,
     onOpenHelp: () -> Unit,
     modifier: Modifier = Modifier,
+    extras: CloseDayExtras = CloseDayExtras(),
 ) {
     val trainingItem = plan.items.firstOrNull { it.id == DayEngine.Ids.TRAINING }
     val trainingAsked = Evening.trainingAsked(trainingItem?.status)
@@ -132,6 +133,7 @@ fun CloseDayCard(
         Spacer(Modifier.height(12.dp))
         Progress(Evening.answered(answers, trainingAsked), total)
         Spacer(Modifier.height(14.dp))
+        extras.top(day)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (trainingItem != null) {
                 EveningRow(DailyTexts.TRAINING, { KindBadge(ItemKind.TRAINING, mode.color(), sizeDp = 40) }) {
@@ -148,6 +150,7 @@ fun CloseDayCard(
             EveningRow(DailyTexts.BODY, { BodyGlyph(body ?: Body.FINE, DailyTexts.BODY, mode.color(), size = 40.dp) }) {
                 Choices(DailyTexts.BODY_OPTIONS, body, { body = it }) { value, color -> BodyGlyph(value, "", color, size = 22.dp) }
             }
+            extras.afterBody(day, body)
             EveningRow(DailyTexts.ALCOHOL, null) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     DailyTexts.ALCOHOL_OPTIONS.forEach { (value, label) ->
@@ -155,6 +158,7 @@ fun CloseDayCard(
                     }
                 }
             }
+            extras.afterAlcohol(day)
             HelpedRow(onHelped = { close(it) })
         }
         Spacer(Modifier.height(10.dp))
@@ -380,3 +384,14 @@ fun DayClosedCard(plan: DayView, close: DayClose?, mode: HotMode, modifier: Modi
         }
     }
 }
+
+/**
+ * Places inside «Закрыть день» for the state cards (A44 §1.4): one evening, not a second survey.
+ * [top] above the rows («уже знаю»), [afterBody] under «Тело» (the zones when «забито»),
+ * [afterAlcohol] after «Алкоголь» (В-3 «Погода вечера» and, on Sunday, the week).
+ */
+class CloseDayExtras(
+    val top: @Composable (LocalDate) -> Unit = {},
+    val afterBody: @Composable (LocalDate, Body?) -> Unit = { _, _ -> },
+    val afterAlcohol: @Composable (LocalDate) -> Unit = {},
+)

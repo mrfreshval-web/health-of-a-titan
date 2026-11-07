@@ -58,3 +58,6 @@ include(":feature:nutrition")
 // Stream B «Тренировка» (A40 §12): configurator, player, TitanPose.
 include(":domain:training")
 include(":feature:training")
+// State cards (A44 v0.2, D-036): the decks, the reveal, discoveries, «Только ты».
+include(":domain:checkin")
+include(":feature:checkin")

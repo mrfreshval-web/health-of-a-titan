@@ -11,6 +11,7 @@ class DeepLinksTest {
         assertEquals("today", DeepLinks.routeFor("hot", "today"))
         assertEquals("me", DeepLinks.routeFor("hot", "me"))
         assertEquals("path", DeepLinks.routeFor("hot", "path"))
+        assertEquals("checkin", DeepLinks.routeFor("hot", "checkin"))
     }
 
     @Test

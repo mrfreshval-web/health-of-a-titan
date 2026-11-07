@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick settings tile «Утро» (A44, D-036): the sun over the horizon, A36 line style. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3,18L21,18M7,18A5,5 0,0 1,17,18M12,6L12,9M5.64,10.64L7.4,12.4M18.36,10.64L16.6,12.4M6,21L18,21"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

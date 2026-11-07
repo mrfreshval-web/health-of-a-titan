@@ -158,7 +158,7 @@ class Builder:
     def json(self, markers, meta):
         layers = list(reversed(self.layers))
         return {"v": "5.12.2", "fr": 60, "ip": 0, "op": self.n, "w": CANVAS, "h": CANVAS, "nm": self.name, "ddd": 0,
-                "assets": [], "layers": layers, "markers": markers, "meta": meta}
+                "assets": list(getattr(self, "assets", [])), "layers": layers, "markers": markers, "meta": meta}
 
 
 def build_figure(b: Builder, frames, front, props_behind=(), props_held=(), props_front=(), breath_scale=0.035, belly_scale=0.07,

@@ -31,7 +31,7 @@ function recolor(doc, mode) {
     for (const it of items || []) {
       const g = it.ty === 'gr' ? it.nm : inGroup;
       if (it.ty === 'gr') walk(it.it, g);
-      if (it.ty === 'gs' && (g === 'titan_line' || g === 'ring_grad')) {
+      if ((it.ty === 'gs' || it.ty === 'gf') && (g === 'titan_line' || g === 'ring_grad')) {
         const k = it.g.k.k; const n = it.g.p;
         for (let i = 0; i < n; i++) { const c = light[Math.min(i, light.length - 1)]; k[i * 4 + 1] = c[0]; k[i * 4 + 2] = c[1]; k[i * 4 + 3] = c[2]; }
       }
@@ -43,13 +43,16 @@ function recolor(doc, mode) {
     }
   };
   for (const l of doc.layers) walk(l.shapes);
+  for (const a of doc.assets || []) for (const l of a.layers || []) walk(l.shapes);
   return doc;
 }
 
-function page(size, bg, glow) {
+// The line's own glow, as the app draws it (a blurred copy under the figure, TitanLottie.kt).
+function page(size, bg, glow, accent) {
+  const r = Math.max(2, size / 110);
   return `<!doctype html><html><body style="margin:0;background:${bg}">
   <div id="w" style="width:${size}px;height:${size}px;position:relative;background:radial-gradient(circle at 50% 50%, ${glow}, transparent 62%)">
-  <div id="a" style="width:${size}px;height:${size}px"></div></div>
+  <div id="a" style="width:${size}px;height:${size}px;filter:drop-shadow(0 0 ${r}px ${accent}99) drop-shadow(0 0 ${r * 3}px ${accent}55)"></div></div>
   <script>${LOTTIE}</script></body></html>`;
 }
 
@@ -57,7 +60,7 @@ async function withAnim(browser, file, size, mode, fn) {
   const doc = recolor(JSON.parse(fs.readFileSync(file, 'utf8')), mode);
   const m = MODES[mode] || MODES.rovno;
   const p = await browser.newPage({ viewport: { width: size, height: size } });
-  await p.setContent(page(size, m.bg, m.glow));
+  await p.setContent(page(size, m.bg, m.glow, m.accent));
   await p.evaluate((d) => {
     window.anim = lottie.loadAnimation({ container: document.getElementById('a'), renderer: 'svg', loop: false, autoplay: false, animationData: d });
   }, doc);

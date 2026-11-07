@@ -79,7 +79,8 @@ def kettlebell(side="N", at=11.8, dx=2.6, dy=0.6):
         handle = {"c": False, "v": [[cx - 2.0, cy - 2.4], [cx, dy - 1.0], [cx + 2.0, cy - 2.4]], "i": [[0, 0], [-1.4, 0], [0, 0]], "o": [[0, 0], [1.4, 0], [0, 0]]}
         w = PROP_PX / b.fr.s
         # a holder layer at the hand, counter-rotated so the bell stays upright
-        holder = b.add("props_kettlebell", 4, lt.transform(p=lt.static([0, -at, 0]), r=rot), [
+        ox, oy = getattr(b, "anchor", {}).get("fa" + side, (0.0, 0.0))
+        holder = b.add("props_kettlebell", 4, lt.transform(p=lt.static([ox, oy - at, 0]), r=rot), [
             lt.group("props_line", [lt.shape_path(handle, "handle"), lt.shape_path(bell, "bell"), lt.stroke(PROPS, w * 1.25, "props_stroke", opacity=75)]),
             lt.group("titan_knockout", [lt.shape_path(bell, "bell_fill"), lt.fill(KNOCKOUT)]),
         ], parent=b.inds["fa" + side])
@@ -92,7 +93,8 @@ def stick(side="N", at=12.2, length=6.0):
     def add(b, vals, frames):
         w = PROP_PX / b.fr.s
         path = _poly([(-length / 2, -at - 0.6), (length / 2, -at + 0.6)])
-        b.add("props_band", 4, lt.transform(), [_line_group([path], w)], parent=b.inds["fa" + side])
+        ox, oy = getattr(b, "anchor", {}).get("fa" + side, (0.0, 0.0))
+        b.add("props_band", 4, lt.transform(p=lt.static([ox, oy, 0])), [_line_group([path], w)], parent=b.inds["fa" + side])
     return add
 
 

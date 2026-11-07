@@ -1,7 +1,7 @@
 """Build the Lottie files: python3 -m hotlottie.build [ids…] (run from tools/lottie).
 
 Reads content/training/poses.yaml (key poses, the same data as the Compose rig), the timing in
-exercises.py / heroes.py, and writes android/feature/training/src/main/assets/lottie/<id>.json
+exercises.py / heroes.py, and writes android/core/ui/src/main/assets/lottie/<id>.json
 plus manifest.json (file, markers, frames, poster) for the player.
 """
 from __future__ import annotations
@@ -13,13 +13,13 @@ from pathlib import Path
 
 import yaml
 
-from . import figure, motion, rig
+from . import figure, motion, rig, titan
 from . import lottie as lt
 from . import props as pr
 
 ROOT = Path(__file__).resolve().parents[3]
 POSES = ROOT / "content/training/poses.yaml"
-OUT = ROOT / "android/feature/training/src/main/assets/lottie"
+OUT = ROOT / "android/core/ui/src/main/assets/lottie"
 
 
 def load_poses():
@@ -63,8 +63,8 @@ def build_exercise(ex_id, spec, lib):
     b = figure.Builder(ex_id, n, breaks, fr, front)
     if spec.get("floor", True):
         pr.floor(b)
-    figure.build_figure(b, frames, front, spec.get("props_behind", ()), spec.get("props_held", ()), spec.get("props_front", ()),
-                        breath_scale=spec.get("breath_scale", 0.035), belly_scale=spec.get("belly_scale", 0.07))
+    titan.build_titan(b, frames, front, spec.get("props_behind", ()), spec.get("props_held", ()), spec.get("props_front", ()),
+                      breath_scale=spec.get("breath_scale", 0.035), belly_scale=spec.get("belly_scale", 0.07), hands=spec.get("hands"), fold=spec.get("fold", ()))
     mk = list(sc.markers)
     poster = spec.get("poster")
     if poster:
@@ -74,7 +74,7 @@ def build_exercise(ex_id, spec, lib):
         mk.append(("poster", pt + spec.get("poster_offset", 0.0)))
     mk += spec.get("markers", [])
     markers = markers_json(sc, [m for m in mk if m not in sc.markers])
-    meta = {"g": "hot-lottie 1 (tools/lottie)", "a": "Agent 17", "k": "Health of a Titan", "d": ex_id}
+    meta = {"g": "hot-lottie 2 (tools/lottie)", "a": "Agent 17", "k": "Health of a Titan", "d": ex_id}
     doc = b.json(markers, meta)
     return doc, sc, frames, fr
 

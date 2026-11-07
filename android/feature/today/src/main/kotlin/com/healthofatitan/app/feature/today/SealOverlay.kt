@@ -33,7 +33,7 @@ import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSpacing
-import com.healthofatitan.app.core.ui.component.TitanSeal
+import com.healthofatitan.app.core.ui.component.TitanSealMoment
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.engine.DayTexts
@@ -71,7 +71,7 @@ fun SealOverlay(plan: DayView, glance: WhoopGlance?) {
                 verticalArrangement = Arrangement.Center,
             ) {
                 Box(Modifier.fillMaxWidth().widthIn(max = 340.dp).aspectRatio(1f)) {
-                    TitanSeal(key = key, modifier = Modifier.fillMaxSize(), spoken = TitanTexts.SEAL_SPOKEN)
+                    TitanSealMoment(key = key, modifier = Modifier.fillMaxSize(), spoken = TitanTexts.SEAL_SPOKEN)
                 }
                 Spacer(Modifier.height(24.dp))
                 Text(

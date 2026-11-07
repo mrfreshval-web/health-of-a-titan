@@ -12,7 +12,7 @@ import math
 import re
 from pathlib import Path
 
-from . import figure, motion, rig
+from . import figure, titan, motion, rig
 from . import lottie as lt
 from . import props as pr
 
@@ -175,10 +175,22 @@ def stand(**kw):
     return _P(**kw)
 
 
-def _figure(b, poses, steps, start, pulses=(), front=True, springs=None, extra=None, contacts=()):
+def capital_hand(v, side):
+    """Hands of the mark: hanging, they go on in the forearm's line; as the arm rises to the
+    capital the palm turns flat onto it, fingers up (as drawn in the mark)."""
+    a = v["fa" + side]["abs"]
+    k = min(1.0, max(0.0, (abs(math.sin(math.radians(a))) - 0.55) / 0.35))
+    k = k * k * (3 - 2 * k)
+    return k * rig.shortest(a, 0.0)
+
+
+MARK_HANDS = {"N": ("open", capital_hand), "F": ("open", capital_hand)}
+
+
+def _figure(b, poses, steps, start, pulses=(), front=True, springs=None, extra=None, contacts=(), hands=None):
     sc = motion.Script(poses, steps, start, contacts, springs or {"head": (3.0, 0.65)}, extra, front=front, loop=False)
     frames = sc.frames()
-    figure.build_figure(b, frames, front, pulses=pulses)
+    titan.build_titan(b, frames, front, hands=MARK_HANDS if hands is None and front else hands)
     return sc
 
 
@@ -186,7 +198,7 @@ def _doc(b, sc, name, extra_markers=()):
     mk = [{"tm": int(round(t * motion.FPS)), "cm": m, "dr": 0} for m, t in sc.markers]
     mk += [{"tm": int(t), "cm": m, "dr": 0} for m, t in extra_markers]
     mk.append({"tm": b.n - 1, "cm": "poster", "dr": 0})
-    return b.json(sorted(mk, key=lambda m: m["tm"]), {"g": "hot-lottie 1 (tools/lottie)", "a": "Agent 17", "k": "Health of a Titan", "d": name})
+    return b.json(sorted(mk, key=lambda m: m["tm"]), {"g": "hot-lottie 2 (tools/lottie)", "a": "Agent 17", "k": "Health of a Titan", "d": name})
 
 
 def _k(t, v, ease=(0.33, 0.0, 0.67, 1.0), last=False):
@@ -260,7 +272,9 @@ class _Fake:
 
 
 def hero_first_skill(lib):
-    """H4 Первый навык 3 s: a muscle-up on the bar (side view), a pause on top with the light."""
+    """H4 Первый навык 3 s: a muscle-up, close up (side view). Keys by hand: the pull (chest to the
+    bar), the turn (the wrists roll over, the chest goes over the bar), the dip bottom over the bar,
+    the press to support — then a pause on top with the light."""
     n = 180
     bar = (50.0, 40.0)
     legs = dict(thN=178.0, shN=182.0, ftN=160.0, thF=180.0, shF=184.0, ftF=162.0)
@@ -269,19 +283,29 @@ def hero_first_skill(lib):
     # driver arm angles only pick the elbow side for the IK (hands stay on the bar)
     poses = {
         "hang": P(rx=50.0, ry=93.0),
-        "pull": P(rx=50.5, ry=73.6, torso=350.0, head=355.0, uaN=170.0, faN=20.0, uaF=170.0, faF=20.0, thN=168.0, shN=174.0, thF=170.0, shF=176.0),
-        "turn": P(rx=38.1, ry=59.3, torso=35.0, head=50.0, uaN=280.0, faN=120.0, uaF=280.0, faF=120.0, thN=160.0, shN=170.0, thF=162.0, shF=172.0),
+        "pull": P(rx=49.0, ry=68.0, torso=350.0, head=356.0, uaN=170.0, faN=20.0, uaF=170.0, faF=20.0, thN=160.0, shN=176.0, thF=162.0,
+                  shF=178.0),
+        "turn": P(rx=38.4, ry=59.0, torso=36.0, head=48.0, spine=0.12, uaN=280.0, faN=120.0, uaF=280.0, faF=120.0, thN=150.0, shN=168.0,
+                  thF=152.0, shF=170.0),
+        "_over": P(rx=44.0, ry=55.6, torso=20.0, head=26.0, uaN=230.0, faN=40.0, uaF=230.0, faF=40.0, thN=168.0, shN=176.0, thF=170.0,
+                   shF=178.0),
         "top": P(rx=50.1, ry=40.0, torso=2.0, head=0.0, uaN=185.0, faN=180.0, uaF=185.0, faF=180.0, breath=1.0),
     }
-    steps = [("hold", 0.3), ("move", "pull", 0.6, "in"), ("move", "turn", 0.4, "linear"), ("move", "top", 0.5, "out"), ("mark", "pause"), ("hold", 1.2)]
-    probe = motion.Script(poses, steps, "hang", [("armN", "hand", bar), ("armF", "hand", bar)], {}, None, front=False, loop=False).frames()
-    fr = figure.fit_frame(figure.motion_points(probe, False, [(26, 38), (74, 38)]), smax=8.0, floor_max=2000, r=480)
-    b = figure.Builder("hero-first-skill", n, [0, 18, 54, 78, 108, n], fr, False)
+    steps = [("hold", 0.3), ("move", "pull", 0.5, "in"), ("move", "turn", 0.25, "linear"), ("move", "_over", 0.25, "out"),
+             ("move", "top", 0.45, "inout"), ("mark", "pause"), ("hold", 1.25)]
+    contacts = [("armN", "hand", bar), ("armF", "hand", bar)]
+    probe = motion.Script(poses, steps, "hang", contacts, {}, None, front=False, loop=False).frames()
+    # close up: the frame holds the upper body and the bar; the legs may leave it while hanging
+    pts = [(26, 38), (74, 38)]
+    for p in probe[60:]:
+        j = rig.joints(p, False)
+        pts += [j[k] for k in ("head", "shoulder", "hip", "handN", "elbowN", "kneeN")]
+    fr = figure.fit_frame(pts, smax=11.5, floor_max=4000, r=420)
+    b = figure.Builder("hero-first-skill", n, [0, 18, 48, 63, 78, 105, n], fr, False)
     pr.bar(bar[1], 26, 74, grip_x=bar[0])(b, None, None)
     ring(b, "ring", width=5.0, op_keys={"a": 1, "k": [_k(100, 0), _k(120, 70, last=True)]})
-    sc = _figure(b, poses, steps, "hang", front=False,
-                 contacts=[("armN", "hand", bar), ("armF", "hand", bar)], springs={"head": (3.0, 0.65), "shN": (2.4, 0.75), "shF": (2.4, 0.75)},
-                 pulses=[(118, 12, 9.0, 24)])
+    sc = _figure(b, poses, steps, "hang", front=False, contacts=contacts,
+                 springs={"head": (3.0, 0.65), "shN": (2.4, 0.75), "shF": (2.4, 0.75)}, hands={"N": "fist", "F": "fist"})
     flash(b, 112, peak=24, dur=46)
     return _doc(b, sc, "hero-first-skill")
 

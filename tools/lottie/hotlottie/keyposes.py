@@ -23,22 +23,33 @@ def P(**kw):
 
 
 def chest_doorway():
-    # Side view (the «top» view does not read at 96 dp). The 2D rig cannot show the forearm up the
-    # jamb with the upper arm abducted (it reads as a hyper-extended elbow), so the near hand rests
-    # on the jamb at shoulder height with a soft elbow — [Допущение] for Agent 12 (straight-arm variant).
-    s = P(rx=52.0, ry=48.8, uaN=266.0, faN=254.0)
-    j = rig.joints(s)
-    hand = j["handN"]
-    elbow = j["elbowN"]
-    ankle_f = j["ankleF"]
-    st = P(rx=57.0, ry=49.1, torso=5.0, head=3.0, uaF=186.0, faF=182.0, thF=187.4, shF=187.4, ftF=97.0)
-    # rear foot stays where it stood
-    solve_leg(st, "F", ankle_f, (ankle_f[0] + 2, ankle_f[1] - 21))
-    j2 = rig.joints(st)
-    solve_leg(st, "N", (j2["hip"][0] + 6.5, 90.8), (j2["hip"][0] + 9, 70))
-    st["ftN"] = 90.0
-    solve_arm(st, "N", hand, (elbow[0], elbow[1] + 3))
-    return {"set": ground(s), "stretch": ground(st)}
+    # v2: front view, so the forearm on the jamb reads (90/90: upper arm out to the side, forearm
+    # up the jamb, palm on it). Stepping through is shown by the upper arm going back behind the
+    # body (foreshortened in exercises.py: armLenN) while the hand stays on the jamb.
+    s = P(rx=46.0, ry=44.8, uaN=90.0, faN=0.0, uaF=182.0, faF=178.0, thN=176.0, shN=180.0, ftN=135.0, thF=184.0, shF=180.0, ftF=225.0)
+    st = dict(s, rx=47.4, head=356.0)
+    return {"set": s, "stretch": st}
+
+
+def child():
+    """v2: hips back onto the heels, the back rounds over the thighs, forehead and palms to the mat."""
+    knee = (40.0, 87.1)
+    hip = (23.5, 79.4)
+    import math
+    th = math.degrees(math.atan2(knee[0] - hip[0], -(knee[1] - hip[1]))) % 360
+    rest = P(rx=hip[0], ry=hip[1], torso=97.0, head=118.0, spine=0.42, thN=th, shN=268.0, ftN=232.0, thF=th + 1.5, shF=268.0, ftF=234.0)
+    j = rig.joints(rest)
+    for side, dx in (("N", 0.0), ("F", -0.6)):
+        solve_arm(rest, side, (j["shoulder"][0] + 23.0 + dx, 90.6), (j["shoulder"][0] + 12.0, j["shoulder"][1] + 7.0))
+    return rest
+
+
+def swap_legs(p):
+    """Near ↔ far leg (the stretched leg must be the near, bright one)."""
+    q = dict(p)
+    for a in ("th", "sh", "ft"):
+        q[a + "N"], q[a + "F"] = p[a + "F"], p[a + "N"]
+    return q
 
 
 def wrist_prep(cc):
@@ -75,8 +86,9 @@ def pullup():
     bar = (50.0, 8.0)
     legs = dict(thN=172.0, shN=262.0, ftN=250.0, thF=175.0, shF=264.0, ftF=252.0)
     hang = P(rx=50.0, ry=61.0, torso=0.0, head=0.0, **legs)
-    mid = P(rx=47.6, ry=49.7, torso=352.0, head=356.0, **legs)
-    top = P(rx=46.5, ry=38.6, torso=350.0, head=0.0, **legs)
+    mid = P(rx=47.2, ry=48.0, torso=352.0, head=356.0, **legs)
+    # v2: the top is a full rep — chin over the bar, elbows down beside the ribs
+    top = P(rx=45.6, ry=35.6, torso=352.0, head=4.0, **legs)
     for p, hint in ((hang, (50, 20)), (mid, (54, 30)), (top, (52, 20))):
         j = rig.joints(p)
         for side in "NF":
@@ -178,7 +190,10 @@ def main():
     up = {}
     up["ex-stretch-pigeon"] = pigeon()
     ch = lib["ex-stretch-child"]
-    up["ex-stretch-child"] = {"kneel": ch["kneel"], "rest": dict(ch["rest"], spine=0.35)}
+    up["ex-stretch-child"] = {"kneel": ch["kneel"], "rest": child()}
+    hf = lib["ex-stretch-hip-flexor"]
+    if hf["start"]["thN"] < 135.0:          # the near leg is still the front one: swap once
+        up["ex-stretch-hip-flexor"] = {k: swap_legs(v) for k, v in hf.items()}
     bd = lib["ex-band-dislocate"]
     up["ex-band-dislocate"] = {"front": dict(bd["front"], uaN=165.0, faN=165.0, uaF=167.0, faF=167.0), "overhead": bd["overhead"], "behind": bd["behind"]}
     up["ex-ankle-knee-wall"] = ankle_knee_wall()

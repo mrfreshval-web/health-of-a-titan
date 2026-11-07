@@ -47,6 +47,7 @@ import com.healthofatitan.app.domain.training.WorkoutStep
 import com.healthofatitan.app.domain.training.WorkoutSteps
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
+import com.healthofatitan.app.feature.today.TodaySlots
 import com.healthofatitan.app.feature.today.TodayUiState
 import com.healthofatitan.app.feature.training.PlayerActions
 import com.healthofatitan.app.feature.training.PlayerScreen
@@ -181,7 +182,7 @@ class TrainingTitaniumScreenshots {
                     TodayUiState(whoop = WhoopStatus(configured = true, connected = true, whoopUserId = "1", lastSyncAt = System.currentTimeMillis(), baselineNights = 21), metrics = TodayMetrics.EMPTY),
                     onConnectWhoop = {},
                     day = DayUiState(plan = dayView(Regime.STEADY, "Силовая · 45 мин"), now = LocalDateTime.now().withHour(17).withMinute(30), loaded = true),
-                    trainingCard = { TrainingDayCard(ui, onOpen = {}) },
+                    slots = TodaySlots(training = { TrainingDayCard(ui, onOpen = {}) }),
                 )
             }
         }

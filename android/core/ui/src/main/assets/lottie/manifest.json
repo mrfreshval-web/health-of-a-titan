@@ -321,7 +321,63 @@
     "mark": 120,
     "poster": 134
    },
-   "bytes": 84527
+   "bytes": 84190
+  },
+  "path-earth": {
+   "file": "lottie/path-earth.json",
+   "kind": "path",
+   "frames": 60,
+   "markers": {
+    "poster": 0
+   },
+   "bytes": 94078
+  },
+  "path-hold": {
+   "file": "lottie/path-hold.json",
+   "kind": "path",
+   "frames": 892,
+   "markers": {
+    "hold_loop_start": 0,
+    "poster": 0,
+    "hold_loop_end": 360,
+    "look_sky": 360,
+    "look_earth": 385,
+    "look_water": 410,
+    "to_one_hand": 435,
+    "one_hand_loop_start": 483,
+    "one_hand_loop_end": 843,
+    "to_two_hands": 843
+   },
+   "bytes": 95015
+  },
+  "path-palms": {
+   "file": "lottie/path-palms.json",
+   "kind": "path",
+   "frames": 55,
+   "markers": {
+    "offer": 0,
+    "poster": 36,
+    "release": 36
+   },
+   "bytes": 74735
+  },
+  "path-sky": {
+   "file": "lottie/path-sky.json",
+   "kind": "path",
+   "frames": 240,
+   "markers": {
+    "poster": 0
+   },
+   "bytes": 67411
+  },
+  "path-water": {
+   "file": "lottie/path-water.json",
+   "kind": "path",
+   "frames": 144,
+   "markers": {
+    "poster": 0
+   },
+   "bytes": 98496
   }
  }
 }

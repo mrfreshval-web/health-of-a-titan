@@ -109,8 +109,9 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
             vs, first = [100 * (1 + breath_scale * f.get("breath", 0.0)) for f in frames], True
         elif name in ("pelvis", "belt"):
             vs, first = [100 * (1 + belly_scale * f.get("belly", 0.0)) for f in frames], True
-        elif name[:2] in ("ua", "fa"):
-            vs, first = [100 * v[name]["sy"] for v in vals], False
+        elif name[:2] in ("ua", "fa") or name == "head":
+            # the head: foreshortened by a front-view nod (figure.bone_values)
+            vs, first = [100 * v[name].get("sy", 1.0) for v in vals], False
         else:
             return None
         fx = b.scalar(vs, 0.1)

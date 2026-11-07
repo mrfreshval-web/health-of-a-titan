@@ -15,8 +15,9 @@ def static(v):
     return {"a": 0, "k": v}
 
 
-def fit_scalar(samples, breaks, tol=0.05, max_handle=12.0):
-    """samples: values for frames 0…N (inclusive). breaks: frames that must be keys.
+def fit_scalar(samples, breaks, tol=0.05, max_handle=12.0, cuts=()):
+    """samples: values for frames 0…N (inclusive). breaks: frames that must be keys. cuts: frames
+    k after which the timeline jumps (a new section starts at k + 1): slopes there are one-sided.
     Returns Lottie keyframes (list) or a static value."""
     n = len(samples) - 1
     lo, hi = min(samples), max(samples)
@@ -28,8 +29,12 @@ def fit_scalar(samples, breaks, tol=0.05, max_handle=12.0):
         a = samples[max(k - 1, 0)]
         b = samples[min(k + 1, n)]
         m[k] = (b - a) / (min(k + 1, n) - max(k - 1, 0))
-    if samples[0] == samples[n] and n > 2:
+    if samples[0] == samples[n] and n > 2 and not cuts:
         m[0] = m[n] = (samples[1] - samples[n - 1]) / 2
+    for k in cuts:
+        if 0 < k < n - 1:
+            m[k] = samples[k] - samples[k - 1]
+            m[k + 1] = samples[k + 2] - samples[k + 1]
 
     def herm(a, b, f):
         dt = b - a

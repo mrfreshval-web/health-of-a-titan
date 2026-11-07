@@ -40,13 +40,19 @@ def _deg(x):
     return math.degrees(x)
 
 
+NOD_LIFT = 0.1       # front-view nod: rig units of lift per degree (+10° → the head 1 unit up)
+NOD_SQUASH = 0.004   # and of foreshortening per degree (10° → 4 % shorter)
+
+
 def bone_values(p, front):
     """Per-frame layer values: rotation relative to the parent, position in the parent, scale y,
     plus the world origin/angle of every bone (rig units) for gradient points and props."""
     d = _deg(math.atan(p.get("spine", 0.0)))
     h = 13.0 / math.cos(math.radians(d))
     torso = p["torso"]
-    head = p["head"] + p.get("nod", 0.0)
+    # nod: in profile the head turns; in the front view (Path v1 §3.1, + up) it cannot turn in the
+    # picture plane, so the head lifts or drops on the neck and foreshortens (pitch_values)
+    head = p["head"] + (0.0 if front is True else p.get("nod", 0.0))
     chest_abs = torso + d
     v = {}
     hip = (p["rx"], p["ry"])
@@ -54,7 +60,8 @@ def bone_values(p, front):
     mid = rig.step(hip, torso - d, h)
     v["chest"] = dict(r=2 * d, p=(0.0, -h), abs=chest_abs, o=mid)
     sh = rig.step(mid, chest_abs, h)
-    v["head"] = dict(r=head - chest_abs, p=(0.0, -h), abs=head, o=sh)
+    nod = p.get("nod", 0.0) if front is True else 0.0
+    v["head"] = dict(r=head - chest_abs, p=(0.0, -h - NOD_LIFT * nod), abs=head, o=sh, sy=1.0 - NOD_SQUASH * abs(nod))
     for side in "NF":
         sw, hw = rig.side_offsets(front, side)
         ln = p.get("armLen" + side, 1.0)
@@ -144,7 +151,7 @@ class Builder:
         return self.ind
 
     def scalar(self, values, tol=0.04):
-        return lt.fit_scalar(values, self.breaks, tol)
+        return lt.fit_scalar(values, self.breaks, tol, cuts=getattr(self, "cuts", ()))
 
     def split_pos(self, xs, ys, tol=0.02):
         fx, fy = self.scalar(xs, tol), self.scalar(ys, tol)

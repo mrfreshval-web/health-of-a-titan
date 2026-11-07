@@ -327,7 +327,9 @@ def hero_test_passed(lib):
         wk = {"a": 1, "k": [_k(f, 6.0), _k(f + 6, 12.0), _k(f + 18, 9.0, last=True)]}
         b.add(f"scale_{i + 1}", 4, lt.transform(o=op), [lt.group("ring", [lt.shape_path(path), lt.stroke(figure.PROPS, wk, "tick_stroke")])])
     columns(b, n)
-    poses = {"stand": stand(), "nod": stand(nod=14.0), "mark": mark_pose()}
+    # v2 drew this «nod» as a tilt of the head (head + nod); since Path v1 a front-view nod is a
+    # pitch (figure.bone_values), so the tilt keeps its own channel
+    poses = {"stand": stand(), "nod": stand(head=14.0), "mark": mark_pose()}
     sc = _figure(b, poses, [("hold", 0.75), ("move", "nod", 0.25, "inout"), ("move", "stand", 0.3, "inout"), ("move", "mark", 0.7, "inout"),
                             ("hold", 0.25)], "stand", pulses=[(100, 8, 7.0, 24)])
     return _doc(b, sc, "hero-test-passed")

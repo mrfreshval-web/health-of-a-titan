@@ -9,6 +9,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:model"))
     implementation(project(":core:security"))
     implementation(libs.sqlcipher.android)
     implementation(libs.kotlinx.coroutines.android)

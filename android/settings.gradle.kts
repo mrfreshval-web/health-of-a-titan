@@ -52,3 +52,6 @@ include(":integration:healthconnect")
 include(":core:datastore")
 include(":domain:path")
 include(":feature:path")
+// Stream C «Еда» (A41): nutrition engine and screens.
+include(":domain:nutrition")
+include(":feature:nutrition")

@@ -48,6 +48,9 @@ import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
+import com.healthofatitan.app.feature.nutrition.NutritionTexts
+import com.healthofatitan.app.feature.nutrition.PlateOfDay
+import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.path.PathTodayStep
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
 import com.healthofatitan.app.feature.path.pathScreen
@@ -160,6 +163,7 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (fullScreen) Modifier else Modifier.padding(padding),
             ) {
+                val openNutrition = { route: String -> navController.navigate(route) { launchSingleTop = true } }
                 todayScreen(
                     onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
                     // CrisisGuard level ≥ 2 in the evening note opens the crisis card (A07 §4.1, D-029)
@@ -167,6 +171,13 @@ fun HotApp(
                     stateful = stateful,
                     // stream Г: «шаг дня» of the path, owned by :feature:path (A42 §3.1)
                     pathStep = { if (stateful) PathTodayStep(onOpenPath = { navController.openTab(HotRoute.PATH) }) },
+                    plateOfDay = {
+                        PlateOfDay(
+                            onOpenMeal = { openNutrition(HotRoute.nutritionMeal(it)) },
+                            onOpenProfile = { openNutrition(HotRoute.NUTRITION_PROFILE) },
+                            onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) },
+                        )
+                    },
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
@@ -176,8 +187,10 @@ fun HotApp(
                     onOpenHelp = { navController.openSos() },
                     onOpenMentor = { navController.navigate(HotRoute.MENTOR_PERSONA) { launchSingleTop = true } },
                     stateful = stateful,
+                    onOpenNutrition = { openNutrition(HotRoute.NUTRITION_PROFILE) },
                 )
                 mentorPersonaScreen(stateful = stateful)
+                nutritionScreens(onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
                 whoopScreen(stateful = stateful)
                 dawnScreen(onStart = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
                 sosScreen(onClose = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
@@ -225,6 +238,9 @@ private val NESTED = mapOf(
     HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
+    HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
+    HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.PATH, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),
+    HotRoute.NUTRITION_MEAL to NestedScreen(HotTab.TODAY, NutritionTexts.PLATE_OF_DAY, NutritionTexts.MEAL_BACK),
 )
 
 /**

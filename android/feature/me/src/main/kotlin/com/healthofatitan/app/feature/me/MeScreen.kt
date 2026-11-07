@@ -56,12 +56,13 @@ fun NavGraphBuilder.meScreen(
     onOpenHelp: () -> Unit = {},
     onOpenMentor: () -> Unit = {},
     stateful: Boolean = true,
+    onOpenNutrition: () -> Unit = {},
 ) {
     composable(route = HotRoute.ME) {
         if (stateful) {
-            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor)
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition)
         } else {
-            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor)
+            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition)
         }
     }
 }
@@ -76,6 +77,7 @@ const val ME_SCREEN_TAG = "screen_me"
 const val ME_WHOOP_ROW_TAG = "me_whoop_row"
 const val ME_HELP_ROW_TAG = "me_help_row"
 const val ME_MENTOR_ROW_TAG = "me_mentor_row"
+const val ME_NUTRITION_ROW_TAG = "me_nutrition_row"
 
 @HiltViewModel
 class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel() {
@@ -84,9 +86,15 @@ class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel()
 }
 
 @Composable
-private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, onOpenMentor: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
+private fun MeRoute(
+    onOpenWhoop: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenMentor: () -> Unit,
+    onOpenNutrition: () -> Unit,
+    viewModel: MeViewModel = hiltViewModel(),
+) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor)
+    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition)
 }
 
 @Composable
@@ -96,6 +104,7 @@ fun MeScreen(
     modifier: Modifier = Modifier,
     onOpenHelp: () -> Unit = {},
     onOpenMentor: () -> Unit = {},
+    onOpenNutrition: () -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -130,6 +139,16 @@ fun MeScreen(
                 caption = "Сенсей · Бро · Дворецкий",
                 divider = false,
                 modifier = Modifier.testTag(ME_MENTOR_ROW_TAG),
+            )
+        }
+        // Stream C (A41 §10): the profile of specifics, shared by food and training.
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = "Еда и тело",
+                onClick = onOpenNutrition,
+                caption = "Аллергены · тип питания · уровень",
+                divider = false,
+                modifier = Modifier.testTag(ME_NUTRITION_ROW_TAG),
             )
         }
         Section("Подключения")

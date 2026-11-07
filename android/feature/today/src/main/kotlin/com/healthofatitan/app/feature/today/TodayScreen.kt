@@ -99,8 +99,15 @@ fun NavGraphBuilder.todayScreen(
     onOpenHelp: () -> Unit = {},
     stateful: Boolean = true,
     pathStep: @Composable () -> Unit = {},
+    /** One card from another module (stream C «Тарелка дня»); the app passes it in. */
+    plateOfDay: @Composable () -> Unit = {},
 ) {
-    val slots = TodaySlots(afterPlan = { pathStep() })
+    val slots = TodaySlots(
+        afterPlan = {
+            plateOfDay()
+            pathStep()
+        },
+    )
     composable(route = HotRoute.TODAY) {
         if (stateful) TodayRoute(onConnectWhoop, onOpenHelp, slots) else TodayScreen(TodayUiState(), onConnectWhoop, slots = slots)
     }

@@ -18,6 +18,9 @@ class HotRoomPlugin : Plugin<Project> {
         pluginManager.apply("androidx.room")
         pluginManager.apply("com.google.devtools.ksp")
         val schemaDir = layout.projectDirectory.dir("schemas")
+        // The schema JSON is not committed; on a fresh CI checkout, KSP may not have written it yet
+        // when tests are configured. An existing (possibly empty) dir keeps the test input valid.
+        schemaDir.asFile.mkdirs()
         extensions.configure<KspExtension> {
             arg("room.generateKotlin", "true")
         }

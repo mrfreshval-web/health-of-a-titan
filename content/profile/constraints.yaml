@@ -1,0 +1,177 @@
+# Profile of user specifics (особенности пользователя) — shared by nutrition (A41) and training (A40).
+# Schema and rules: content/profile/SCHEMA.md. Validated by scripts/check_nutrition.py (profile part).
+# Every list here is CLOSED: the engine, the configurator UI and Claude generation use only these ids.
+# Medical content: Agent 3 (veto). Wording about food and body: Agent 10. Storage and consent: Agent 7.
+# Nothing here is a diagnosis: medical flags are what the user tells us; they switch the product into a safe mode.
+version: 1
+reviewedBy: []   # draft: Agent 12 on behalf of 3, 10, 7 — needs their review before release
+status: draft
+
+# ---------------------------------------------------------------------------
+# 1. Allergens — HARD filter. Union of EU Reg. 1169/2011 Annex II (14) and US FALCPA + FASTER Act (9).
+#    Component-level codes (content/nutrition/components.yaml uses exactly these).
+#    Rule: a component with `wheat` must also carry `gluten` (validator checks).
+# ---------------------------------------------------------------------------
+allergens:
+  - {id: gluten,     ru: "Злаки с глютеном",        en: "Cereals containing gluten", eu14: true,  us9: false, includes_ru: "пшеница, рожь, ячмень, спельта, камут; овёс без маркировки «без глютена» — «может содержать»"}
+  - {id: wheat,      ru: "Пшеница",                 en: "Wheat",                     eu14: false, us9: true,  implies: [gluten]}
+  - {id: crustacean, ru: "Ракообразные",            en: "Crustacean shellfish",      eu14: true,  us9: true,  includes_ru: "креветки, крабы, лобстер, раки"}
+  - {id: mollusc,    ru: "Моллюски",                en: "Molluscs",                  eu14: true,  us9: false, includes_ru: "мидии, кальмары, осьминог, устрицы, гребешок"}
+  - {id: egg,        ru: "Яйца",                    en: "Eggs",                      eu14: true,  us9: true}
+  - {id: fish,       ru: "Рыба",                    en: "Fish",                      eu14: true,  us9: true}
+  - {id: peanut,     ru: "Арахис",                  en: "Peanuts",                   eu14: true,  us9: true}
+  - {id: tree_nut,   ru: "Орехи",                   en: "Tree nuts",                 eu14: true,  us9: true,  includes_ru: "миндаль, фундук, грецкий, кешью, пекан, бразильский, фисташки, макадамия; кокос в США с 2025 г. не считается орехом (FDA), в профиле — отдельный пункт"}
+  - {id: soy,        ru: "Соя",                     en: "Soybeans",                  eu14: true,  us9: true,  includes_ru: "тофу, эдамаме, соевый соус, темпе, соевое молоко"}
+  - {id: milk,       ru: "Молоко (белок молока)",   en: "Milk",                      eu14: true,  us9: true,  note_ru: "Аллергия на белок молока ≠ непереносимость лактозы: безлактозное молоко при аллергии тоже исключается"}
+  - {id: sesame,     ru: "Кунжут",                  en: "Sesame",                    eu14: true,  us9: true,  includes_ru: "кунжут, тахини, хумус (обычно с тахини)"}
+  - {id: celery,     ru: "Сельдерей",               en: "Celery",                    eu14: true,  us9: false}
+  - {id: mustard,    ru: "Горчица",                 en: "Mustard",                   eu14: true,  us9: false}
+  - {id: sulphite,   ru: "Сульфиты (> 10 мг/кг)",   en: "Sulphites",                 eu14: true,  us9: false, includes_ru: "вино, сухофрукты (часто), некоторые соусы"}
+  - {id: lupin,      ru: "Люпин",                   en: "Lupin",                     eu14: true,  us9: false}
+  # Not a major allergen anywhere, but users ask for it often:
+  - {id: coconut,    ru: "Кокос",                   en: "Coconut",                   eu14: false, us9: false}
+
+# Severity changes how strictly «может содержать» (may_contain / cross-contact) is treated.
+allergy_severity:
+  - {id: avoid,        ru: "Избегаю",                       may_contain: allowed_with_note}
+  - {id: allergy,      ru: "Аллергия",                      may_contain: excluded}
+  - {id: anaphylaxis,  ru: "Тяжёлая реакция (анафилаксия)", may_contain: excluded, extra: [restaurant_warning, no_unlabeled_generation, see_doctor_card]}
+
+# ---------------------------------------------------------------------------
+# 2. Intolerances — filter or soften, not an allergy.
+# ---------------------------------------------------------------------------
+intolerances:
+  - {id: lactose,          ru: "Непереносимость лактозы",          filter: {component_lactose_max: low}, note_ru: "Твёрдый сыр, греческий йогурт, кефир часто переносятся — отмечены как low"}
+  - {id: gluten_sensitive, ru: "Чувствительность к глютену (без целиакии)", filter: {exclude_allergens: [gluten]}, may_contain: allowed_with_note}
+  - {id: caffeine,         ru: "Чувствительность к кофеину",       rules: {caffeine_cutoff_shift_h: -2}, note_ru: "Кофейный рубеж сдвигается на 2 часа раньше"}
+  - {id: spicy,            ru: "Не ем острое",                     filter: {exclude_tags: [spicy]}}
+  - {id: fodmap,           ru: "Чувствительный ЖКТ (FODMAP)",      filter: {}, medical_route: true, note_ru: "Диета low-FODMAP — лечебная, только с врачом или диетологом; продукт ничего не исключает сам"}
+
+# ---------------------------------------------------------------------------
+# 3. Diets (тип питания) — HARD filter by component origin and by meal rules.
+#    Component `origin` codes: meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood,
+#    dairy, egg, honey, gelatin, alcohol. Plant = [].
+# ---------------------------------------------------------------------------
+origins: [meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood, dairy, egg, honey, gelatin, alcohol]
+
+diets:
+  - {id: omnivore,     ru: "Ем всё",               exclude_origins: []}
+  - {id: pescatarian,  ru: "Пескетарианство",      exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, gelatin]}
+  - {id: vegetarian,   ru: "Вегетарианство",       exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood, gelatin]}
+  - {id: vegan,        ru: "Веганство",            exclude_origins: [meat_pork, meat_beef, meat_poultry, meat_other, fish, seafood, dairy, egg, honey, gelatin]}
+  - {id: halal,        ru: "Халяль",               exclude_origins: [meat_pork, alcohol, gelatin], meat_note_ru: "Мясо и птица — халяль-происхождения; HoT не сертифицирует блюда, метка значит «в рецепте нет запрещённого»"}
+  - {id: kosher,       ru: "Кошер",                exclude_origins: [meat_pork, seafood, gelatin], exclude_allergens: [crustacean, mollusc], meal_rule: no_meat_with_dairy, meat_note_ru: "Кошерность зависит от продукта и кухни; HoT не сертифицирует, метка значит «в рецепте нет запрещённого и мясо не смешано с молочным»"}
+  - {id: gluten_free,  ru: "Без глютена",          exclude_allergens: [gluten], may_contain: excluded}
+  - {id: no_pork,      ru: "Без свинины",          exclude_origins: [meat_pork]}
+  - {id: no_beef,      ru: "Без говядины",         exclude_origins: [meat_beef]}
+  - {id: no_alcohol,   ru: "Без алкоголя",         exclude_origins: [alcohol], rules: {hide_alcohol_hints: true}}
+# Diets combine (vegan + gluten_free; halal + no_beef). Exclusions are unions. Ketogenic, carnivore,
+# very-low-calorie, fasting diets are NOT in the list: they are not lifestyle presets here (Agent 3 veto, A19 §7).
+
+# Dislikes are soft: they lower the score, never break a filter.
+dislikes: {max: 20, note_ru: "Не люблю: до 20 продуктов из components.yaml; влияет на выбор, а не на безопасность"}
+
+# ---------------------------------------------------------------------------
+# 4. Physiology (физиологические особенности). Optional; derived from data first (D-027).
+# ---------------------------------------------------------------------------
+physiology:
+  - {id: age_band,       ru: "Возраст",              values: [under_18, "18_39", "40_59", "60_plus"], source: "онбординг", gate: {under_18: no_program}}
+  - {id: body_mass_kg,   ru: "Вес, кг (по желанию)", type: number, source: "WHOOP профиль или ручной ввод", used_for: "белок г/кг на уровнях «Опора» и «Точность»; без веса — порции ладонью", hidden_when: [ed_history, ed_signals]}
+  - {id: height_cm,      ru: "Рост (по желанию)",    type: number, source: "WHOOP профиль", used_for: "ничего в питании; только камера-трафарет (A37 §7)"}
+  - {id: sex_for_ref,    ru: "Пол для справочных диапазонов", values: [female, male, not_said], used_for: "справочные диапазоны железа и т. п. — только текст, без норм"}
+  - {id: menstrual_cycle, ru: "Отмечаю цикл",        type: boolean, used_for: "сигнал «пропал цикл на фоне нагрузки» → маршрут к врачу (A19 §6.3, REDs)"}
+  - {id: shift_work,     ru: "Сменная / ночная работа", type: boolean, used_for: "шаблоны дня от якорей сна, а не от часов (A09 §7a)"}
+  - {id: chewing_swallowing, ru: "Трудно жевать или глотать", type: boolean, filter: {prefer_tags: [soft]}, medical_route: true}
+
+# Life stages with their own rules (gates). No programs for these groups — safe mode + specialist.
+life_stage:
+  - {id: pregnancy,     ru: "Беременность",           mode: safe, nutrition: {max_level: base, forbid_methods: [tre_12, tre_window_8_10, carb_periodization, macro_ranges, protein_g_per_kg], add_hints: [H-PREG]}, training: {program: none, route: doctor}}
+  - {id: lactation,     ru: "Кормление грудью",       mode: safe, nutrition: {max_level: base, forbid_methods: [tre_12, tre_window_8_10, carb_periodization, macro_ranges], add_hints: [H-LACT]}, training: {route: doctor}}
+  - {id: postpartum_6m, ru: "Роды за последние 6 мес", mode: safe, nutrition: {max_level: base}, training: {program: none, route: doctor}}
+
+# ---------------------------------------------------------------------------
+# 5. Injuries and movement limits — for TRAINING (A40). Nutrition ignores them.
+#    The training engine maps them to exercise exclusions; ids are shared so one profile serves both.
+# ---------------------------------------------------------------------------
+injury_regions: [neck, shoulder, elbow, wrist_hand, upper_back, lower_back, hip, knee, ankle_foot]
+injury_status:  [acute, recovering, chronic_stable]    # acute → no training of the region + doctor/physio route
+movement_limits:
+  - {id: no_impact,          ru: "Без прыжков и ударной нагрузки"}
+  - {id: no_overhead,        ru: "Без движений над головой"}
+  - {id: no_deep_knee_flexion, ru: "Без глубоких приседаний"}
+  - {id: no_loaded_spinal_flexion, ru: "Без нагруженных наклонов"}
+  - {id: no_floor_work,      ru: "Без упражнений лёжа на полу"}
+  - {id: no_high_intensity,  ru: "Без высокой интенсивности (интервалы, RPE > 7)"}
+  - {id: no_breath_hold,     ru: "Без задержки дыхания и натуживания"}
+screening: {ref: "A19 §6.1 S1–S9", note_ru: "Любое «да» → щадящий режим тренировок до отметки «врач разрешил нагрузки»"}
+
+# ---------------------------------------------------------------------------
+# 6. Medical flags — what the user TELLS us. Never inferred, never named as a diagnosis by the product.
+#    Effect: safe mode. No prescriptions, no therapeutic diets, «обсуди с врачом» (Agent 3, CLAUDE.md).
+# ---------------------------------------------------------------------------
+medical_flags:
+  - id: ed_history
+    ru: "Расстройство пищевого поведения сейчас или раньше"
+    mode: ed_care                     # A09 flag ED_CARE
+    nutrition: {max_level: base, hide_numbers: true, forbid_methods: [tre_12, tre_window_8_10, macro_ranges, protein_g_per_kg, carb_periodization, energy_reference], photo_feedback: off_by_default, add_hints: [H-ED]}
+    training: {no_extra_sessions: true, hide_calorie_burn: true}
+    route: agent10_and_specialist     # A19 §6.3, A07
+  - id: diabetes
+    ru: "Диабет (любой тип) или преддиабет под наблюдением врача"
+    mode: safe
+    nutrition: {max_level: structured, forbid_methods: [tre_12, tre_window_8_10, carb_periodization, energy_reference], add_hints: [H-MED]}
+    training: {route: doctor_before_intensity}
+    note_ru: "Инсулин и сахароснижающие меняют реакцию на голод, углеводы и нагрузку — схему питания ведёт врач"
+  - id: kidney
+    ru: "Болезнь почек"
+    mode: safe
+    nutrition: {max_level: base, forbid_methods: [protein_g_per_kg, macro_ranges, protein_distribution, tre_12, tre_window_8_10], add_hints: [H-MED]}
+    note_ru: "Норма белка и соли при болезни почек — только от врача; подсказки «больше белка» скрыты"
+  - id: celiac
+    ru: "Целиакия"
+    mode: filter_only
+    implies_diet: [gluten_free]
+    nutrition: {may_contain_gluten: excluded, add_hints: [H-MED]}
+  - id: heart_bp_meds
+    ru: "Болезнь сердца или давление на лекарствах"
+    mode: safe
+    nutrition: {forbid_methods: [tre_window_8_10], caffeine_hints: neutral_only, add_hints: [H-MED]}
+    training: {route: doctor_before_intensity}
+  - id: gi_disease
+    ru: "Хроническая болезнь ЖКТ (например, воспалительная болезнь кишечника)"
+    mode: safe
+    nutrition: {max_level: base, forbid_methods: [tre_12, tre_window_8_10, fiber_plants], add_hints: [H-MED]}
+  - id: bariatric
+    ru: "Операция на желудке (бариатрическая)"
+    mode: safe
+    nutrition: {max_level: base, forbid_methods: [hand_portions, tre_12, tre_window_8_10], add_hints: [H-MED]}
+  - id: anticoagulants
+    ru: "Принимаю антикоагулянты"
+    mode: filter_only
+    nutrition: {add_hints: [H-MED], note_ru: "Резкие перемены в зелени и добавках — обсудить с врачом; продукт не меняет зелень в плане сам"}
+  - id: other_chronic
+    ru: "Другое хроническое состояние, которое врач связывал с едой"
+    mode: safe
+    nutrition: {max_level: base, forbid_methods: [tre_12, tre_window_8_10, energy_reference], add_hints: [H-MED]}
+  - id: underweight_reported
+    ru: "Врач говорил о недостатке веса"
+    mode: ed_care_light
+    nutrition: {hide_numbers: true, forbid_methods: [tre_12, tre_window_8_10, energy_reference], add_hints: [H-MED]}
+
+# Signals that switch ed_care on WITHOUT the user ticking a box (A19 §6.3): SCOFF ≥ 2, N19 two weeks,
+# words from the stop list in chat, BMI < 18.5 if the user gave weight and height, lost period with high load.
+ed_signals_ref: "A19 §6.3; A41 §6.4"
+
+# ---------------------------------------------------------------------------
+# 7. Storage and consent (Agent 7). Allergies, intolerances, diets with religious meaning,
+#    physiology, life stage and medical flags are health data (and, for halal/kosher, may reveal religion).
+# ---------------------------------------------------------------------------
+storage:
+  class: S4                       # A25 §6: SQLCipher on the phone, not in logs/analytics/pushes/widgets
+  location: device_only
+  cloud_sync: separate_opt_in
+  to_llm: codes_only              # Claude gets exclusion codes (e.g. [peanut, tree_nut], vegan), never medical flag names: only `safe_mode: true`
+  consent: separate_explicit      # one screen, per category, before the first field; WA MHMDA / GDPR art. 9 style
+  delete: per_category_and_all
+  export: included_unless_excluded
+  disclaimer_ru: "HoT подбирает блюда без отмеченных тобой аллергенов по составу рецепта. Мы не знаем, как готовят в конкретном кафе и что на упаковке: всегда проверяй этикетку. При тяжёлой реакции держи при себе то, что назначил врач."

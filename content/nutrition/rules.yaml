@@ -1,0 +1,198 @@
+# Nutrition rules (правила связи с показателями и тренировками) — layer 4→7 modifiers (A41 §8).
+# Engine: :domain:engine, pure functions, no network, no LLM (ADR-14, A09 §5). Order = priority:
+# the first rule that caps or hides wins over anything below it (safety → regime → load → context → habits).
+# A19 N01–N20 stay valid and are referenced by id (`a19:`); this file adds the links to regime, load, sleep.
+# Medical content: Agent 3 (veto). Wording: Agent 10. Brands only as examples of places: Agent 7.
+version: 1
+reviewedBy: []
+status: draft
+ruleSet: nutrition
+
+# Facts the engine reads. class = sensitivity (A25 §6). Nutrition reads training facts, never writes them.
+facts:
+  - {id: day.regime,               type: enum, values: [razgon, ravno, berezhno], source: "A09 §2 DayState.regime", class: S3}
+  - {id: day.flags,                type: set,  values: [SICK, EMERGENCY, CARE, ED_CARE, TRAVEL, RETURN, LIGHT_WEEK, CALIBRATION, DATA_LIMITED, SEE_SPECIALIST], source: "A09 §2", class: S3}
+  - {id: sleep.hours,              type: number, source: "WHOOP", class: S3}
+  - {id: anchors.wake,             type: time, source: "A09 §7a", class: S3}
+  - {id: anchors.lights_out,       type: time, source: "A09 §7a", class: S3}
+  - {id: whoop.strain_z_yesterday, type: number, source: "A25 TRL z of yesterday", class: S3}
+  - {id: training.level,           type: enum, values: [classic, advanced, extreme], source: "A40 (training system)", class: S3}
+  - {id: training.today.load,      type: enum, values: [rest, light, moderate, hard, long], source: "A40 plan, then WHOOP fact", class: S3}
+  - {id: training.today.start,     type: time, source: "A40 plan / calendar / WHOOP", class: S3}
+  - {id: training.today.duration_min, type: integer, source: "A40 plan / WHOOP", class: S3}
+  - {id: training.tomorrow.load,   type: enum, values: [rest, light, moderate, hard, long], source: "A40 plan", class: S3}
+  - {id: context.heat,             type: boolean, source: "погода ≥ 28 °C в часы тренировки (телефон)", class: S1}
+  - {id: context.calendar_dense,   type: boolean, source: "календарь: нет окна ≥ 30 мин между 11:00 и 15:00", class: S3}
+  - {id: journal.missed_meals_7d,  type: integer, source: "вечерняя отметка «пропустил приём» (A19 §5)", class: S3}
+  - {id: journal.plate_share_7d,   type: number, source: "доля приёмов «по тарелке» (A25 FUEL ①)", class: S3}
+  - {id: journal.alcohol_yesterday, type: integer, source: "порции, вечерняя отметка", class: S4}
+  - {id: trl.above_norm_days_7d,   type: integer, source: "A25 TRL", class: S3}
+  - {id: profile.level,            type: enum, values: [base, structured, precise], source: "выбор пользователя (A41 §4)", class: S3}
+  - {id: profile.mode,             type: enum, values: [normal, safe, ed_care, filter_only], source: "constraints.yaml → свёртка флагов", class: S4}
+  - {id: profile.body_mass_kg,     type: number, source: "WHOOP профиль / ручной ввод", class: S3}
+  - {id: profile.caffeine_sensitive, type: boolean, source: "constraints.yaml intolerances", class: S4}
+  - {id: profile.cycle_lost,       type: boolean, source: "отметка цикла (по желанию)", class: S4}
+
+# Closed list of effects (check_nutrition.py validates `then:` keys against it).
+effects: [overlay, cap_level, hide_numbers, forbid_method, set_plate, starch_hands_delta, add_slot, prefer_meal_tags, hint, route, caffeine_cutoff, suggest_level, fallback]
+
+rules:
+  # ---------------------------------- 1. Safety and profile (always first) ----------------------------------
+  - id: NR-01
+    when: "profile.mode == 'ed_care' or 'ED_CARE' in day.flags"
+    then: {overlay: OV-ed-care, cap_level: base, hide_numbers: true, route: agent10}
+    why_ru: "Еда здесь — забота, а не задача. Цифры спрятаны, план простой."
+    evidence: "A (консенсус) — A19 §6.3"
+  - id: NR-02
+    when: "profile.mode == 'safe'"
+    then: {overlay: OV-safe, hint: H-MED}
+    why_ru: "Под твои особенности план собирается в безопасном режиме. Схему питания при этом состоянии ведёт врач."
+    evidence: "D — CLAUDE.md, A19 §7"
+  - id: NR-03
+    when: "'SICK' in day.flags"
+    then: {overlay: OV-sick, hint: H-SICK}
+    why_ru: "Когда болеешь, главное — пить и есть то, что легко идёт."
+    evidence: "C/D"
+  - id: NR-04
+    when: "profile.cycle_lost and trl.above_norm_days_7d >= 3"
+    then: {route: doctor, hint: H-REDS}
+    why_ru: "Цикл может сбиваться, когда еды не хватает под нагрузку. Это повод показаться врачу."
+    evidence: "A (консенсус REDs) — A19 K13"
+
+  # ---------------------------------- 2. Regime of the day (A09) ----------------------------------
+  - id: NR-10
+    when: "day.regime == 'berezhno'"
+    then: {overlay: OV-gentle}
+    why_ru: "Бережный день: три приёма без пропусков, простая еда. Урезать еду сегодня не нужно."
+    evidence: "A (REDs) / C"
+  - id: NR-11
+    when: "day.regime == 'razgon' and training.today.load in ['hard', 'long']"
+    then: {set_plate: {post_training: hard}, add_slot: pre_training}
+    why_ru: "Сегодня тело готово к работе — дай ему топливо до и после."
+    evidence: "A (консенсус) — Thomas 2016"
+  - id: NR-12
+    when: "'LIGHT_WEEK' in day.flags"
+    then: {hint: H-LIGHTWEEK}
+    why_ru: "Лёгкая неделя — это меньше нагрузки, а не меньше еды. Белок тот же."
+    evidence: "A (REDs)"
+
+  # ---------------------------------- 3. Sleep ----------------------------------
+  - id: NR-20
+    when: "sleep.hours < 6"
+    then: {hint: N05, prefer_meal_tags: {breakfast: [after_short_sleep, gentle]}}
+    why_ru: "После короткой ночи тянет к сладкому — это нормально. Начни с белка."
+    evidence: "A — Al Khatib 2017 (A19 K16)"
+    a19: N05
+  - id: NR-21
+    when: "true"
+    then: {caffeine_cutoff: "anchors.lights_out - 9h (- 11h if profile.caffeine_sensitive)"}
+    why_ru: "Кофейный рубеж считается от твоего отбоя."
+    evidence: "B — Drake 2013 (A19 K19)"
+    a19: N17
+
+  # ---------------------------------- 4. Training load (A40 contract) ----------------------------------
+  - id: NR-30
+    when: "training.today.start - now <= 60min and training.today.load != 'rest'"
+    then: {add_slot: pre_training, prefer_meal_tags: {pre_training: [pre_training, quick]}}
+    why_ru: "До тренировки меньше часа — что-то лёгкое: банан, йогурт, хлебец."
+    evidence: "A (консенсус)"
+    a19: N07
+  - id: NR-31
+    when: "training.today.load != 'rest'"
+    then: {add_slot: post_training}
+    why_ru: "В ближайший приём после тренировки — белок и крупа или фрукт. Спешить в «окно 30 минут» не нужно."
+    evidence: "A / B — Schoenfeld 2013 (A19 K17)"
+    a19: N08
+  - id: NR-32
+    when: "training.today.duration_min >= 75 and profile.level != 'base'"
+    then: {add_slot: during_training}
+    why_ru: "Длинная сессия: возьми с собой финики, банан или спортивный напиток."
+    evidence: "A (консенсус) — Jeukendrup 2014"
+  - id: NR-33
+    when: "context.heat or training.today.duration_min >= 60"
+    then: {hint: N09}
+    why_ru: "Пей по жажде во время и после; после долгой потной тренировки — вода и солёная еда."
+    evidence: "B / C"
+    a19: N09
+  - id: NR-34
+    when: "training.tomorrow.load in ['hard', 'long'] and profile.level == 'structured'"
+    then: {starch_hands_delta: {dinner: 1}, hint: H-FUEL-TOMORROW}
+    why_ru: "Завтра тяжёлая тренировка — сегодня к ужину лишняя горсть крупы или картофеля."
+    evidence: "A (консенсус) — Burke 2011"
+  - id: NR-35
+    when: "training.tomorrow.load == 'long' and profile.level == 'precise'"
+    then: {set_plate: {dinner: hard}, prefer_meal_tags: {dinner: [tomorrow_long, fuel]}, hint: H-FUEL-TOMORROW}
+    why_ru: "Завтра длинная сессия — ужин с двойной порцией крупы."
+    evidence: "A (консенсус) — Burke 2011"
+  - id: NR-36
+    when: "whoop.strain_z_yesterday >= 1 and training.today.load in ['rest', 'light']"
+    then: {set_plate: {breakfast: moderate, lunch: moderate}}
+    why_ru: "Вчера нагрузка была выше твоей нормы — сегодня восполняем, а не урезаем."
+    evidence: "A (консенсус) / C (порог)"
+  - id: NR-37
+    when: "training.today.start + training.today.duration_min >= anchors.lights_out - 2h"
+    then: {set_plate: {dinner: moderate}, hint: H-LATE-TRAINING}
+    why_ru: "Поздняя тренировка: ужин и восстановление — один приём, белок и крупа, полегче с жирным."
+    evidence: "C — A19 N15; Stutz 2019 (A19 K12)"
+
+  # ---------------------------------- 5. Context ----------------------------------
+  - id: NR-40
+    when: "'TRAVEL' in day.flags"
+    then: {overlay: OV-travel}
+    why_ru: "В дороге: запас с собой, еда по местному времени."
+    evidence: "C / D"
+    a19: N13
+  - id: NR-41
+    when: "context.calendar_dense"
+    then: {overlay: OV-no-time}
+    why_ru: "День плотный — обед, который собирается за 5 минут или берётся по дороге."
+    evidence: "D"
+    a19: N14
+  - id: NR-42
+    when: "journal.alcohol_yesterday >= 2"
+    then: {hint: N18, prefer_meal_tags: {breakfast: [gentle]}}
+    why_ru: "Вода и обычный завтрак с белком. Это просто информация для сегодняшнего плана."
+    evidence: "B / D"
+    a19: N18
+
+  # ---------------------------------- 6. Habits and history ----------------------------------
+  - id: NR-50
+    when: "journal.missed_meals_7d >= 3 and trl.above_norm_days_7d >= 3"
+    then: {add_slot: snack, hint: N19}
+    why_ru: "Похоже, еды может не хватать под твою нагрузку. Добавим один перекус с белком."
+    evidence: "A (консенсус REDs)"
+    a19: N19
+  - id: NR-51
+    when: "NR-50 fired on >= 10 of last 14 days"
+    then: {route: agent10_and_doctor}
+    why_ru: "Это повторяется две недели — стоит обсудить со специалистом."
+    evidence: "A (консенсус REDs)"
+  - id: NR-52
+    when: "journal.plate_share_7d < 0.5 and profile.mode == 'normal'"
+    then: {hint: H-ONE-STEP}
+    why_ru: "Одна маленькая добавка на неделю: овощ или белок в один приём, который тебе проще всего."
+    evidence: "C — мотивационное интервьюирование (A26 §4)"
+  - id: NR-53
+    when: "training.level == 'extreme' and profile.level == 'base' and not shown_in_last_30d"
+    then: {suggest_level: structured}
+    why_ru: "Под твою нагрузку может подойти «Опора» — тарелки по дням и еда вокруг тренировок. Только если хочешь."
+    evidence: "A (консенсус) — Thomas 2016"
+  - id: NR-54
+    when: "profile.level != 'base' and profile.body_mass_kg is null"
+    then: {fallback: hands_instead_of_grams}
+    why_ru: "Без веса считаем ладонями — этого достаточно."
+    evidence: "C"
+
+# User-facing hint texts used above (H-*). A19 N01–N20 texts live in A19 §4 and are copied here by Agent 13.
+hints:
+  H-ED:            "Сегодня без цифр. Ешь регулярно то, что тебе подходит. Если с едой сейчас непросто — можно поговорить, и есть специалисты, которые помогают именно с этим."
+  H-MED:           "План собран в безопасном режиме под твои особенности. Что и сколько есть при твоём состоянии, лучше обсудить с врачом — можем подготовить вопросы к визиту."
+  H-PREG:          "Во время беременности HoT показывает только общие привычки: регулярные приёмы, вода, овощи. Питание сейчас лучше вести с врачом."
+  H-LACT:          "Пока кормишь грудью, еды и воды нужно больше обычного. Мы не урезаем и не считаем — подробности лучше обсудить с врачом."
+  H-GENTLE:        "Бережный день: три приёма, простая еда, вода. Урезать сегодня не нужно."
+  H-SICK:          "Пей тёплое, ешь то, что легко идёт: суп, рис, бананы. Если держится температура или не можешь пить — к врачу."
+  H-REDS:          "Когда еды меньше, чем нужно под нагрузку, тело может давать сигналы — например, сбивается цикл. Покажись врачу; до тех пор нагрузка без увеличения."
+  H-LIGHTWEEK:     "Лёгкая неделя — меньше нагрузки, а не меньше еды."
+  H-FUEL-TOMORROW: "Завтра тяжёлая тренировка — сегодня к ужину немного больше крупы или картофеля."
+  H-LATE-TRAINING: "Поздняя тренировка: ужин после неё — белок и крупа, полегче с жирным и острым."
+  H-ONE-STEP:      "Выбери один приём на неделю, куда проще всего добавить овощ или белок."

@@ -1,0 +1,180 @@
+# Day templates (шаблоны дня) — layer 4 of the configurator (A41 §7). Schema: SCHEMA.md §4.
+# A template = level × load class of the day (from training, A40) → meal slots with plates and time anchors.
+# The regime (Разгон / Ровно / Бережно), sleep and flags are applied after this, by rules.yaml.
+# Times are anchors, not clock values: relative to wake, lights-out (A09 §7a) and the training session.
+version: 1
+reviewedBy: []
+status: draft
+
+# Plates: share of the plate by role (sums to 1.0) and hand portions for one main meal.
+# `base` is the A19 N01 plate. easy/moderate/hard follow the USOPC/UCCS Athlete's Plate idea (A41 §5.1).
+# Protein stays the same on every plate: the load changes starch and fruit, not protein (Thomas 2016).
+plates:
+  base:     {ru: "Тарелка",          share: {veg: 0.50, protein: 0.25, starch: 0.25}, hands: {protein: 1, starch: 1, veg: 2, fat: 1}}
+  easy:     {ru: "Лёгкий день",      share: {veg: 0.50, protein: 0.25, starch: 0.20, fat: 0.05}, hands: {protein: 1, starch: 0.5, veg: 2, fat: 1}}
+  moderate: {ru: "Рабочий день",     share: {veg: 0.40, protein: 0.25, starch: 0.30, fat: 0.05}, hands: {protein: 1, starch: 1, veg: 1.5, fat: 1}}
+  hard:     {ru: "Тяжёлый день",     share: {veg: 0.25, protein: 0.25, starch: 0.45, fat: 0.05}, hands: {protein: 1, starch: 2, veg: 1, fat: 1}}
+  snack:    {ru: "Перекус",          share: {protein: 0.50, starch: 0.50}, hands: {protein: 0.5, starch: 0.5}}
+
+slots:
+  - {id: breakfast,       ru: "Завтрак",            anchor: "wake + 0:30…1:30"}
+  - {id: lunch,           ru: "Обед",               anchor: "середина бодрствования ± 1:00"}
+  - {id: snack,           ru: "Перекус",            anchor: "между приёмами, если голоден или до приёма > 5 ч"}
+  - {id: pre_training,    ru: "Перед тренировкой",  anchor: "session.start − 1:00…3:00 (обычный приём) или − 0:30…1:00 (лёгкий)"}
+  - {id: during_training, ru: "Во время",           anchor: "session.duration ≥ 75 мин"}
+  - {id: post_training,   ru: "После тренировки",   anchor: "session.end + 0:00…2:00 — ближайший приём"}
+  - {id: dinner,          ru: "Ужин",               anchor: "lights_out − 3:00…2:00"}
+  - {id: evening_snack,   ru: "Если голоден вечером", anchor: "lights_out − 2:00…1:00", optional: true}
+
+# Load class of the day comes from the training system (A40 contract, A41 §8.2):
+# rest | light (mobility, walk, Zone 2 < 45 min) | moderate (strength or Zone 2 45–75 min) |
+# hard (intervals, strength RPE ≥ 8, or WHOOP strain above personal norm) | long (≥ 90 min).
+load_classes: [rest, light, moderate, hard, long]
+
+templates:
+  # ------------------------------ «Основа»: one plate, three meals, no numbers ------------------------------
+  - id: TD-base-day
+    level: base
+    load: [rest, light, moderate]
+    ru: "Обычный день"
+    slots:
+      - {slot: breakfast, plate: base}
+      - {slot: lunch,     plate: base}
+      - {slot: snack,     plate: snack, optional: true}
+      - {slot: dinner,    plate: base}
+    methods: [plate, hand_portions, protein_each_meal, fiber_plants, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals, mindful_hunger, less_upf]
+  - id: TD-base-training
+    level: base
+    load: [hard, long]
+    ru: "День с тренировкой"
+    slots:
+      - {slot: breakfast,     plate: base}
+      - {slot: lunch,         plate: base}
+      - {slot: pre_training,  plate: snack, optional: true}
+      - {slot: post_training, plate: base, merge_with_next_meal: true}
+      - {slot: dinner,        plate: base}
+    methods: [plate, hand_portions, protein_each_meal, fiber_plants, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals, mindful_hunger]
+
+  # ------------------------------ «Опора»: plates by load, timing around training ------------------------------
+  - id: TD-str-rest
+    level: structured
+    load: [rest, light]
+    ru: "Лёгкий день"
+    slots:
+      - {slot: breakfast, plate: easy}
+      - {slot: lunch,     plate: easy}
+      - {slot: snack,     plate: snack, optional: true}
+      - {slot: dinner,    plate: easy}
+      - {slot: evening_snack, plate: snack, optional: true}
+    methods: [athlete_plates, protein_distribution, hand_portions, fiber_plants, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals, mindful_hunger]
+  - id: TD-str-moderate
+    level: structured
+    load: [moderate]
+    ru: "Рабочий день"
+    slots:
+      - {slot: breakfast,     plate: moderate}
+      - {slot: lunch,         plate: moderate}
+      - {slot: pre_training,  plate: snack, optional: true}
+      - {slot: post_training, plate: moderate, merge_with_next_meal: true}
+      - {slot: dinner,        plate: moderate}
+    methods: [athlete_plates, peri_workout_timing, protein_distribution, hand_portions, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals]
+  - id: TD-str-hard
+    level: structured
+    load: [hard, long]
+    ru: "Тяжёлый день"
+    slots:
+      - {slot: breakfast,       plate: moderate}
+      - {slot: lunch,           plate: hard}
+      - {slot: pre_training,    plate: snack}
+      - {slot: during_training, plate: snack, when: "session.duration_min >= 75"}
+      - {slot: post_training,   plate: hard, merge_with_next_meal: true}
+      - {slot: dinner,          plate: moderate}
+      - {slot: evening_snack,   plate: snack, optional: true}
+    methods: [athlete_plates, peri_workout_timing, protein_distribution, sodium_sweat, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals]
+
+  # ------------------------------ «Точность»: periodised carbs, optional ranges ------------------------------
+  - id: TD-pre-rest
+    level: precise
+    load: [rest]
+    ru: "День отдыха"
+    slots:
+      - {slot: breakfast, plate: easy}
+      - {slot: lunch,     plate: easy}
+      - {slot: snack,     plate: snack, optional: true}
+      - {slot: dinner,    plate: easy}
+      - {slot: evening_snack, plate: snack, optional: true}
+    carbs_g_per_kg: [3, 5]
+    methods: [carb_periodization, protein_distribution, protein_g_per_kg, macro_ranges, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals]
+  - id: TD-pre-light
+    level: precise
+    load: [light]
+    ru: "Лёгкая нагрузка"
+    slots:
+      - {slot: breakfast, plate: easy}
+      - {slot: lunch,     plate: moderate}
+      - {slot: snack,     plate: snack, optional: true}
+      - {slot: dinner,    plate: easy}
+    carbs_g_per_kg: [3, 5]
+    methods: [carb_periodization, protein_distribution, protein_g_per_kg, macro_ranges, peri_workout_timing, hydration_cues, caffeine_cutoff, late_meal_gap]
+  - id: TD-pre-moderate
+    level: precise
+    load: [moderate]
+    ru: "Рабочая нагрузка"
+    slots:
+      - {slot: breakfast,     plate: moderate}
+      - {slot: lunch,         plate: moderate}
+      - {slot: pre_training,  plate: snack, optional: true}
+      - {slot: post_training, plate: moderate, merge_with_next_meal: true}
+      - {slot: dinner,        plate: moderate}
+      - {slot: evening_snack, plate: snack, optional: true}
+    carbs_g_per_kg: [5, 7]
+    methods: [carb_periodization, peri_workout_timing, protein_distribution, protein_g_per_kg, macro_ranges, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals]
+  - id: TD-pre-hard
+    level: precise
+    load: [hard]
+    ru: "Тяжёлая нагрузка"
+    slots:
+      - {slot: breakfast,     plate: moderate}
+      - {slot: lunch,         plate: hard}
+      - {slot: pre_training,  plate: snack}
+      - {slot: post_training, plate: hard, merge_with_next_meal: true}
+      - {slot: dinner,        plate: moderate}
+      - {slot: evening_snack, plate: snack, optional: true}
+    carbs_g_per_kg: [6, 8]
+    methods: [carb_periodization, peri_workout_timing, protein_distribution, protein_g_per_kg, macro_ranges, sodium_sweat, hydration_cues, caffeine_cutoff, late_meal_gap, regular_meals]
+  - id: TD-pre-long
+    level: precise
+    load: [long]
+    ru: "Длинная сессия"
+    slots:
+      - {slot: breakfast,       plate: hard}
+      - {slot: pre_training,    plate: snack}
+      - {slot: during_training, plate: snack}
+      - {slot: post_training,   plate: hard, merge_with_next_meal: true}
+      - {slot: lunch,           plate: hard}
+      - {slot: dinner,          plate: moderate}
+      - {slot: evening_snack,   plate: snack, optional: true}
+    carbs_g_per_kg: [7, 10]
+    methods: [carb_periodization, during_training_carbs, peri_workout_timing, protein_distribution, protein_g_per_kg, macro_ranges, sodium_sweat, hydration_cues, caffeine_cutoff, regular_meals]
+
+# Overlays: applied on top of any template by flags (rules.yaml decides when). They only make the day
+# simpler or safer; an overlay never raises a level, a plate or a number.
+overlays:
+  - id: OV-gentle
+    ru: "Бережно"
+    effect: {plate_cap: moderate, prefer_tags: [gentle, soft, quick], keep_slots: [breakfast, lunch, dinner], forbid_skip: true, hint: H-GENTLE}
+  - id: OV-sick
+    ru: "Болею"
+    effect: {plate: easy, prefer_tags: [sick_day, soft], hint: H-SICK, numbers: hide}
+  - id: OV-travel
+    ru: "В дороге"
+    effect: {prefer_context: [travel, airport, fastfood, restaurant], hint: N13}
+  - id: OV-no-time
+    ru: "Нет времени"
+    effect: {max_prep_min: 10, prefer_tags: [no_time, quick, ready], hint: N14}
+  - id: OV-ed-care
+    ru: "Бережный режим еды"
+    effect: {level: base, numbers: hide, photo_feedback: off, hide_metrics: [FUEL_numbers], hint: H-ED}
+  - id: OV-safe
+    ru: "Безопасный режим (медицинский флаг)"
+    effect: {level_cap_from_profile: true, numbers: hide_unless_allowed, hint: H-MED}

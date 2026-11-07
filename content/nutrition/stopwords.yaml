@@ -1,0 +1,79 @@
+# Nutrition stop dictionary («не говорим»), see SCHEMA.md §7 and A41 §6.
+# Used by scripts/check_nutrition.py for every user-facing text: meals, components, rules (why_ru, hints),
+# templates, methods (except the `excluded:` list, which names what we do NOT do) and generated meals.
+# Patterns are Python regexes over normalized text (lower case, «ё» → «е»), wrapped in Russian word boundaries.
+# errors → rejected; warnings → allowed, a human (Agent 10 / 3) reads them before release.
+# Shame and body words: Agent 10. Medical words and doses: Agent 3.
+version: 1
+reviewedBy: []
+status: draft
+
+errors:
+  miracle_diets:            # «диеты-чудеса»
+    - "детокс.*"
+    - "очищени.*"
+    - "очища.*"
+    - "шлак.*"
+    - "суперфуд.*"
+    - "жиросжиг.*"
+    - "сжига(ет|ют|ющ.*) жир.*"
+    - "чудо.*"
+    - "чудесн.*"
+    - "волшебн.*"
+    - "магическ.*"
+    - "похуд.*"
+    - "ускор(ить|яет|яют|ение) метаболизм.*"
+    - "щелочн.*"
+    - "чист(ая|ой|ую|ое|ые) (еда|еды|еду|питани.*)"
+    - "читмил.*"
+    - "минус \\d+ ?кг"
+    - "сбрось.*"
+    - "сбросить.*"
+  shame_and_body:           # стыд и оценка тела
+    - "вредн.*"
+    - "запрещенн.*"
+    - "срыв.*"
+    - "сорвал.*"
+    - "грех.*"
+    - "грешн.*"
+    - "вин(а|у|ы|ой)"
+    - "виноват.*"
+    - "заслуж.*"
+    - "отработ.*"
+    - "сжечь"
+    - "сжигать"
+    - "лишн(ий|его|ие|их) (вес.*|килограмм.*|кг)"
+    - "толст.*"
+    - "худ(ой|ая|ые|ым|еть|еешь)"
+    - "стройн.*"
+    - "фигур.*"
+    - "пляжн.*"
+    - "идеальн.* тел.*"
+    - "некрасив.*"
+    - "слабак.*"
+    - "сила воли"
+    - "позор.*"
+    - "стыдн.*"
+  medical_and_dose:         # диагнозы, лечение, дозы (вето A19 №3)
+    - "лечит.*"
+    - "лечебн.*"
+    - "вылеч.*"
+    - "излеч.*"
+    - "диагноз.*"
+    - "назнача.*"
+    - "дозировк.*"
+    - "\\d+ ?мг"
+    - "предотвраща.*"
+    - "профилактик.*"
+    - "иммунитет.*"
+    - "гормон.*"
+
+warnings:
+  - "калори.*"
+  - "ккал"
+  - "диет.*"
+  - "вес"
+  - "дефицит.*"
+  - "голодан.*"
+  - "контрол.*"
+  - "нельзя"

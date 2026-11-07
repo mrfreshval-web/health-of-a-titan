@@ -1,0 +1,701 @@
+# Meal library (блюда и тарелки) — layer 6 of the configurator (A41 §7). Schema: SCHEMA.md §3.
+# `components` reference components.yaml; `n` = hand portions for the «рабочая» (moderate) plate.
+# The engine rescales starch/fruit by the plate of the day (templates.yaml → plates) and never touches safety.
+# `allergens`, `may_contain`, `diets` are DECLARED for people to read; check_nutrition.py derives them from
+# components and fails on any mismatch, so a typo can never hide an allergen.
+# Ids are stable forever: never renumber or reuse; retire with `retired: true`.
+# Brands appear only as examples of places (A19 §7, Agent 7), never as advertising.
+version: 1
+reviewedBy: []
+status: draft
+
+meals:
+  # ======================= breakfast =======================
+  - id: M001
+    ru: "Овсянка с ягодами и греческим йогуртом"
+    levels: [base, structured, precise]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: oats, n: 1}, {c: berries, n: 1}, {c: greek_yogurt, n: 1}, {c: chia, n: 0.5}]
+    context: [home]
+    prep_min: 5
+    swaps: {greek_yogurt: [soy_yogurt, skyr], oats: [oats_gf, quinoa]}
+    tags: [quick]
+    allergens: [milk]
+    may_contain: [gluten]
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M002
+    ru: "Творог с яблоком и грецкими орехами"
+    levels: [base, structured, precise]
+    slots: [breakfast, snack]
+    plate: easy
+    components: [{c: tvorog, n: 1}, {c: apple, n: 1}, {c: walnuts, n: 0.5}]
+    context: [home, office]
+    prep_min: 3
+    swaps: {walnuts: [pumpkin_seeds], tvorog: [soy_yogurt]}
+    tags: [russian_classic, quick]
+    allergens: [milk, tree_nut]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M003
+    ru: "Омлет со шпинатом и ржаным хлебом"
+    levels: [base, structured, precise]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: egg, n: 1}, {c: spinach, n: 1}, {c: tomato, n: 1}, {c: rye_bread, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 10
+    swaps: {rye_bread: [bread_gf, potato], egg: [tofu]}
+    tags: []
+    allergens: [egg, gluten]
+    may_contain: [sesame, wheat]
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M004
+    ru: "Сырники со сметаной и ягодами"
+    levels: [base, structured]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: syrniki, n: 1}, {c: sour_cream, n: 0.5}, {c: berries, n: 1}]
+    context: [home]
+    prep_min: 20
+    swaps: {}
+    tags: [russian_classic, weekend]
+    allergens: [egg, gluten, milk, wheat]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M005
+    ru: "Скир с бананом и семечками"
+    levels: [base, structured, precise]
+    slots: [breakfast, snack, pre_training]
+    plate: moderate
+    components: [{c: skyr, n: 1}, {c: banana, n: 1}, {c: pumpkin_seeds, n: 0.5}]
+    context: [home, office, travel]
+    prep_min: 2
+    swaps: {skyr: [soy_yogurt, greek_yogurt]}
+    tags: [quick]
+    allergens: [milk]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M006
+    ru: "Тост с авокадо и яйцами"
+    levels: [base, structured, precise]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: bread_wholegrain, n: 1}, {c: avocado, n: 0.5}, {c: egg, n: 1}, {c: tomato, n: 1}]
+    context: [home, restaurant]
+    prep_min: 10
+    swaps: {bread_wholegrain: [bread_gf], egg: [tofu]}
+    tags: [us]
+    allergens: [egg, gluten, wheat]
+    may_contain: [sesame, soy]
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M007
+    ru: "Тофу-скрэмбл с овощами и тортильей"
+    levels: [base, structured, precise]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: tofu, n: 1}, {c: bell_pepper, n: 1}, {c: spinach, n: 0.5}, {c: tortilla_corn, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 10
+    swaps: {tofu: [egg]}
+    tags: [plant]
+    allergens: [soy]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M008
+    ru: "Гречка с кефиром"
+    levels: [base, structured]
+    slots: [breakfast, dinner]
+    plate: moderate
+    components: [{c: buckwheat, n: 1}, {c: kefir, n: 1}, {c: cucumber, n: 1}]
+    context: [home]
+    prep_min: 5
+    swaps: {kefir: [soy_yogurt]}
+    tags: [russian_classic, quick]
+    allergens: [milk]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M009
+    ru: "Овсянка на соевом молоке с арахисовой пастой и бананом"
+    levels: [structured, precise]
+    slots: [breakfast, pre_training]
+    plate: hard
+    components: [{c: oats, n: 1.5}, {c: soy_drink, n: 1}, {c: peanut_butter, n: 1}, {c: banana, n: 1}]
+    context: [home]
+    prep_min: 7
+    swaps: {peanut_butter: [sunflower_butter], oats: [oats_gf]}
+    tags: [plant, fuel]
+    allergens: [peanut, soy]
+    may_contain: [gluten]
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M010
+    ru: "Йогурт-парфе: соевый йогурт, ягоды, семена чиа"
+    levels: [base, structured, precise]
+    slots: [breakfast, snack]
+    plate: easy
+    components: [{c: soy_yogurt, n: 1}, {c: berries, n: 1}, {c: chia, n: 0.5}, {c: sunflower_seeds, n: 0.5}]
+    context: [home, office]
+    prep_min: 3
+    swaps: {}
+    tags: [plant, quick]
+    allergens: [soy]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+
+  # ======================= lunch / dinner — home =======================
+  - id: M011
+    ru: "Гречка с курицей и овощами"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner, post_training]
+    plate: moderate
+    components: [{c: buckwheat, n: 1}, {c: chicken_breast, n: 1}, {c: cucumber, n: 1}, {c: tomato, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home, office]
+    prep_min: 20
+    swaps: {chicken_breast: [tofu, turkey, lentils]}
+    tags: [russian_classic, meal_prep]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M012
+    ru: "Лосось, бурый рис и брокколи"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner, post_training]
+    plate: moderate
+    components: [{c: salmon, n: 1}, {c: rice_brown, n: 1}, {c: broccoli, n: 1.5}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 25
+    swaps: {salmon: [cod, tofu]}
+    tags: [omega3, mediterranean]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M013
+    ru: "Чечевичное рагу с овощами и ржаным хлебом"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: lentils, n: 1.5}, {c: carrot, n: 1}, {c: onion, n: 0.5}, {c: tomato, n: 1}, {c: rye_bread, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home, office]
+    prep_min: 30
+    swaps: {rye_bread: [bread_gf, rice_brown]}
+    tags: [plant, meal_prep, fiber]
+    allergens: [gluten]
+    may_contain: [sesame, wheat]
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M014
+    ru: "Индейка с картофелем и квашеной капустой"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: turkey, n: 1}, {c: potato, n: 1}, {c: sauerkraut, n: 1}, {c: cucumber, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 30
+    swaps: {turkey: [chicken_breast, tempeh]}
+    tags: [russian_classic, fermented]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M015
+    ru: "Боул с тофу, киноа и эдамаме"
+    levels: [structured, precise]
+    slots: [lunch, dinner, post_training]
+    plate: moderate
+    components: [{c: tofu, n: 1}, {c: quinoa, n: 1}, {c: edamame, n: 0.5}, {c: carrot, n: 1}, {c: cucumber, n: 1}, {c: tamari_gf, n: 0.5}]
+    context: [home, office]
+    prep_min: 20
+    swaps: {}
+    tags: [plant, meal_prep]
+    allergens: [soy]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M016
+    ru: "Паста с говяжьим фаршем, томатами и салатом"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner, pre_training]
+    plate: hard
+    components: [{c: pasta_wholegrain, n: 1.5}, {c: ground_beef, n: 1}, {c: tomato, n: 1}, {c: onion, n: 0.5}, {c: salad_mix, n: 1}]
+    context: [home]
+    prep_min: 25
+    swaps: {pasta_wholegrain: [pasta_gf], ground_beef: [pea_protein_crumble, turkey]}
+    tags: [fuel, meal_prep]
+    allergens: [gluten, wheat]
+    may_contain: [egg]
+    diets: [omnivore, halal, kosher, no_pork, no_alcohol]
+  - id: M017
+    ru: "Треска с бататом и стручковой фасолью"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: cod, n: 1}, {c: sweet_potato, n: 1}, {c: green_beans, n: 1.5}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 25
+    swaps: {cod: [chicken_breast, tofu]}
+    tags: [lean]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M018
+    ru: "Нут с овощами, булгуром и дзадзики"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: chickpeas, n: 1}, {c: bulgur, n: 1}, {c: tomato, n: 1}, {c: cucumber, n: 1}, {c: tzatziki, n: 0.5}, {c: olive_oil, n: 0.5}]
+    context: [home, office]
+    prep_min: 15
+    swaps: {bulgur: [quinoa], tzatziki: [tahini]}
+    tags: [mediterranean, fiber]
+    allergens: [gluten, milk, wheat]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M019
+    ru: "Креветки с рисом и овощами вок"
+    levels: [structured, precise]
+    slots: [lunch, dinner, post_training]
+    plate: hard
+    components: [{c: shrimp, n: 1}, {c: rice_white, n: 1.5}, {c: frozen_veg_mix, n: 1.5}, {c: soy_sauce, n: 0.5}]
+    context: [home]
+    prep_min: 15
+    swaps: {shrimp: [chicken_breast, tofu], soy_sauce: [tamari_gf]}
+    tags: [fuel, quick]
+    allergens: [crustacean, gluten, soy, wheat]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, no_pork, no_beef, no_alcohol]
+  - id: M020
+    ru: "Борщ с фасолью и ложкой сметаны"
+    levels: [base, structured]
+    slots: [lunch, dinner]
+    plate: easy
+    components: [{c: beetroot, n: 1}, {c: cabbage, n: 1}, {c: potato, n: 0.5}, {c: kidney_beans, n: 1}, {c: sour_cream, n: 0.5}, {c: rye_bread, n: 0.5}]
+    context: [home]
+    prep_min: 60
+    swaps: {sour_cream: [avocado], rye_bread: [bread_gf]}
+    tags: [russian_classic, meal_prep]
+    allergens: [gluten, milk]
+    may_contain: [sesame, wheat]
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M021
+    ru: "Курица с рисом, фасолью и сальсой (боул)"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner, post_training]
+    plate: hard
+    components: [{c: chicken_thigh, n: 1}, {c: rice_brown, n: 1}, {c: black_beans, n: 0.5}, {c: salad_mix, n: 1}, {c: salsa, n: 0.5}, {c: avocado, n: 0.5}]
+    context: [home, office, fastfood]
+    prep_min: 10
+    swaps: {chicken_thigh: [tofu, black_beans]}
+    tags: [us, fuel]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M022
+    ru: "Темпе с бататом и шпинатом"
+    levels: [structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: tempeh, n: 1}, {c: sweet_potato, n: 1}, {c: spinach, n: 1}, {c: tahini, n: 0.5}]
+    context: [home]
+    prep_min: 25
+    swaps: {tempeh: [tofu, chickpeas], tahini: [olive_oil]}
+    tags: [plant]
+    allergens: [sesame, soy]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M023
+    ru: "Говядина с гречкой и тушёной капустой"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: beef_lean, n: 1}, {c: buckwheat, n: 1}, {c: cabbage, n: 1.5}, {c: carrot, n: 0.5}]
+    context: [home]
+    prep_min: 40
+    swaps: {beef_lean: [turkey, lentils]}
+    tags: [russian_classic]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_alcohol]
+  - id: M024
+    ru: "Свинина с печёными овощами и картофелем"
+    levels: [base, structured]
+    slots: [dinner]
+    plate: moderate
+    components: [{c: pork_loin, n: 1}, {c: potato, n: 1}, {c: zucchini, n: 1}, {c: bell_pepper, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 40
+    swaps: {pork_loin: [chicken_thigh, beef_lean]}
+    tags: []
+    allergens: []
+    may_contain: []
+    diets: [omnivore, gluten_free, no_beef, no_alcohol]
+  - id: M025
+    ru: "Сельдь, картофель и винегрет"
+    levels: [base, structured]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: herring, n: 1}, {c: potato, n: 1}, {c: vinaigrette_veg, n: 1}, {c: onion, n: 0.5}]
+    context: [home]
+    prep_min: 20
+    swaps: {herring: [salmon]}
+    tags: [russian_classic, omega3]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M026
+    ru: "Мидии с овощами и цельнозерновым хлебом"
+    levels: [structured, precise]
+    slots: [dinner]
+    plate: easy
+    components: [{c: mussels, n: 1}, {c: tomato, n: 1}, {c: onion, n: 0.5}, {c: bread_wholegrain, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home, restaurant]
+    prep_min: 20
+    swaps: {bread_wholegrain: [bread_gf]}
+    tags: [mediterranean]
+    allergens: [gluten, mollusc, wheat]
+    may_contain: [sesame, soy]
+    diets: [omnivore, pescatarian, halal, no_pork, no_beef, no_alcohol]
+  - id: M027
+    ru: "Баранина с киноа и салатом"
+    levels: [structured, precise]
+    slots: [dinner]
+    plate: moderate
+    components: [{c: lamb, n: 1}, {c: quinoa, n: 1}, {c: salad_mix, n: 1}, {c: olives, n: 0.5}]
+    context: [home, restaurant]
+    prep_min: 30
+    swaps: {lamb: [chicken_thigh, chickpeas]}
+    tags: [mediterranean]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M028
+    ru: "Пельмени с салатом и сметаной"
+    levels: [base]
+    slots: [dinner]
+    plate: moderate
+    components: [{c: pelmeni, n: 1.5}, {c: salad_mix, n: 1}, {c: sour_cream, n: 0.5}]
+    context: [home]
+    prep_min: 12
+    swaps: {}
+    tags: [russian_classic, quick, no_time]
+    allergens: [egg, gluten, milk, wheat]
+    may_contain: []
+    diets: [omnivore, no_alcohol]
+  - id: M029
+    ru: "Тушёная фасоль с яйцом и рисом"
+    levels: [base, structured]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: kidney_beans, n: 1}, {c: egg, n: 1}, {c: rice_microwave, n: 1}, {c: tomato, n: 1}]
+    context: [home]
+    prep_min: 10
+    swaps: {egg: [tofu]}
+    tags: [quick, pantry, no_time]
+    allergens: [egg]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+
+  # ======================= fast assembly / no time (A19 N14) =======================
+  - id: M030
+    ru: "Сборка за 5 минут: курица-гриль, салат из пакета, рис из микроволновки"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: rotisserie_chicken, n: 1}, {c: salad_mix, n: 1.5}, {c: rice_microwave, n: 1}]
+    context: [home, office]
+    prep_min: 5
+    swaps: {rotisserie_chicken: [tuna_can, chickpeas]}
+    tags: [no_time, us, quick]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M031
+    ru: "Тунец с фасолью, огурцом и оливковым маслом"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: easy
+    components: [{c: tuna_can, n: 1}, {c: kidney_beans, n: 1}, {c: cucumber, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [home, office]
+    prep_min: 5
+    swaps: {tuna_can: [chickpeas]}
+    tags: [no_time, pantry]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M032
+    ru: "Хумус, морковь, яйца и лепёшка"
+    levels: [base, structured]
+    slots: [lunch, snack]
+    plate: easy
+    components: [{c: hummus, n: 1}, {c: carrot, n: 1}, {c: egg, n: 1}, {c: tortilla_wheat, n: 1}]
+    context: [office, travel]
+    prep_min: 3
+    swaps: {tortilla_wheat: [tortilla_corn], egg: [edamame]}
+    tags: [no_time]
+    allergens: [egg, gluten, sesame, wheat]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+
+  # ======================= outside: office, restaurant, fastfood, travel =======================
+  - id: M033
+    ru: "Боул в кафе: белок + крупа + овощи, соус отдельно"
+    levels: [base, structured, precise]
+    slots: [lunch]
+    plate: moderate
+    components: [{c: chicken_breast, n: 1}, {c: rice_brown, n: 1}, {c: salad_mix, n: 1.5}, {c: black_beans, n: 0.5}, {c: salsa, n: 0.5}]
+    context: [office, restaurant, fastfood]
+    prep_min: 0
+    swaps: {chicken_breast: [tofu]}
+    tags: [us, outside]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M034
+    ru: "Фастфуд без выбора: курица-гриль в лепёшке + салат + вода"
+    levels: [base, structured]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: chicken_breast, n: 1}, {c: tortilla_wheat, n: 1}, {c: salad_mix, n: 1}, {c: water, n: 1}]
+    context: [fastfood, travel]
+    prep_min: 0
+    swaps: {}
+    tags: [us, outside]
+    allergens: [gluten, wheat]
+    may_contain: []
+    diets: [omnivore, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M035
+    ru: "Ресторан: рыба, овощи гриль, картофель; хлеб и десерт — по желанию"
+    levels: [base, structured, precise]
+    slots: [dinner]
+    plate: moderate
+    components: [{c: salmon, n: 1}, {c: zucchini, n: 1}, {c: bell_pepper, n: 1}, {c: potato, n: 1}, {c: olive_oil, n: 0.5}]
+    context: [restaurant]
+    prep_min: 0
+    swaps: {salmon: [chicken_breast, beef_lean]}
+    tags: [outside]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M036
+    ru: "Аэропорт: греческий йогурт, банан и сыр-палочка"
+    levels: [base, structured, precise]
+    slots: [breakfast, snack]
+    plate: easy
+    components: [{c: greek_yogurt, n: 1}, {c: banana, n: 1}, {c: string_cheese, n: 0.5}]
+    context: [airport, travel]
+    prep_min: 0
+    swaps: {}
+    tags: [travel, us]
+    allergens: [milk]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M037
+    ru: "Запас в дорогу: jerky, яблоко, миндаль, вода"
+    levels: [base, structured, precise]
+    slots: [snack]
+    plate: snack
+    components: [{c: beef_jerky, n: 1}, {c: apple, n: 1}, {c: almonds, n: 0.5}, {c: water, n: 1}]
+    context: [travel, airport]
+    prep_min: 0
+    swaps: {almonds: [pumpkin_seeds], beef_jerky: [edamame]}
+    tags: [travel, us]
+    allergens: [soy, tree_nut]
+    may_contain: [gluten, wheat]
+    diets: [omnivore, halal, kosher, no_pork, no_alcohol]
+  - id: M038
+    ru: "Суши-сет: роллы с рыбой, эдамаме, салат"
+    levels: [base, structured]
+    slots: [lunch, dinner]
+    plate: moderate
+    components: [{c: sushi_roll, n: 1}, {c: edamame, n: 0.5}, {c: salad_mix, n: 1}]
+    context: [restaurant, office]
+    prep_min: 0
+    swaps: {}
+    tags: [outside]
+    allergens: [fish, sesame, soy]
+    may_contain: [crustacean, gluten, wheat]
+    diets: [omnivore, pescatarian, halal, no_pork, no_beef, no_alcohol]
+
+  # ======================= snacks, pre / post / during training =======================
+  - id: M039
+    ru: "Перед тренировкой: банан и рисовые хлебцы"
+    levels: [base, structured, precise]
+    slots: [pre_training, snack]
+    plate: snack
+    components: [{c: banana, n: 1}, {c: rice_cakes, n: 1}]
+    context: [home, office, travel]
+    prep_min: 0
+    swaps: {}
+    tags: [pre_training, quick]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M040
+    ru: "После тренировки: кефир и банан"
+    levels: [base, structured, precise]
+    slots: [post_training, snack]
+    plate: snack
+    components: [{c: kefir, n: 1}, {c: banana, n: 1}]
+    context: [home, office]
+    prep_min: 0
+    swaps: {kefir: [soy_drink]}
+    tags: [post_training, russian_classic]
+    allergens: [milk]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M041
+    ru: "Перекус: яблоко и арахисовая паста"
+    levels: [base, structured, precise]
+    slots: [snack]
+    plate: snack
+    components: [{c: apple, n: 1}, {c: peanut_butter, n: 1}]
+    context: [home, office]
+    prep_min: 1
+    swaps: {peanut_butter: [sunflower_butter]}
+    tags: [us]
+    allergens: [peanut]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M042
+    ru: "Перекус: эдамаме и апельсин"
+    levels: [base, structured, precise]
+    slots: [snack, post_training]
+    plate: snack
+    components: [{c: edamame, n: 1}, {c: orange, n: 1}]
+    context: [home, office]
+    prep_min: 5
+    swaps: {}
+    tags: [plant]
+    allergens: [soy]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M043
+    ru: "Во время длинной тренировки: финики и вода"
+    levels: [structured, precise]
+    slots: [during_training]
+    plate: snack
+    components: [{c: dates, n: 1}, {c: water, n: 1}]
+    context: [outdoor, gym]
+    prep_min: 0
+    swaps: {dates: [banana]}
+    tags: [during_training]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M044
+    ru: "Во время длинной тренировки: спортивный напиток"
+    levels: [precise]
+    slots: [during_training]
+    plate: snack
+    components: [{c: sports_drink, n: 1}]
+    context: [outdoor, gym]
+    prep_min: 0
+    swaps: {}
+    tags: [during_training]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M045
+    ru: "Перед сном (если голоден): творог или кефир"
+    levels: [base, structured, precise]
+    slots: [evening_snack]
+    plate: snack
+    components: [{c: tvorog, n: 1}]
+    context: [home]
+    prep_min: 0
+    swaps: {tvorog: [kefir, soy_yogurt]}
+    tags: [protein_before_sleep]
+    allergens: [milk]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M046
+    ru: "Хумус с овощными палочками"
+    levels: [base, structured, precise]
+    slots: [snack]
+    plate: snack
+    components: [{c: hummus, n: 1}, {c: carrot, n: 1}, {c: cucumber, n: 1}, {c: bell_pepper, n: 0.5}]
+    context: [home, office]
+    prep_min: 5
+    swaps: {}
+    tags: [plant, mediterranean]
+    allergens: [sesame]
+    may_contain: []
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+
+  # ======================= gentle / sick day / after a short night (Бережно, SICK) =======================
+  - id: M047
+    ru: "Суп-бульон с курицей, рисом и кабачком"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: easy
+    components: [{c: broth, n: 1}, {c: chicken_breast, n: 1}, {c: rice_white, n: 1}, {c: zucchini, n: 1}, {c: carrot, n: 0.5}]
+    context: [home]
+    prep_min: 25
+    swaps: {broth: [veg_broth], chicken_breast: [tofu]}
+    tags: [soft, sick_day, gentle]
+    allergens: [celery]
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M048
+    ru: "Мисо-суп с тофу, грибами и рисом"
+    levels: [base, structured, precise]
+    slots: [lunch, dinner]
+    plate: easy
+    components: [{c: miso, n: 0.5}, {c: tofu, n: 1}, {c: mushrooms, n: 1}, {c: spinach, n: 0.5}, {c: rice_white, n: 1}]
+    context: [home, restaurant]
+    prep_min: 15
+    swaps: {}
+    tags: [soft, gentle, plant]
+    allergens: [soy]
+    may_contain: [gluten]
+    diets: [omnivore, pescatarian, vegetarian, vegan, halal, kosher, no_pork, no_beef, no_alcohol]
+  - id: M049
+    ru: "Утро после короткой ночи: яйца, тост, апельсин, вода"
+    levels: [base, structured, precise]
+    slots: [breakfast]
+    plate: moderate
+    components: [{c: egg, n: 1}, {c: bread_wholegrain, n: 1}, {c: orange, n: 1}, {c: water, n: 1}]
+    context: [home]
+    prep_min: 8
+    swaps: {egg: [greek_yogurt, tofu], bread_wholegrain: [bread_gf]}
+    tags: [gentle, after_short_sleep]
+    allergens: [egg, gluten, wheat]
+    may_contain: [sesame, soy]
+    diets: [omnivore, pescatarian, vegetarian, halal, kosher, no_pork, no_beef, no_alcohol]
+
+  # ======================= «Точность»: load-specific plates =======================
+  - id: M050
+    ru: "Тяжёлый день: курица, двойной рис, овощи и фрукт"
+    levels: [precise]
+    slots: [lunch, post_training]
+    plate: hard
+    components: [{c: chicken_breast, n: 1.5}, {c: rice_white, n: 2}, {c: frozen_veg_mix, n: 1}, {c: banana, n: 1}]
+    context: [home, office]
+    prep_min: 15
+    swaps: {chicken_breast: [tofu, turkey]}
+    tags: [fuel, high_load]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M051
+    ru: "Лёгкий день: лосось, большой салат, немного киноа"
+    levels: [structured, precise]
+    slots: [lunch, dinner]
+    plate: easy
+    components: [{c: salmon, n: 1}, {c: salad_mix, n: 2}, {c: quinoa, n: 0.5}, {c: avocado, n: 0.5}]
+    context: [home, restaurant]
+    prep_min: 15
+    swaps: {salmon: [chickpeas, tofu]}
+    tags: [low_load]
+    allergens: [fish]
+    may_contain: []
+    diets: [omnivore, pescatarian, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]
+  - id: M052
+    ru: "Вечер перед длинной тренировкой: паста без глютена, индейка, томатный соус"
+    levels: [precise]
+    slots: [dinner]
+    plate: hard
+    components: [{c: pasta_gf, n: 2}, {c: turkey, n: 1}, {c: tomato, n: 1}, {c: spinach, n: 0.5}, {c: olive_oil, n: 0.5}]
+    context: [home]
+    prep_min: 20
+    swaps: {turkey: [chickpeas, tofu]}
+    tags: [fuel, tomorrow_long]
+    allergens: []
+    may_contain: []
+    diets: [omnivore, halal, kosher, gluten_free, no_pork, no_beef, no_alcohol]

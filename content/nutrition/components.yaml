@@ -1,0 +1,156 @@
+# Nutrition components (продукты и компоненты) — the closed list every meal and every generated meal is built from.
+# Schema: content/nutrition/SCHEMA.md §2. Validate: python3 scripts/check_nutrition.py
+# Allergens/origins use the closed lists of content/profile/constraints.yaml. The ENGINE derives a meal's
+# allergens from its components — never from what a text or Claude says.
+# `per` = rough macros for ONE hand portion (palm / cupped hand / fist / thumb, see SCHEMA.md §2.3), grams,
+# ±25 %, from USDA FoodData Central typical values [Оценка: сверить Агенту 3 перед уровнем «Точность»].
+# No kcal field on purpose (A19, Agent 3 veto): energy is not a product number by default.
+version: 1
+reviewedBy: []
+status: draft
+
+groups: [protein_animal, protein_plant, dairy, grain, starchy_veg, legume, vegetable, fruit, nut_seed, fat_oil, condiment, drink, ready]
+roles:  [protein, starch, veg, fruit, fat, extra, drink]
+
+components:
+  # --- protein: animal ---------------------------------------------------------------------------------
+  - {id: chicken_breast,  ru: "Куриная грудка",          group: protein_animal, role: protein, allergens: [], origin: [meat_poultry], lactose: none, tags: [lean, quick], per: {p: 30, c: 0, f: 4, fib: 0}}
+  - {id: chicken_thigh,   ru: "Куриное бедро",           group: protein_animal, role: protein, allergens: [], origin: [meat_poultry], lactose: none, tags: [], per: {p: 25, c: 0, f: 9, fib: 0}}
+  - {id: rotisserie_chicken, ru: "Курица-гриль из магазина", group: protein_animal, role: protein, allergens: [], origin: [meat_poultry], lactose: none, tags: [ready, quick, us], per: {p: 27, c: 0, f: 8, fib: 0}}
+  - {id: turkey,          ru: "Индейка",                 group: protein_animal, role: protein, allergens: [], origin: [meat_poultry], lactose: none, tags: [lean], per: {p: 29, c: 0, f: 3, fib: 0}}
+  - {id: beef_lean,       ru: "Говядина нежирная",       group: protein_animal, role: protein, allergens: [], origin: [meat_beef], lactose: none, tags: [], per: {p: 27, c: 0, f: 9, fib: 0}}
+  - {id: ground_beef,     ru: "Говяжий фарш",            group: protein_animal, role: protein, allergens: [], origin: [meat_beef], lactose: none, tags: [], per: {p: 24, c: 0, f: 13, fib: 0}}
+  - {id: pork_loin,       ru: "Свиная вырезка",          group: protein_animal, role: protein, allergens: [], origin: [meat_pork], lactose: none, tags: [], per: {p: 27, c: 0, f: 6, fib: 0}}
+  - {id: lamb,            ru: "Баранина",                group: protein_animal, role: protein, allergens: [], origin: [meat_other], lactose: none, tags: [], per: {p: 25, c: 0, f: 14, fib: 0}}
+  - {id: salmon,          ru: "Лосось",                  group: protein_animal, role: protein, allergens: [fish], origin: [fish], lactose: none, tags: [omega3], per: {p: 25, c: 0, f: 12, fib: 0}}
+  - {id: cod,             ru: "Треска",                  group: protein_animal, role: protein, allergens: [fish], origin: [fish], lactose: none, tags: [lean], per: {p: 23, c: 0, f: 1, fib: 0}}
+  - {id: tuna_can,        ru: "Тунец консервированный",  group: protein_animal, role: protein, allergens: [fish], origin: [fish], lactose: none, tags: [ready, quick, pantry], per: {p: 25, c: 0, f: 2, fib: 0}}
+  - {id: herring,         ru: "Сельдь",                  group: protein_animal, role: protein, allergens: [fish], origin: [fish], lactose: none, tags: [omega3, russian_classic], per: {p: 18, c: 0, f: 12, fib: 0}}
+  - {id: shrimp,          ru: "Креветки",                group: protein_animal, role: protein, allergens: [crustacean], origin: [seafood], lactose: none, tags: [lean, quick], per: {p: 24, c: 0, f: 1, fib: 0}}
+  - {id: mussels,         ru: "Мидии",                   group: protein_animal, role: protein, allergens: [mollusc], origin: [seafood], lactose: none, tags: [], per: {p: 20, c: 4, f: 4, fib: 0}}
+  - {id: egg,             ru: "Яйца (2 шт.)",            group: protein_animal, role: protein, allergens: [egg], origin: [egg], lactose: none, tags: [quick, breakfast], per: {p: 13, c: 1, f: 10, fib: 0}}
+  - {id: beef_jerky,      ru: "Вяленая говядина (jerky)", group: protein_animal, role: protein, allergens: [soy], may_contain: [wheat, gluten], origin: [meat_beef], lactose: none, tags: [travel, us, snack], per: {p: 15, c: 6, f: 2, fib: 0}}
+
+  # --- protein: plant -----------------------------------------------------------------------------------
+  - {id: tofu,            ru: "Тофу",                    group: protein_plant, role: protein, allergens: [soy], origin: [], lactose: none, tags: [quick], per: {p: 15, c: 3, f: 9, fib: 2}}
+  - {id: tempeh,          ru: "Темпе",                   group: protein_plant, role: protein, allergens: [soy], origin: [], lactose: none, tags: [], per: {p: 19, c: 9, f: 11, fib: 5}}
+  - {id: edamame,         ru: "Эдамаме",                 group: protein_plant, role: protein, allergens: [soy], origin: [], lactose: none, tags: [snack, quick], per: {p: 11, c: 9, f: 5, fib: 5}}
+  - {id: seitan,          ru: "Сейтан",                  group: protein_plant, role: protein, allergens: [wheat, gluten, soy], origin: [], lactose: none, tags: [], per: {p: 21, c: 4, f: 2, fib: 1}}
+  - {id: pea_protein_crumble, ru: "Гороховый «фарш» (растительный)", group: protein_plant, role: protein, allergens: [], may_contain: [soy], origin: [], lactose: none, tags: [], per: {p: 18, c: 6, f: 8, fib: 3}}
+
+  # --- dairy (protein role or extra) --------------------------------------------------------------------
+  - {id: greek_yogurt,    ru: "Греческий йогурт",        group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [breakfast, snack, quick], per: {p: 17, c: 6, f: 4, fib: 0}}
+  - {id: skyr,            ru: "Скир",                    group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [breakfast, snack, quick], per: {p: 18, c: 6, f: 0, fib: 0}}
+  - {id: tvorog,          ru: "Творог",                  group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [breakfast, russian_classic, quick], per: {p: 18, c: 4, f: 5, fib: 0}}
+  - {id: cottage_cheese,  ru: "Зернёный творог (cottage cheese)", group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [snack, us, quick], per: {p: 14, c: 4, f: 5, fib: 0}}
+  - {id: kefir,           ru: "Кефир",                   group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [russian_classic, drinkable], per: {p: 8, c: 10, f: 5, fib: 0}}
+  - {id: milk,            ru: "Молоко",                  group: dairy, role: extra, allergens: [milk], origin: [dairy], lactose: high, tags: [], per: {p: 8, c: 12, f: 5, fib: 0}}
+  - {id: lactose_free_milk, ru: "Безлактозное молоко",   group: dairy, role: extra, allergens: [milk], origin: [dairy], lactose: none, tags: [], per: {p: 8, c: 12, f: 5, fib: 0}}
+  - {id: hard_cheese,     ru: "Твёрдый сыр",             group: dairy, role: fat, allergens: [milk], origin: [dairy], lactose: low, tags: [], per: {p: 7, c: 0, f: 9, fib: 0}}
+  - {id: feta,            ru: "Фета",                    group: dairy, role: fat, allergens: [milk], origin: [dairy], lactose: low, tags: [mediterranean], per: {p: 4, c: 1, f: 6, fib: 0}}
+  - {id: string_cheese,   ru: "Сыр-палочка",             group: dairy, role: protein, allergens: [milk], origin: [dairy], lactose: low, tags: [snack, travel, us], per: {p: 7, c: 1, f: 6, fib: 0}}
+  - {id: sour_cream,      ru: "Сметана",                 group: dairy, role: fat, allergens: [milk], origin: [dairy], lactose: high, tags: [russian_classic], per: {p: 1, c: 1, f: 6, fib: 0}}
+  - {id: soy_yogurt,      ru: "Соевый йогурт",           group: dairy, role: protein, allergens: [soy], origin: [], lactose: none, tags: [plant_alt, breakfast], per: {p: 8, c: 8, f: 4, fib: 1}}
+  - {id: oat_drink,       ru: "Овсяное молоко",          group: drink, role: extra, allergens: [], may_contain: [gluten], origin: [], lactose: none, tags: [plant_alt], per: {p: 1, c: 16, f: 3, fib: 1}}
+  - {id: soy_drink,       ru: "Соевое молоко",           group: drink, role: extra, allergens: [soy], origin: [], lactose: none, tags: [plant_alt], per: {p: 7, c: 4, f: 4, fib: 1}}
+
+  # --- grains & starch ----------------------------------------------------------------------------------
+  - {id: buckwheat,       ru: "Гречка",                  group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [russian_classic, whole_grain], per: {p: 5, c: 30, f: 1, fib: 4}}
+  - {id: rice_brown,      ru: "Бурый рис",               group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [whole_grain], per: {p: 4, c: 35, f: 1, fib: 2}}
+  - {id: rice_white,      ru: "Белый рис",               group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [fast_carb], per: {p: 3, c: 40, f: 0, fib: 1}}
+  - {id: rice_microwave,  ru: "Рис из микроволновки (пакет)", group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [ready, quick, us], per: {p: 3, c: 38, f: 2, fib: 1}}
+  - {id: oats,            ru: "Овсянка",                 group: grain, role: starch, allergens: [], may_contain: [gluten], origin: [], lactose: none, tags: [breakfast, whole_grain], per: {p: 5, c: 27, f: 3, fib: 4}}
+  - {id: oats_gf,         ru: "Овсянка «без глютена»",   group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [breakfast, whole_grain, gf_alt], per: {p: 5, c: 27, f: 3, fib: 4}}
+  - {id: quinoa,          ru: "Киноа",                   group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [whole_grain, gf_alt], per: {p: 4, c: 21, f: 2, fib: 3}}
+  - {id: bulgur,          ru: "Булгур",                  group: grain, role: starch, allergens: [wheat, gluten], origin: [], lactose: none, tags: [whole_grain, mediterranean], per: {p: 4, c: 23, f: 0, fib: 5}}
+  - {id: pasta_wholegrain, ru: "Паста цельнозерновая",   group: grain, role: starch, allergens: [wheat, gluten], may_contain: [egg], origin: [], lactose: none, tags: [whole_grain], per: {p: 6, c: 32, f: 1, fib: 4}}
+  - {id: pasta_gf,        ru: "Паста без глютена (рис/кукуруза)", group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [gf_alt], per: {p: 3, c: 36, f: 1, fib: 2}}
+  - {id: bread_wholegrain, ru: "Цельнозерновой хлеб",    group: grain, role: starch, allergens: [wheat, gluten], may_contain: [sesame, soy], origin: [], lactose: none, tags: [whole_grain], per: {p: 4, c: 20, f: 1, fib: 3}}
+  - {id: rye_bread,       ru: "Ржаной хлеб",             group: grain, role: starch, allergens: [gluten], may_contain: [wheat, sesame], origin: [], lactose: none, tags: [russian_classic, whole_grain], per: {p: 3, c: 20, f: 1, fib: 3}}
+  - {id: bread_gf,        ru: "Хлеб без глютена",        group: grain, role: starch, allergens: [], may_contain: [egg], origin: [], lactose: none, tags: [gf_alt], per: {p: 2, c: 22, f: 2, fib: 2}}
+  - {id: tortilla_wheat,  ru: "Пшеничная лепёшка (wrap)", group: grain, role: starch, allergens: [wheat, gluten], origin: [], lactose: none, tags: [us, quick], per: {p: 5, c: 30, f: 4, fib: 2}}
+  - {id: tortilla_corn,   ru: "Кукурузная тортилья",     group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [gf_alt, us], per: {p: 2, c: 22, f: 1, fib: 3}}
+  - {id: potato,          ru: "Картофель",               group: starchy_veg, role: starch, allergens: [], origin: [], lactose: none, tags: [russian_classic], per: {p: 3, c: 30, f: 0, fib: 3}}
+  - {id: sweet_potato,    ru: "Батат",                   group: starchy_veg, role: starch, allergens: [], origin: [], lactose: none, tags: [], per: {p: 2, c: 27, f: 0, fib: 4}}
+  - {id: corn,            ru: "Кукуруза",                group: starchy_veg, role: starch, allergens: [], origin: [], lactose: none, tags: [], per: {p: 3, c: 21, f: 1, fib: 2}}
+  - {id: rice_cakes,      ru: "Рисовые хлебцы",          group: grain, role: starch, allergens: [], origin: [], lactose: none, tags: [snack, pre_training, gf_alt], per: {p: 2, c: 22, f: 1, fib: 1}}
+  - {id: granola,         ru: "Гранола",                 group: grain, role: starch, allergens: [tree_nut], may_contain: [gluten, peanut, sesame, soy], origin: [honey], lactose: none, tags: [breakfast], per: {p: 4, c: 30, f: 8, fib: 3}}
+
+  # --- legumes ------------------------------------------------------------------------------------------
+  - {id: lentils,         ru: "Чечевица",                group: legume, role: protein, allergens: [], origin: [], lactose: none, tags: [fiber, pantry], per: {p: 9, c: 20, f: 0, fib: 8}}
+  - {id: chickpeas,       ru: "Нут",                     group: legume, role: protein, allergens: [], origin: [], lactose: none, tags: [fiber, pantry, mediterranean], per: {p: 7, c: 22, f: 2, fib: 6}}
+  - {id: black_beans,     ru: "Чёрная фасоль",           group: legume, role: protein, allergens: [], origin: [], lactose: none, tags: [fiber, pantry, us], per: {p: 8, c: 20, f: 0, fib: 7}}
+  - {id: kidney_beans,    ru: "Красная фасоль (банка)",  group: legume, role: protein, allergens: [], origin: [], lactose: none, tags: [fiber, pantry, quick], per: {p: 8, c: 20, f: 0, fib: 6}}
+  - {id: green_peas,      ru: "Зелёный горошек",         group: legume, role: veg, allergens: [], origin: [], lactose: none, tags: [fiber], per: {p: 5, c: 14, f: 0, fib: 5}}
+  - {id: hummus,          ru: "Хумус",                   group: legume, role: fat, allergens: [sesame], origin: [], lactose: none, tags: [snack, mediterranean], per: {p: 3, c: 6, f: 6, fib: 2}}
+
+  # --- vegetables ---------------------------------------------------------------------------------------
+  - {id: salad_mix,       ru: "Салат из пакета",         group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [ready, quick], per: {p: 1, c: 3, f: 0, fib: 2}}
+  - {id: cucumber,        ru: "Огурец",                  group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick], per: {p: 1, c: 3, f: 0, fib: 1}}
+  - {id: tomato,          ru: "Помидоры",                group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick, mediterranean], per: {p: 1, c: 5, f: 0, fib: 2}}
+  - {id: bell_pepper,     ru: "Сладкий перец",           group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick], per: {p: 1, c: 6, f: 0, fib: 2}}
+  - {id: broccoli,        ru: "Брокколи",                group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [fiber], per: {p: 3, c: 6, f: 0, fib: 3}}
+  - {id: frozen_veg_mix,  ru: "Замороженная овощная смесь", group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick, pantry], per: {p: 2, c: 8, f: 0, fib: 3}}
+  - {id: spinach,         ru: "Шпинат",                  group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick, leafy_green], per: {p: 1, c: 1, f: 0, fib: 1}}
+  - {id: carrot,          ru: "Морковь",                 group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [snack], per: {p: 1, c: 9, f: 0, fib: 3}}
+  - {id: cabbage,         ru: "Капуста",                 group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [russian_classic], per: {p: 1, c: 5, f: 0, fib: 2}}
+  - {id: sauerkraut,      ru: "Квашеная капуста",        group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [russian_classic, fermented], per: {p: 1, c: 4, f: 0, fib: 3}}
+  - {id: beetroot,        ru: "Свёкла",                  group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [russian_classic], per: {p: 2, c: 10, f: 0, fib: 3}}
+  - {id: zucchini,        ru: "Кабачок",                 group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [soft], per: {p: 1, c: 3, f: 0, fib: 1}}
+  - {id: mushrooms,       ru: "Грибы",                   group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [], per: {p: 3, c: 3, f: 0, fib: 1}}
+  - {id: onion,           ru: "Лук",                     group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [], per: {p: 1, c: 9, f: 0, fib: 2}}
+  - {id: celery_stalk,    ru: "Стебель сельдерея",       group: vegetable, role: veg, allergens: [celery], origin: [], lactose: none, tags: [snack], per: {p: 1, c: 3, f: 0, fib: 2}}
+  - {id: green_beans,     ru: "Стручковая фасоль",       group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [quick], per: {p: 2, c: 7, f: 0, fib: 3}}
+  - {id: avocado,         ru: "Авокадо",                 group: vegetable, role: fat, allergens: [], origin: [], lactose: none, tags: [], per: {p: 1, c: 4, f: 10, fib: 4}}
+  - {id: olives,          ru: "Оливки",                  group: vegetable, role: fat, allergens: [], origin: [], lactose: none, tags: [mediterranean], per: {p: 0, c: 1, f: 4, fib: 1}}
+  - {id: vinaigrette_veg, ru: "Винегрет (овощи)",        group: vegetable, role: veg, allergens: [], origin: [], lactose: none, tags: [russian_classic], per: {p: 2, c: 12, f: 3, fib: 4}}
+
+  # --- fruit --------------------------------------------------------------------------------------------
+  - {id: banana,          ru: "Банан",                   group: fruit, role: fruit, allergens: [], origin: [], lactose: none, tags: [pre_training, quick, travel], per: {p: 1, c: 27, f: 0, fib: 3}}
+  - {id: apple,           ru: "Яблоко",                  group: fruit, role: fruit, allergens: [], origin: [], lactose: none, tags: [snack, travel], per: {p: 0, c: 25, f: 0, fib: 4}}
+  - {id: berries,         ru: "Ягоды (свежие или замороженные)", group: fruit, role: fruit, allergens: [], origin: [], lactose: none, tags: [breakfast], per: {p: 1, c: 14, f: 0, fib: 4}}
+  - {id: orange,          ru: "Апельсин",                group: fruit, role: fruit, allergens: [], origin: [], lactose: none, tags: [snack], per: {p: 1, c: 15, f: 0, fib: 3}}
+  - {id: dried_fruit,     ru: "Сухофрукты (горсть)",     group: fruit, role: fruit, allergens: [sulphite], origin: [], lactose: none, tags: [travel, during_training], per: {p: 1, c: 30, f: 0, fib: 3}}
+  - {id: dates,           ru: "Финики",                  group: fruit, role: fruit, allergens: [], origin: [], lactose: none, tags: [pre_training, during_training], per: {p: 1, c: 36, f: 0, fib: 3}}
+
+  # --- nuts & seeds -------------------------------------------------------------------------------------
+  - {id: almonds,         ru: "Миндаль",                 group: nut_seed, role: fat, allergens: [tree_nut], origin: [], lactose: none, tags: [snack, travel], per: {p: 6, c: 6, f: 14, fib: 3}}
+  - {id: walnuts,         ru: "Грецкие орехи",           group: nut_seed, role: fat, allergens: [tree_nut], origin: [], lactose: none, tags: [snack, omega3], per: {p: 4, c: 4, f: 18, fib: 2}}
+  - {id: mixed_nuts,      ru: "Смесь орехов",            group: nut_seed, role: fat, allergens: [tree_nut, peanut], origin: [], lactose: none, tags: [snack, travel], per: {p: 5, c: 6, f: 15, fib: 2}}
+  - {id: peanut_butter,   ru: "Арахисовая паста",        group: nut_seed, role: fat, allergens: [peanut], origin: [], lactose: none, tags: [snack, us], per: {p: 4, c: 3, f: 8, fib: 1}}
+  - {id: sunflower_seeds, ru: "Семечки подсолнуха",      group: nut_seed, role: fat, allergens: [], origin: [], lactose: none, tags: [snack, nut_free_alt], per: {p: 6, c: 6, f: 14, fib: 3}}
+  - {id: pumpkin_seeds,   ru: "Тыквенные семечки",       group: nut_seed, role: fat, allergens: [], origin: [], lactose: none, tags: [snack, nut_free_alt], per: {p: 8, c: 4, f: 13, fib: 2}}
+  - {id: sunflower_butter, ru: "Паста из семечек подсолнуха", group: nut_seed, role: fat, allergens: [], origin: [], lactose: none, tags: [nut_free_alt], per: {p: 4, c: 4, f: 9, fib: 1}}
+  - {id: chia,            ru: "Семена чиа",              group: nut_seed, role: fat, allergens: [], origin: [], lactose: none, tags: [fiber, breakfast], per: {p: 2, c: 5, f: 4, fib: 4}}
+  - {id: tahini,          ru: "Тахини",                  group: nut_seed, role: fat, allergens: [sesame], origin: [], lactose: none, tags: [mediterranean], per: {p: 3, c: 3, f: 8, fib: 1}}
+  - {id: coconut_flakes,  ru: "Кокосовая стружка",       group: nut_seed, role: fat, allergens: [coconut], origin: [], lactose: none, tags: [], per: {p: 1, c: 2, f: 6, fib: 2}}
+
+  # --- fats & condiments --------------------------------------------------------------------------------
+  - {id: olive_oil,       ru: "Оливковое масло",         group: fat_oil, role: fat, allergens: [], origin: [], lactose: none, tags: [mediterranean], per: {p: 0, c: 0, f: 10, fib: 0}}
+  - {id: butter,          ru: "Сливочное масло",         group: fat_oil, role: fat, allergens: [milk], origin: [dairy], lactose: low, tags: [], per: {p: 0, c: 0, f: 8, fib: 0}}
+  - {id: soy_sauce,       ru: "Соевый соус",             group: condiment, role: extra, allergens: [soy, wheat, gluten], origin: [], lactose: none, tags: [], per: {p: 1, c: 1, f: 0, fib: 0}}
+  - {id: tamari_gf,       ru: "Тамари без глютена",      group: condiment, role: extra, allergens: [soy], origin: [], lactose: none, tags: [gf_alt], per: {p: 1, c: 1, f: 0, fib: 0}}
+  - {id: mustard_sauce,   ru: "Горчица",                 group: condiment, role: extra, allergens: [mustard], origin: [], lactose: none, tags: [], per: {p: 0, c: 1, f: 0, fib: 0}}
+  - {id: salsa,           ru: "Сальса",                  group: condiment, role: extra, allergens: [], origin: [], lactose: none, tags: [us, spicy], per: {p: 0, c: 3, f: 0, fib: 1}}
+  - {id: pesto,           ru: "Песто",                   group: condiment, role: fat, allergens: [milk, tree_nut], origin: [dairy], lactose: low, tags: [mediterranean], per: {p: 2, c: 1, f: 8, fib: 0}}
+  - {id: tzatziki,        ru: "Дзадзики",                group: condiment, role: extra, allergens: [milk], origin: [dairy], lactose: low, tags: [mediterranean], per: {p: 2, c: 2, f: 2, fib: 0}}
+  - {id: honey,           ru: "Мёд",                     group: condiment, role: extra, allergens: [], origin: [honey], lactose: none, tags: [], per: {p: 0, c: 17, f: 0, fib: 0}}
+  - {id: miso,            ru: "Мисо",                    group: condiment, role: extra, allergens: [soy], may_contain: [gluten], origin: [], lactose: none, tags: [fermented], per: {p: 2, c: 4, f: 1, fib: 1}}
+
+  # --- drinks -------------------------------------------------------------------------------------------
+  - {id: water,           ru: "Вода",                    group: drink, role: drink, allergens: [], origin: [], lactose: none, tags: [], per: {p: 0, c: 0, f: 0, fib: 0}}
+  - {id: coffee,          ru: "Кофе",                    group: drink, role: drink, allergens: [], origin: [], lactose: none, tags: [caffeine], per: {p: 0, c: 0, f: 0, fib: 0}}
+  - {id: tea,             ru: "Чай",                     group: drink, role: drink, allergens: [], origin: [], lactose: none, tags: [caffeine], per: {p: 0, c: 0, f: 0, fib: 0}}
+  - {id: herbal_tea,      ru: "Травяной чай без кофеина", group: drink, role: drink, allergens: [], origin: [], lactose: none, tags: [], per: {p: 0, c: 0, f: 0, fib: 0}}
+  - {id: sports_drink,    ru: "Спортивный напиток",      group: drink, role: drink, allergens: [], origin: [], lactose: none, tags: [during_training], per: {p: 0, c: 30, f: 0, fib: 0}}
+  - {id: broth,           ru: "Бульон",                  group: drink, role: extra, allergens: [celery], origin: [meat_poultry], lactose: none, tags: [soft, sick_day], per: {p: 3, c: 1, f: 1, fib: 0}}
+  - {id: veg_broth,       ru: "Овощной бульон",          group: drink, role: extra, allergens: [celery], origin: [], lactose: none, tags: [soft, sick_day], per: {p: 1, c: 2, f: 0, fib: 0}}
+  - {id: wine,            ru: "Вино (бокал)",            group: drink, role: drink, allergens: [sulphite], origin: [alcohol], lactose: none, tags: [alcohol], per: {p: 0, c: 4, f: 0, fib: 0}}
+
+  # --- ready-made (US & travel scenarios, A19 N10–N14) --------------------------------------------------
+  - {id: protein_bar,     ru: "Протеиновый батончик",    group: ready, role: protein, allergens: [milk, soy], may_contain: [peanut, tree_nut, gluten, egg], origin: [dairy], lactose: low, tags: [travel, snack], per: {p: 20, c: 22, f: 7, fib: 3}}
+  - {id: overnight_oats_jar, ru: "Готовая овсянка в банке", group: ready, role: starch, allergens: [milk], may_contain: [gluten, tree_nut], origin: [dairy], lactose: high, tags: [travel, breakfast], per: {p: 10, c: 40, f: 6, fib: 5}}
+  - {id: sushi_roll,      ru: "Ролл с рыбой",            group: ready, role: starch, allergens: [fish, soy, sesame], may_contain: [crustacean, gluten, wheat], origin: [fish], lactose: none, tags: [restaurant], per: {p: 9, c: 38, f: 4, fib: 2}}
+  - {id: pelmeni,         ru: "Пельмени",                group: ready, role: starch, allergens: [wheat, gluten, egg], origin: [meat_beef, meat_pork], lactose: none, tags: [russian_classic, quick], per: {p: 11, c: 28, f: 10, fib: 1}}
+  - {id: blini,           ru: "Блины",                   group: ready, role: starch, allergens: [wheat, gluten, egg, milk], origin: [dairy, egg], lactose: high, tags: [russian_classic], per: {p: 6, c: 25, f: 7, fib: 1}}
+  - {id: syrniki,         ru: "Сырники",                 group: ready, role: protein, allergens: [milk, egg, wheat, gluten], origin: [dairy, egg], lactose: low, tags: [russian_classic, breakfast], per: {p: 14, c: 18, f: 8, fib: 1}}

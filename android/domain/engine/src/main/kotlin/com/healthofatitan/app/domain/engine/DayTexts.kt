@@ -81,11 +81,12 @@ object DayTexts {
 
     /** CTX-01. Only inside the app, never in the push (S4, A09 §9). Information, not a verdict. */
     fun alcohol(servings: Int, lowRecovery: Boolean, lighter: Boolean): String {
-        val n = if (servings >= 4) "4+" else servings.toString()
+        // Review 2026-11-07: «1 порция», «2 порции», «4+ порции» (was «1 порции»).
+        val n = if (servings >= 4) "4+ порции" else "$servings " + if (servings == 1) "порция" else "порции"
         val head = if (lowRecovery) {
-            "Вчера $n порции — у многих после этого ночь восстанавливает слабее. Это не оценка."
+            "Вчера $n — у многих после этого ночь восстанавливает слабее. Это не оценка."
         } else {
-            "Вчера $n порции."
+            "Вчера $n."
         }
         val tail = when {
             lighter -> " Вода, завтрак с белком, тренировка легче."

@@ -1,16 +1,34 @@
-# Emergency resources by country (A07 §4.5, A11 §8.1). Used offline by the SOS screen.
-# Slice 0: pipeline example only — the SOS screen still uses built-in US numbers.
-# Crisis content: changes only with review by Agent 10.
-version: 1
-reviewedBy: []
+# Emergency resources by country (A07 §4.5, A11 §8.1, UX review 2026-11-07 Y6).
+# The app keeps a built-in copy (core/model HelpDirectory) so SOS opens instantly and offline;
+# HelpDirectoryTest fails if the two differ. Change both together.
+# Country = where the phone is: mobile network → SIM → phone region; never the language.
+# Unknown country → emergency 112 and the findahelpline.com directory (no crisis line).
+# Crisis content: changes only with review by Agents 10 and 7.
+# Numbers are re-checked before every release; `checked` is the date of the last check.
+version: 2
+reviewedBy: [agent-10, agent-7, agent-3]
 status: draft
+fallback:
+  emergency:
+    number: "112"
+  directoryUrl: "https://findahelpline.com"
 countries:
   US:
+    checked: "2026-11-06"
     emergency:
       number: "911"
-      label: "911"
     crisisLine:
       number: "988"
-      label: "988 — поговорить"
+      shown: "988"
       sms: "988"
       chatUrl: "https://988lifeline.org/chat/"
+  RU:
+    checked: "2026-11-07"
+    emergency:
+      number: "112"
+    crisisLine:
+      # Free, anonymous, 24/7. Its mandate is children, teens and their parents: an adult
+      # line (e.g. the EMERCOM psychological help line) is an open founder question,
+      # see docs/reviews/2026-11-07-content-review.md. Re-check before G3.
+      number: "88002000122"
+      shown: "8-800-2000-122"

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -23,10 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSecondaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
+import com.healthofatitan.app.core.ui.component.dialHelp
+import com.healthofatitan.app.core.ui.component.openHelpDirectory
+import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotType
 
 const val CARE_TAG = "checkin_care"
@@ -36,11 +41,14 @@ const val CARE_OK_TAG = "checkin_care_ok"
 /**
  * «Как ты на самом деле?» (sc6, И2.8′, A07 §4.3 level 1): a sober screen — no Titan, no game.
  * «Нужна помощь сейчас» opens the SOS screen (its texts unchanged), «Поговорить» opens the mentor
- * in its careful mode, «Всё ок, просто день» closes. 988 and 911 are on this screen itself.
+ * in its careful mode, «Всё ок, просто день» closes. The crisis line and the emergency number of
+ * the phone's country (988 and 911 in the US, 8-800-2000-122 and 112 in Russia; Y6) are on this
+ * screen itself; without a line of ours the left button opens the directory.
  */
 @Composable
 fun CareScreen(onHelp: () -> Unit, onTalk: () -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
+    val lines = rememberHelpLines()
     var okSaid by remember { mutableStateOf(false) }
     Column(
         Modifier
@@ -68,8 +76,13 @@ fun CareScreen(onHelp: () -> Unit, onTalk: () -> Unit, onClose: () -> Unit) {
         }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = { context.dial("988") }, modifier = Modifier.weight(1f).height(56.dp)) { Text("988") }
-            OutlinedButton(onClick = { context.dial(EMERGENCY_NUMBER) }, modifier = Modifier.weight(1f).height(56.dp)) { Text(EMERGENCY_NUMBER) }
+            OutlinedButton(
+                onClick = { lines.crisisLine?.let { context.dialHelp(it) } ?: context.openHelpDirectory() },
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            ) { Text(lines.crisisShown ?: CheckinTexts.FIND_LINE, textAlign = TextAlign.Center) }
+            OutlinedButton(onClick = { context.dialHelp(lines.emergency) }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                Text(lines.emergency)
+            }
         }
     }
 }

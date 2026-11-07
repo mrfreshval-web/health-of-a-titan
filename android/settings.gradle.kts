@@ -46,3 +46,5 @@ include(":domain:metrics")
 include(":integration:whoop")
 // Slice 2 (day rules A09, plan, morning push):
 include(":domain:engine")
+// Stream A (D-024): phone steps from Health Connect
+include(":integration:healthconnect")

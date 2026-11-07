@@ -67,6 +67,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:network"))
     implementation(project(":integration:whoop"))
+    implementation(project(":integration:healthconnect"))
     implementation(project(":feature:today"))
     implementation(project(":feature:mentor"))
     implementation(project(":feature:week"))

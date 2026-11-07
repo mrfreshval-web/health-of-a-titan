@@ -80,5 +80,27 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /**
+     * Stream A «Каждый день»: «Закрыть день» answers on `evening_check` (A18 И4.1), the return log
+     * (И4.4) and safety events without any text (A07 §4.7, И4.3). No health values, no raw WHOOP.
+     */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `training` TEXT")
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `food` TEXT")
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `plan_helped` INTEGER")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `return_log` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`kind` TEXT NOT NULL, `at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`, `kind`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `safety_event` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `at` INTEGER NOT NULL, `level` INTEGER NOT NULL, " +
+                    "`reason` TEXT, `source` TEXT NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_safety_event_user_id_at` ON `safety_event` (`user_id`, `at`)")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }

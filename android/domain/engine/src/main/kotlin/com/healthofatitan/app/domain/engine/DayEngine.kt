@@ -121,7 +121,7 @@ object DayEngine {
 
         val visible = items.sortedBy { it.priority }.take(BUDGET).sortedWith(compareBy({ it.startMin ?: Int.MAX_VALUE }, { it.priority }))
 
-        return DayPlan(
+        val plan = DayPlan(
             dayKey = input.dayKey,
             regime = r.regime,
             regimeComputed = r.computed,
@@ -138,5 +138,7 @@ object DayEngine {
             headline = DayTexts.headline(r.regime, r.flags),
             summary = DayTexts.summary(n, training, bedtime),
         )
+        // RET-01 last: after a pause the plan becomes its minimal version (A18 И4.4).
+        return ReturnMode.apply(plan, input.silenceDays)
     }
 }

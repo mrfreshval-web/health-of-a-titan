@@ -95,18 +95,29 @@ def _band_poses():
     return {k: dict(v, ry=44.8) for k, v in kp.band_v4().items()}
 
 
+def _quick_middle(u, k=8.0):
+    """0 → 1 with a short, quick middle: the arms pass the moment they point at the viewer (the band
+    at the face, the arm foreshortened to a stub) in ~3 frames and dwell where they read."""
+    return 0.5 + 0.5 * math.tanh(k * (u - 0.5)) / math.tanh(k / 2)
+
+
 def dislocate(period=4.0):
-    """Band dislocates from the front: the straight arms swing on one cosine from in front of the
-    thighs (θ 20°) over the head (180°) to behind the hips (340°) and back. Front view shows the arm
-    foreshortened as it points at the viewer; the band is in front of the body while θ < 180°."""
+    """Band dislocates from the front: the straight arms swing from in front of the thighs (θ 20°)
+    over the head (180°) to behind the hips (340°) and back, one second per quarter. Front view shows
+    the arm foreshortened as it points at the viewer; the band and the arms are in front of the body
+    while θ < 180° and behind the head and torso afterwards (titan.py: arms_back)."""
     def extra(t, p, seg):
-        th = 180.0 - 160.0 * math.cos(math.pi * (t % period) / (period / 2))
+        q = (t % period) / (period / 4)
+        i, u = min(int(q), 3), q - min(int(q), 3)
+        a, b_ = ((20.0, 180.0), (180.0, 340.0), (340.0, 180.0), (180.0, 20.0))[i]
+        th = a + (b_ - a) * _quick_middle(u)
         fwd = math.sin(math.radians(th))
         for side in "NF":
             ang, ln = kp.band_angles(th, side)
             p["ua" + side] = p["fa" + side] = ang
             p["armLen" + side] = ln
-        p["_band_front"] = max(0.0, min(1.0, 0.5 + fwd * 6.0))
+        p["_band_front"] = 1.0 if fwd > 0 or (fwd == 0 and th < 180) else 0.0
+        p["_arms_back"] = 1.0 - p["_band_front"]
     return extra
 
 
@@ -184,12 +195,11 @@ EXERCISES = {
     "ex-leg-swings": dict(
         start="back", kind="reps", poster="front",
         # v4 (Agent 12: the leg went through the wall): side-on to the wall — the wall is behind the
-        # figure, the far hand on its rail (the arm reaches back, foreshortened), the near hand on the
-        # hip; the leg swings parallel to the wall
-        poses={"front": {"base": "front", "armLenF": 0.42}, "back": {"base": "back", "armLenF": 0.42}},
+        # figure, the far hand holds its rail at hand height (arm_f ≈ [115, 95]), the near hand is on
+        # the hip; the leg swings parallel to the wall
         steps=[("move", "front", 0.8, "sine"), ("move", "back", 0.8, "sine")],
         contacts=[("legF", "ankle")], springs={"shN": (3.2, 0.55), "ftN": (4.0, 0.5), "head": (3.0, 0.7)},
-        props_behind=[pr.rail(30.2, 24.0, 76.0, base=89.0)], frame_pts=[(24, 30), (76, 30)], hands=FISTS,
+        props_behind=[pr.rail(30.4, 22.0, 80.0, base=89.0)], frame_pts=[(22, 30), (80, 30)], hands=FISTS,
     ),
     # 12 · child's pose: hips to the heels, arms long, breathe into the back
     "ex-stretch-child": dict(

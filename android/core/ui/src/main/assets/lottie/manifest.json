@@ -22,7 +22,7 @@
     "poster": 0,
     "up": 30
    },
-   "bytes": 70373
+   "bytes": 69697
   },
   "ex-band-dislocate": {
    "file": "lottie/ex-band-dislocate.json",
@@ -34,7 +34,7 @@
     "poster": 60,
     "behind": 120
    },
-   "bytes": 110237
+   "bytes": 141717
   },
   "ex-breath-long-exhale": {
    "file": "lottie/ex-breath-long-exhale.json",
@@ -94,7 +94,7 @@
     "front": 48,
     "poster": 48
    },
-   "bytes": 81726
+   "bytes": 81724
   },
   "ex-pullup": {
    "file": "lottie/ex-pullup.json",
@@ -117,7 +117,7 @@
     "protract": 60,
     "poster": 60
    },
-   "bytes": 105521
+   "bytes": 104161
   },
   "ex-stretch-calf": {
    "file": "lottie/ex-stretch-calf.json",

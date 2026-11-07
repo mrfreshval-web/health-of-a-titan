@@ -195,7 +195,7 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
             if name[:2] in ("ua", "fa"):
                 # a foreshortened arm (arm circles, a pull-up seen from the front): the piece is
                 # scaled along its bone
-                fy = b.scalar([100 * v[name]["sy"] for v in vals], 0.1)
+                fy = b.scalar([100 * v[name]["sy"] for v in vals], 0.3)
                 if fy["a"]:
                     from .figure import _pair_keys
                     sc = _pair_keys(fy, 100, False)
@@ -277,11 +277,22 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
         chain(["thF", "shF", "ftF"])
         chain(["thN", "shN", "ftN"])
         b.layers += [body[1], body[0], body[2]]      # chest under pelvis (the wrap lies over the waist)
+        body_first = body[1]
         mark = len(b.layers)
         chain(["uaF", "faF", "hdF"], keys=hand_key("F"))
         chain(["uaN", "faN", "hdN"], keys=hand_key("N"))
         arms = b.layers[mark:]
         del b.layers[mark:]
+        back = [f.get("_arms_back", 0.0) > 0.5 for f in frames]
+        if any(back):
+            # v4 (band dislocates): while the hands are behind the back the arms are drawn a second
+            # time under the head and torso; the two sets switch on hold keys at the overhead pass
+            f0, f1 = back.index(True), len(back) - back[::-1].index(True)
+            assert all(back[f0:f1]), "one window of arms behind the back"
+            twin = _twin(b, arms, f0, f1)
+            at = b.layers.index(body_first)
+            b.layers[at:at] = twin
+            _switch(arms, [not x for x in back])
         for pr in props_held:
             pr(b, vals, frames)
         b.layers += arms
@@ -333,6 +344,45 @@ def build_titan(b, frames, front, props_behind=(), props_held=(), props_front=()
 
 
 BELLY_BACK = -5.8        # pelvis-local x of the back: the belly rises from it (v4), the back stays on the mat
+
+
+def _twin(b, layers, f0, f1):
+    """Copies of a set of layers with new indices, shown in frames [f0, f1) only (in/out points; the
+    keys outside are dropped — the size budget); parents inside the set are remapped."""
+    import copy
+    remap = {}
+    out = []
+    for lay in layers:
+        b.ind += 1
+        remap[lay["ind"]] = b.ind
+    for lay in layers:
+        c = copy.deepcopy(lay)
+        c["ind"] = remap[lay["ind"]]
+        c["nm"] = lay["nm"] + "_back"
+        if lay.get("parent") in remap:
+            c["parent"] = remap[lay["parent"]]
+        c["ip"], c["op"] = f0, f1
+        for prop in c["ks"].values():
+            if isinstance(prop, dict) and prop.get("a") == 1:
+                k = prop["k"]
+                lo = max([i for i, key in enumerate(k) if key["t"] <= f0] or [0])
+                hi = min([i for i, key in enumerate(k) if key["t"] >= f1] or [len(k) - 1])
+                prop["k"] = k[lo:hi + 1]
+        out.append(c)
+    return out
+
+
+def _switch(layers, visible):
+    """Hold-keyed opacity: 100 while visible, 0 otherwise (a hard switch, no cross-fade)."""
+    keys = []
+    prev = None
+    for f, v in enumerate(visible):
+        if v != prev:
+            keys.append({"t": f, "s": [100 if v else 0], "h": 1})
+            prev = v
+    o = {"a": 1, "k": keys} if len(keys) > 1 else lt.static(keys[0]["s"][0])
+    for lay in layers:
+        lay["ks"]["o"] = o
 
 
 def _cloth(vals, frames, b, belly_scale=0.0):

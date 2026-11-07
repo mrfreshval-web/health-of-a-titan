@@ -123,12 +123,30 @@ def band(layer):
         def wrap(vv):
             return lt.path_value([(vv[0], vv[1]), (vv[2], vv[3])], [(0, 0), (0, 0)], [(0, 0), (0, 0)], False)
         ks = lt.fit_linear(pts, b.breaks, 1.0, wrap=wrap)
-        vis = [p.get("_band_front", 1.0) for p in frames]
+        vis = [p.get("_band_front", 1.0) > 0.5 for p in frames]
         if layer == "behind":
-            vis = [1.0 - x for x in vis]
-        op = b.scalar([100 * x for x in vis], 1.0)
-        b.add("props_band_" + layer, 4, lt.transform(o=op), [lt.group("props_line", [{"ty": "sh", "nm": "band", "ks": ks},
-                                                                                    lt.stroke(PROPS, PROP_PX * 1.3, "props_stroke", opacity=80)])])
+            vis = [not x for x in vis]
+        b.add("props_band_" + layer, 4, lt.transform(), [lt.group("props_line", [{"ty": "sh", "nm": "band", "ks": ks},
+                                                                               lt.stroke(PROPS, PROP_PX * 1.3, "props_stroke", opacity=80)])])
+        lay = b.layers[-1]
+        if all(vis[:-1]):
+            return
+        if layer == "behind":
+            # one window: in/out points, the path keys outside it dropped (the size budget)
+            f0, f1 = vis.index(True), len(vis) - vis[::-1].index(True)
+            lay["ip"], lay["op"] = f0, f1
+            k = ks["k"] if isinstance(ks, dict) and ks.get("a") == 1 else None
+            if k:
+                lo = max([i for i, key in enumerate(k) if key["t"] <= f0] or [0])
+                hi = min([i for i, key in enumerate(k) if key["t"] >= f1] or [len(k) - 1])
+                ks["k"] = k[lo:hi + 1]
+        else:
+            keys, prev = [], None
+            for f, v in enumerate(vis):
+                if v != prev:
+                    keys.append({"t": f, "s": [100 if v else 0], "h": 1})
+                    prev = v
+            lay["ks"]["o"] = {"a": 1, "k": keys}
     return add
 
 

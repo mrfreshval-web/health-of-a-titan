@@ -324,7 +324,7 @@ def leg_swings_v4(ls):
     hand holds a rail on it, the near hand is on the hip; the leg swings parallel to the wall."""
     out = {}
     for k in ("front", "back"):
-        p = dict(ls[k], torso=0.0, head=0.0, uaF=160.0, faF=140.0)
+        p = dict(ls[k], torso=0.0, head=0.0, uaF=115.0, faF=95.0)          # far hand forward on the rail
         j = rig.joints(p)
         solve_arm(p, "N", (j["hip"][0] + 2.6, j["hip"][1] - 7.5), (j["hip"][0] - 7.0, j["hip"][1] - 15.0))
         out[k] = p

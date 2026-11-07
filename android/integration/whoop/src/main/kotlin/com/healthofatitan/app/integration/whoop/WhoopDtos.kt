@@ -86,6 +86,8 @@ internal data class WhoopSleep(
         @SerialName("total_light_sleep_time_milli") val light: Long = 0,
         @SerialName("total_slow_wave_sleep_time_milli") val slowWave: Long = 0,
         @SerialName("total_rem_sleep_time_milli") val rem: Long = 0,
+        /** Awake in bed: only for the composition of the night on «Сегодня» (Y2), memory only. */
+        @SerialName("total_awake_time_milli") val awake: Long = 0,
     )
 }
 

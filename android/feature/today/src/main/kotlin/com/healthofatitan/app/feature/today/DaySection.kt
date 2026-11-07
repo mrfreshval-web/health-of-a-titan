@@ -117,140 +117,9 @@ class DayActions(
     val onOpenHelp: () -> Unit = {},
     /** Health Connect answered the permission request, or the steps should be re-read. */
     val onSteps: () -> Unit = {},
+    /** R3: a tap on the training or a meal opens its screen (stream B player, stream C «Тарелка дня»). */
+    val onOpen: (String) -> Unit = {},
 )
-
-/**
- * The hero of «Сегодня» (A37 §1 scenario 2, s2): the Titan inside the Заряд ring, lit by the mode,
- * with the Заряд pill at the end of the arc, the mode word under it and three data tokens.
- * Before the norm is learned the ring is the calibration «9/14», dashed, in the theme light.
- *
- * @param charge Заряд 5–95 (50 = your norm); null while calibrating
- * @param normNights nights in the norm while calibrating
- */
-@Composable
-fun TodayHero(
-    mode: HotMode?,
-    charge: Int?,
-    normNights: Int?,
-    tokens: List<String>,
-    modifier: Modifier = Modifier,
-    summary: String? = null,
-    flags: Set<DayFlag> = emptySet(),
-) {
-    val reduce = rememberReduceMotion()
-    val fraction = when {
-        charge != null -> charge / 100f
-        normNights != null -> normNights / TodayTexts.NORM_NIGHTS.toFloat()
-        else -> 0f
-    }.coerceIn(0f, 1f)
-    val ring = remember { Animatable(if (reduce) fraction else 0f) }
-    LaunchedEffect(fraction) {
-        if (reduce) ring.snapTo(fraction) else ring.animateTo(fraction, spring(dampingRatio = 0.9f, stiffness = 220f))
-    }
-    val color = mode?.color() ?: MaterialTheme.colorScheme.primary
-    val light = mode?.let { TitanLights.of(it) } ?: TitanLights.default()
-    val glow = HotThemeTokens.colors.glow
-    Column(
-        modifier.fillMaxWidth().testTag(TODAY_HERO_TAG),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val side = minOf(maxWidth, 320.dp)
-            var box by remember { mutableStateOf(IntSize.Zero) }
-            val density = LocalDensity.current
-            Box(
-                Modifier
-                    .size(side)
-                    .onSizeChanged { box = it }
-                    .drawBehind {
-                        // aura of the mode: radial light 16 % behind the hero (A37 §9.5)
-                        if (glow) {
-                            drawCircle(
-                                Brush.radialGradient(listOf(color.copy(alpha = 0.16f), color.copy(alpha = 0.04f), Color.Transparent)),
-                                radius = size.minDimension * 0.62f,
-                            )
-                        }
-                    }
-                    .semantics { contentDescription = TitanTexts.heroSpoken(mode, charge) },
-            ) {
-                TitanScene(
-                    modifier = Modifier.fillMaxSize(),
-                    light = light,
-                    ring = { ring.value },
-                    ringColor = color,
-                    ringTrack = HotThemeTokens.colors.hairline,
-                    ringDashed = mode == HotMode.BEREZHNO || charge == null,
-                    ringStroke = 10f,
-                    ringFit = 0.9f,
-                )
-                val pillText = charge?.toString() ?: normNights?.let { "$it/${TodayTexts.NORM_NIGHTS}" }
-                if (pillText != null && box != IntSize.Zero) {
-                    val p = titanRingPoint(
-                        androidx.compose.ui.geometry.Size(box.width.toFloat(), box.height.toFloat()),
-                        ring.value.coerceAtLeast(0.001f),
-                        0.9f,
-                    )
-                    val pillW = with(density) { 64.dp.toPx() }
-                    val pillH = with(density) { 36.dp.toPx() }
-                    Box(
-                        Modifier
-                            .offset { IntOffset((p.x - pillW / 2).roundToInt(), (p.y - pillH / 2).roundToInt()) }
-                            .size(64.dp, 36.dp)
-                            .background(color, CircleShape)
-                            .clearAndSetSemantics { },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(pillText, style = HotType.ringValue.copy(fontSize = HotType.ringValue.fontSize * 1.25f), color = Titanium.Depth)
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        if (mode != null) {
-            ModeWord(mode, style = HotType.headline, color = MaterialTheme.colorScheme.onSurface, glyphSize = 44.dp, modifier = Modifier.testTag(DAY_REGIME_TAG))
-        }
-        if (!summary.isNullOrBlank()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                summary,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag(DAY_SUMMARY_TAG),
-            )
-        }
-        if (flags.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                flags.sortedBy { it.ordinal }.forEach { FlagGlyph(it, MaterialTheme.colorScheme.onSurfaceVariant, size = 28.dp) }
-            }
-        }
-        if (tokens.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                tokens.forEach { DataToken(it) }
-            }
-        }
-    }
-}
-
-/** A data token «сон 5:50 ↓»: glass capsule, tabular numbers (A37 §6 Сегодня). */
-@Composable
-fun DataToken(text: String, modifier: Modifier = Modifier) {
-    val tokens = HotThemeTokens.colors
-    Text(
-        text,
-        style = HotType.ringValue,
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
-        modifier = modifier
-            .border(1.dp, tokens.hairline, CircleShape)
-            .background(Brush.verticalGradient(listOf(tokens.glassTop, tokens.glassBottom)), CircleShape)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    )
-}
 
 /** Where a fired rule stands in «Почему так» (A39 §7): safety → data → regime → context. */
 internal enum class WhyKind { SAFETY, DATA, REGIME, CONTEXT }
@@ -313,7 +182,7 @@ fun SafetyCard(plan: DayView) {
     }
 }
 
-/** «Почему так» under the hero: folded; at most 4 lines with a sphere pictogram each (A39 §7.3). */
+/** «Почему такой день ⌄» under the hero (Y4): folded, unfolds in place; at most 4 lines with a sphere pictogram each (A39 §7.3). */
 @Composable
 fun RegimeWhy(plan: DayView) {
     var why by rememberSaveable(plan.dayKey) { mutableStateOf(false) }
@@ -338,76 +207,10 @@ fun RegimeWhy(plan: DayView) {
     }
 }
 
-/** The item of the moment: in its slot now, else the next open one, else the first open one. */
-fun nowItem(items: List<DayItemView>, nowMin: Int): DayItemView? {
-    val open = items.filter { it.status == ItemStatus.OPEN }
-    return open.firstOrNull { s -> s.startMin != null && s.endMin != null && nowMin in s.startMin!!..s.endMin!! }
-        ?: open.filter { it.startMin != null && it.startMin!! >= nowMin }.minByOrNull { it.startMin!! }
-        ?: open.firstOrNull()
-}
-
-/**
- * «Сейчас» (s2): the one next action as a glass card — time in the dawn accent, the title in
- * 21 sp and the dawn round button that marks it done (WHOOP confirms a workout by itself).
- */
-@Composable
-fun NowCard(plan: DayView, item: DayItemView, onToggle: (LocalDate, String) -> Unit, mode: HotMode) {
-    HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(DAY_NOW_TAG), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            KindBadge(item.kind, mode.color(), sizeDp = 64)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                val slot = DayUiTexts.slot(item.startMin, item.endMin)
-                HotOverline(if (slot.isEmpty()) TitanTexts.NOW else slot, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(4.dp))
-                Text(item.title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                item.detail?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            DawnRoundButton(onClick = { onToggle(plan.dayKey, item.id) }, description = TitanTexts.MARK_DONE)
-        }
-    }
-}
-
-/** The dawn round action (s2 «▶»): 64 dp, the dawn fill with its glow. Marks the item done. */
-@Composable
-private fun DawnRoundButton(onClick: () -> Unit, description: String) {
-    val tokens = HotThemeTokens.colors
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = Color.Transparent,
-        modifier = Modifier
-            .size(64.dp)
-            .drawBehind {
-                if (tokens.glow) {
-                    drawCircle(Brush.radialGradient(listOf(tokens.dawnFill[1].copy(alpha = 0.35f), Color.Transparent)), radius = size.minDimension * 0.75f)
-                }
-            }
-            .semantics { contentDescription = description; role = Role.Button },
-    ) {
-        Box(
-            Modifier.background(Brush.verticalGradient(tokens.dawnFill), CircleShape).drawBehind {
-                // check mark
-                val w = size.width
-                val s = Stroke(width = 2.4.dp.toPx(), cap = StrokeCap.Round)
-                val p = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.33f, w * 0.52f)
-                    lineTo(w * 0.45f, w * 0.64f)
-                    lineTo(w * 0.68f, w * 0.38f)
-                }
-                drawPath(p, Titanium.OnDawn, style = s)
-            },
-        )
-    }
-}
-
 /**
  * A plan item's kind as a round badge (until the A37 §6 sphere pictograms arrive in the next slice):
  * a thin ring with a reduced sign — two columns for training, a crescent for sleep, a sun for
- * light, a block for work, a plate for food.
+ * light, a block for work, a plate with a fork and a knife for food (G1).
  */
 @Composable
 fun KindBadge(kind: ItemKind?, color: Color, sizeDp: Int = 44, filled: Boolean = false, dashed: Boolean = false) {
@@ -457,168 +260,21 @@ fun KindBadge(kind: ItemKind?, color: Color, sizeDp: Int = 44, filled: Boolean =
                         drawLine(ink, Offset(c.x - k * 0.3f, c.y + k * 0.8f), Offset(c.x + k * 0.3f, c.y + k * 0.8f), w, StrokeCap.Round)
                     }
                     ItemKind.NUTRITION -> {
-                        drawCircle(ink, k * 0.85f, c, style = Stroke(w))
-                        drawCircle(ink, k * 0.45f, c, style = Stroke(w))
+                        // G1: a plate between a fork and a knife (it read as a target before)
+                        drawCircle(ink, k * 0.62f, c, style = Stroke(w))
+                        drawCircle(ink, k * 0.36f, c, style = Stroke(w * 0.8f))
+                        val fx = c.x - k * 1.05f
+                        drawLine(ink, Offset(fx, c.y - k * 0.7f), Offset(fx, c.y + k * 0.7f), w, StrokeCap.Round)
+                        drawLine(ink, Offset(fx - k * 0.16f, c.y - k * 0.7f), Offset(fx - k * 0.16f, c.y - k * 0.3f), w * 0.8f, StrokeCap.Round)
+                        drawLine(ink, Offset(fx + k * 0.16f, c.y - k * 0.7f), Offset(fx + k * 0.16f, c.y - k * 0.3f), w * 0.8f, StrokeCap.Round)
+                        val kx = c.x + k * 1.05f
+                        drawLine(ink, Offset(kx, c.y - k * 0.7f), Offset(kx, c.y + k * 0.7f), w, StrokeCap.Round)
+                        drawLine(ink, Offset(kx, c.y - k * 0.7f), Offset(kx + k * 0.14f, c.y - k * 0.1f), w * 0.8f, StrokeCap.Round)
                     }
                     null -> drawCircle(ink, k * 0.3f, c)
                 }
             },
     )
-}
-
-/**
- * «Линия дня» (A37 §10 фишка 10, s2): the plan as nodes on one line — what was (filled in the
- * mode light), now (the dawn node with its glow), what comes (hairline) — and bedtime at the end.
- */
-@Composable
-fun DayLine(plan: DayView, nowMin: Int, mode: HotMode, modifier: Modifier = Modifier) {
-    val items = plan.items.filter { it.startMin != null }.sortedBy { it.startMin }
-    val current = nowItem(plan.items, nowMin)
-    val tokens = HotThemeTokens.colors
-    val modeColor = mode.color()
-    val dawn = MaterialTheme.colorScheme.primary
-    val nodes = items.map { it to it.startMin!! } + (null to plan.bedtimeMin)
-    val doneUntil = nodes.indexOfLast { (item, start) -> item?.status != ItemStatus.OPEN && item != null || start <= nowMin }
-    Column(modifier.fillMaxWidth().testTag(DAY_LINE_TAG)) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .drawBehind {
-                    // the line under the nodes: the part that has passed glows dawn
-                    val y = 22.dp.toPx() + 26.dp.toPx()
-                    val step = 78.dp.toPx()
-                    val first = 39.dp.toPx()
-                    val last = first + step * (nodes.size - 1)
-                    drawLine(tokens.rule, Offset(first, y), Offset(last, y), 1.dp.toPx())
-                    if (doneUntil >= 0) {
-                        val x = first + step * doneUntil.coerceAtMost(nodes.size - 1)
-                        drawLine(dawn.copy(alpha = 0.8f), Offset(first, y), Offset(x, y), 1.5.dp.toPx())
-                    }
-                },
-        ) {
-            nodes.forEachIndexed { i, (item, start) ->
-                val isNow = item != null && item.id == current?.id
-                val done = item != null && item.status != ItemStatus.OPEN
-                val color = when {
-                    item == null -> tokens.modeBerezhno
-                    isNow -> dawn
-                    done -> modeColor
-                    else -> tokens.textTertiary
-                }
-                Column(
-                    Modifier
-                        .width(78.dp)
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = (item?.title ?: TitanTexts.BEDTIME) + ", " + DayTexts.time(start)
-                            stateDescription = when {
-                                isNow -> TitanTexts.NOW
-                                done -> TitanTexts.MARKED
-                                else -> ""
-                            }
-                        },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        DayTexts.time(start),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isNow) dawn else tokens.textTertiary,
-                        modifier = Modifier.height(22.dp),
-                    )
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
-                        if (isNow && tokens.glow) {
-                            Spacer(Modifier.size(52.dp).background(Brush.radialGradient(listOf(dawn.copy(alpha = 0.35f), Color.Transparent)), CircleShape))
-                        }
-                        KindBadge(
-                            item?.kind ?: ItemKind.SLEEP,
-                            color,
-                            sizeDp = 44,
-                            filled = isNow || done,
-                            dashed = !isNow && !done && item != null && i > doneUntil,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** The full plan (slice 2) in glass: time, title, detail, the source of a mark (A35), tap to mark. */
-@Composable
-fun PlanCard(plan: DayView, onToggle: (LocalDate, String) -> Unit) {
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(DAY_PLAN_TAG)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            HotOverline(DayUiTexts.PLAN, modifier = Modifier.weight(1f))
-            Markers(plan)
-        }
-        Spacer(Modifier.height(4.dp))
-        plan.items.sortedWith(compareBy(nullsLast()) { it.startMin }).forEachIndexed { i, item ->
-            if (i > 0) HorizontalDivider(color = HotThemeTokens.colors.hairline)
-            PlanRow(item, onClick = { onToggle(plan.dayKey, item.id) })
-        }
-    }
-}
-
-/** «кофе до · экраны в сторону с» as two pictograms with times; the words stay for TalkBack (A39 §7.4). */
-@Composable
-private fun Markers(plan: DayView) {
-    val ink = HotThemeTokens.colors.textTertiary
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clearAndSetSemantics {
-            contentDescription = DayUiTexts.markers(plan.caffeineCutoffMin, plan.windDownMin, plan.bedtimeMin)
-        },
-    ) {
-        CupGlyph("", ink)
-        Spacer(Modifier.width(4.dp))
-        Text(DayTexts.time(plan.caffeineCutoffMin), style = MaterialTheme.typography.labelSmall, color = ink)
-        Spacer(Modifier.width(12.dp))
-        ScreenGlyph("", ink)
-        Spacer(Modifier.width(4.dp))
-        Text(DayTexts.time(plan.windDownMin), style = MaterialTheme.typography.labelSmall, color = ink)
-    }
-}
-
-@Composable
-private fun PlanRow(item: DayItemView, onClick: () -> Unit) {
-    val done = item.status != ItemStatus.OPEN
-    val fromWhoop = item.status == ItemStatus.DONE_WHOOP || item.status == ItemStatus.MODIFIED
-    val tokens = HotThemeTokens.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .clickable(enabled = !fromWhoop, role = Role.Checkbox, onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            DayUiTexts.slot(item.startMin, item.endMin),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (done) tokens.textTertiary else MaterialTheme.colorScheme.primary,
-            modifier = Modifier.width(92.dp),
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                item.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            )
-            item.detail?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = tokens.textTertiary)
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        if (done) {
-            StatusGlyph(item.status, tokens.modeRovno, Titanium.Depth, size = 24.dp)
-        } else {
-            Spacer(
-                Modifier
-                    .size(24.dp)
-                    .drawBehind { drawCircle(tokens.rule, size.minDimension / 2f - 0.5.dp.toPx(), style = Stroke(1.dp.toPx())) },
-            )
-        }
-    }
 }
 
 /** No plan for today yet: an honest dashed card (D-027: the plan is made from data, not a guess). */

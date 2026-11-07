@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotOverline
@@ -51,7 +52,6 @@ import com.healthofatitan.app.core.ui.component.HotStatTile
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanSealMoment
 import com.healthofatitan.app.core.ui.component.dialHelp
-import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.training.PlayerPhase
@@ -344,18 +344,27 @@ private fun BoxScope.Paused(actions: PlayerActions, feltBad: Boolean) {
 }
 
 /**
- * «Мне плохо» (A40 §2.5, A19 §6.2): what to do now, before «Продолжить». The number is the
- * emergency number of the phone's country (911, 112; Y6); the dialer asks before calling.
+ * «Мне плохо» (A40 §2.5, A19 §6.2): what to do now, before «Продолжить». The numbers are 112 and
+ * 911, in this order, as everywhere (core/model HelpNumbers); the dialer asks before calling.
  */
 @Composable
 private fun FeelBad() {
     val context = LocalContext.current
-    val emergency = rememberHelpLines().emergency
+    val numbers = HelpNumbers.IN_TEXT
     Column(Modifier.testTag(PLAYER_FEEL_BAD_HELP_TAG), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(TrainingTexts.FEEL_BAD_TITLE, style = HotType.headline, modifier = Modifier.semantics { heading() })
-        Text(TrainingTexts.feelBadUrgent(emergency), style = MaterialTheme.typography.bodyLarge)
-        Text(TrainingTexts.feelBadBreath(emergency), style = MaterialTheme.typography.bodyMedium)
-        HotPrimaryButton(TrainingTexts.callEmergency(emergency), onClick = { context.dialHelp(emergency) }, modifier = Modifier.fillMaxWidth())
+        Text(TrainingTexts.feelBadUrgent(numbers), style = MaterialTheme.typography.bodyLarge)
+        Text(TrainingTexts.feelBadBreath(numbers), style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HelpNumbers.ALL.forEachIndexed { i, number ->
+                val call = TrainingTexts.callEmergency(number)
+                if (i == 0) {
+                    HotPrimaryButton(call, onClick = { context.dialHelp(number) }, modifier = Modifier.weight(1f))
+                } else {
+                    HotSecondaryButton(call, onClick = { context.dialHelp(number) }, modifier = Modifier.weight(1f))
+                }
+            }
+        }
         Text(TrainingTexts.FEEL_BAD_REST, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

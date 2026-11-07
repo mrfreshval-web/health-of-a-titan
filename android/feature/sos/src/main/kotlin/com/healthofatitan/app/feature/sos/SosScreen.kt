@@ -41,35 +41,27 @@ import androidx.compose.ui.unit.em
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.model.safety.HelpLines
+import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.dialHelp
-import com.healthofatitan.app.core.ui.component.openHelpDirectory
-import com.healthofatitan.app.core.ui.component.rememberHelpLines
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.core.ui.theme.HotType
 
 const val SOS_SCREEN_TAG = "screen_sos"
 
-/** The «поговорить» button: the country's crisis line, or the directory when we have none. */
-const val SOS_CALL_CRISIS_TAG = "sos_call_crisis"
+/** The first help number, 112. */
+const val SOS_CALL_112_TAG = "sos_call_112"
 
-/** The emergency number of the country (911, 112). */
-const val SOS_CALL_EMERGENCY_TAG = "sos_call_emergency"
+/** The second help number, 911. */
+const val SOS_CALL_911_TAG = "sos_call_911"
 
 /**
- * Words of the emergency block (A07 §4.4–4.5, Y6). The numbers come from [HelpLines] of the phone's
- * country; the built-in table opens instantly and offline (core/model HelpDirectory, a copy of
- * content/safety/resources.yaml). Crisis content: Agents 10 and 7.
+ * Words of the emergency block (A07 §4.4). Numbers: 112 and 911, everywhere and in this order
+ * (founder's decision 2026-11-07, core/model HelpNumbers). Crisis content: Agents 10 and 7.
  */
 internal object SosTexts {
     const val DANGER = "Если опасность прямо сейчас"
-    const val FIND_LINE = "Найти линию помощи"
-
-    fun talk(lines: HelpLines): String = lines.crisisShown?.let { "$it — поговорить" } ?: FIND_LINE
-
-    fun humans(lines: HelpLines): String =
-        "Я ИИ, не человек. Живые люди — " + (lines.crisisShown ?: "линии помощи твоей страны на findahelpline.com") + "."
+    val HUMANS = "Я ИИ, не человек. Живые люди ответят по ${HelpNumbers.FIRST} и ${HelpNumbers.SECOND}."
 }
 
 /** SOS outside the tabs (A11 §1.1): from the top bar, the quick settings tile and the shortcut. */
@@ -89,7 +81,6 @@ fun NavGraphBuilder.sosScreen(onClose: () -> Unit) {
 @Composable
 fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val lines = rememberHelpLines()
     HotTheme(darkTheme = true, dynamicColor = false) {
         Surface(
             color = MaterialTheme.colorScheme.background,
@@ -118,11 +109,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                             .semantics { heading() },
                     )
                 }
-                EmergencyBlock(
-                    lines = lines,
-                    onCrisisLine = { lines.crisisLine?.let { context.dialHelp(it) } ?: context.openHelpDirectory() },
-                    onEmergency = { context.dialHelp(lines.emergency) },
-                )
+                EmergencyBlock(onCall = { context.dialHelp(it) })
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Я рядом. Что сейчас?",
@@ -136,7 +123,7 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    SosTexts.humans(lines),
+                    SosTexts.HUMANS,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -148,42 +135,9 @@ fun SosScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmergencyBlock(lines: HelpLines, onCrisisLine: () -> Unit, onEmergency: () -> Unit) {
+private fun EmergencyBlock(onCall: (String) -> Unit) {
     val onBlock = MaterialTheme.colorScheme.onErrorContainer
     val block = MaterialTheme.colorScheme.errorContainer
-    val crisis: @Composable (Modifier) -> Unit = { m ->
-        Button(
-            onClick = onCrisisLine,
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = onBlock, contentColor = block),
-            contentPadding = PaddingValues(horizontal = 18.dp),
-            modifier = m
-                .heightIn(min = 56.dp)
-                .testTag(SOS_CALL_CRISIS_TAG),
-        ) {
-            if (lines.crisisLine != null) {
-                Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(SosTexts.talk(lines), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        }
-    }
-    val emergency: @Composable (Modifier) -> Unit = { m ->
-        OutlinedButton(
-            onClick = onEmergency,
-            shape = CircleShape,
-            border = BorderStroke(1.dp, onBlock),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = onBlock),
-            contentPadding = PaddingValues(horizontal = 22.dp),
-            modifier = m
-                .heightIn(min = 56.dp)
-                .testTag(SOS_CALL_EMERGENCY_TAG),
-        ) {
-            Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(lines.emergency, style = MaterialTheme.typography.titleMedium)
-        }
-    }
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = block, contentColor = onBlock),
@@ -195,18 +149,38 @@ private fun EmergencyBlock(lines: HelpLines, onCrisisLine: () -> Unit, onEmergen
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            // 988 / 911 fit in one row; a long number (8-800-2000-122) or the directory stacks.
-            if ((lines.crisisShown?.length ?: Int.MAX_VALUE) <= SHORT_NUMBER) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    crisis(Modifier.weight(1f))
-                    emergency(Modifier)
+            // 112 first and filled, 911 second and outlined: the same order on every screen.
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = { onCall(HelpNumbers.FIRST) },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = onBlock, contentColor = block),
+                    contentPadding = PaddingValues(horizontal = 18.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 56.dp)
+                        .testTag(SOS_CALL_112_TAG),
+                ) {
+                    Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(HelpNumbers.FIRST, style = MaterialTheme.typography.titleMedium)
                 }
-            } else {
-                emergency(Modifier.fillMaxWidth())
-                crisis(Modifier.fillMaxWidth())
+                OutlinedButton(
+                    onClick = { onCall(HelpNumbers.SECOND) },
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, onBlock),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = onBlock),
+                    contentPadding = PaddingValues(horizontal = 18.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 56.dp)
+                        .testTag(SOS_CALL_911_TAG),
+                ) {
+                    Icon(painterResource(R.drawable.core_ui_ic_call), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(HelpNumbers.SECOND, style = MaterialTheme.typography.titleMedium)
+                }
             }
         }
     }
 }
-
-private const val SHORT_NUMBER = 4

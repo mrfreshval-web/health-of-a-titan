@@ -189,6 +189,8 @@ fun HotApp(
                     trainingCard = {
                         if (stateful) TrainingDayCardRoute(onOpen = { navController.navigate(HotRoute.TRAINING) { launchSingleTop = true } })
                     },
+                    // UX review 119, R3: a tap on the training opens stream B, on a meal its card of stream C.
+                    onOpenRoute = { route -> navController.navigate(route) { launchSingleTop = true } },
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()

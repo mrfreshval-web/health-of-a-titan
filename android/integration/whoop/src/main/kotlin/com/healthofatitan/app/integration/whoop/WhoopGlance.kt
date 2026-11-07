@@ -26,8 +26,21 @@ data class WhoopGlance(
 /** The day strain of the latest WHOOP cycle and the cycle's start. */
 data class StrainGlance(val cycleStart: Instant, val strain: Double)
 
-/** Last main sleep: [hours] asleep (light + deep + REM), [needHours] = WHOOP's sleep need. */
-data class SleepGlance(val wakeDay: LocalDate, val end: Instant, val hours: Double, val needHours: Double?)
+/**
+ * Last main sleep: [hours] asleep (light + deep + REM), [needHours] = WHOOP's sleep need, and the
+ * composition of the night in minutes (UX review 119, Y2: the sleep chip opens it). Shown only,
+ * never used by the metrics (A25 P7: no stages in the norm); memory only like the rest.
+ */
+data class SleepGlance(
+    val wakeDay: LocalDate,
+    val end: Instant,
+    val hours: Double,
+    val needHours: Double?,
+    val stages: SleepStages? = null,
+)
+
+/** Minutes of light, deep (slow wave) and REM sleep and of waking in bed (WHOOP stage summary). */
+data class SleepStages(val lightMin: Int, val deepMin: Int, val remMin: Int, val awakeMin: Int)
 
 /** Recovery inputs of that night: HRV (rMSSD, ms) and resting heart rate. No Recovery % (A25 P7). */
 data class RecoveryGlance(val hrvMs: Double?, val restingHr: Double?)
@@ -36,6 +49,8 @@ data class RecoveryGlance(val hrvMs: Double?, val restingHr: Double?)
 data class WorkoutGlance(val start: Instant, val minutes: Int, val sport: String?, val trimp: Double?)
 
 internal object WhoopGlanceMapper {
+
+    private fun minutes(milli: Long): Int = (milli / 60_000L).toInt()
 
     fun from(window: WhoopWindow, fallbackZone: ZoneId, fetchedAt: Long): WhoopGlance {
         val sleep = window.sleeps
@@ -46,7 +61,8 @@ internal object WhoopGlanceMapper {
             val st = s.score!!.stageSummary!!
             val hours = (st.light + st.slowWave + st.rem) / 3_600_000.0
             val need = s.score?.sleepNeeded?.totalMilli?.takeIf { it > 0 }?.let { it / 3_600_000.0 }
-            SleepGlance(end.atZone(zoneOf(s.timezoneOffset, fallbackZone)).toLocalDate(), end, hours, need)
+            val stages = SleepStages(minutes(st.light), minutes(st.slowWave), minutes(st.rem), minutes(st.awake))
+            SleepGlance(end.atZone(zoneOf(s.timezoneOffset, fallbackZone)).toLocalDate(), end, hours, need, stages)
         }
         val recovery = sleep?.let { (s, _) ->
             window.recoveries.firstOrNull { it.sleepId == s.id && it.scoreState == SCORED }?.score?.let {

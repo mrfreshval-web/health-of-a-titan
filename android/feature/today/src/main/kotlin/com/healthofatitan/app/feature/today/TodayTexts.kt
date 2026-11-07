@@ -1,5 +1,6 @@
 package com.healthofatitan.app.feature.today
 
+import com.healthofatitan.app.core.ui.component.HotNorm
 import com.healthofatitan.app.integration.whoop.SyncFailure
 import com.healthofatitan.app.integration.whoop.SyncStatus
 import java.time.Instant
@@ -18,7 +19,13 @@ object TodayTexts {
     const val CONNECT = "Подключить WHOOP"
     const val STATE_TITLE = "Состояние"
     const val LOADING = "Загружаю…"
-    const val NORM_NIGHTS = 14
+    /** Nights before Заряд is shown: the engine's MIN_BASELINE (14), out of a 28-night window (R5). */
+    const val NORM_NIGHTS = HotNorm.MIN_NIGHTS
+    const val NORM_FULL_NIGHTS = HotNorm.FULL_NIGHTS
+
+    /** R3: a tap opens an item; a long press marks it. */
+    const val OPEN = "Открыть"
+    const val UNMARK = "Снять отметку"
     const val NORM = "Норма"
     const val CHARGE = "Заряд"
     const val BALANCE = "Весы"
@@ -31,7 +38,8 @@ object TodayTexts {
     const val STEPS = "Шаги"
     const val NO_DATA = "нет данных"
 
-    fun nights(n: Int) = "$n/$NORM_NIGHTS"
+    /** R5: the nights of the norm as words, never a fraction («Учусь тебя: 9 из 28 ночей»). */
+    fun nights(n: Int) = HotNorm.label(n)
 
     /** A25 §4: five levels from «заметно ниже нормы» to «заметно выше». */
     fun chargeWord(level: Int?): String = when (level) {

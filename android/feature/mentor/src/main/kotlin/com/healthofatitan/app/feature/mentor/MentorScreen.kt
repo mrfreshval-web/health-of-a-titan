@@ -1,5 +1,6 @@
 package com.healthofatitan.app.feature.mentor
 
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -36,11 +38,25 @@ const val MENTOR_SCREEN_TAG = "screen_mentor"
 const val MENTOR_MENU_TAG = "mentor_menu"
 const val MENTOR_HELP_TAG = "mentor_menu_help"
 
+/** G2: one line on the first visit. Review: Agent 12 (copy), Agent 10 (tone). */
+const val MENTOR_INTRO = "Винс — твой наставник. ИИ, не врач."
+private const val MENTOR_PREFS = "hot_mentor_ui"
+private const val INTRO_SEEN = "intro_seen"
+
 @Composable
 fun MentorScreen(modifier: Modifier = Modifier, onOpenHelp: () -> Unit = {}) {
     var menu by rememberSaveable { mutableStateOf(false) }
+    // G2 (UX review 119): Винс introduces himself once, on the first visit to the tab.
+    val context = LocalContext.current
+    val firstVisit = rememberSaveable {
+        val prefs = context.getSharedPreferences(MENTOR_PREFS, Context.MODE_PRIVATE)
+        val first = !prefs.getBoolean(INTRO_SEEN, false)
+        if (first) prefs.edit().putBoolean(INTRO_SEEN, true).apply()
+        first
+    }
     Box(modifier.fillMaxSize()) {
         StubScreen(
+            intro = MENTOR_INTRO.takeIf { firstVisit },
             lead = "Я ИИ-наставник, не врач и не терапевт.",
             blocks = listOf("Разговор", "Работа", "Записи"),
             columns = 3,

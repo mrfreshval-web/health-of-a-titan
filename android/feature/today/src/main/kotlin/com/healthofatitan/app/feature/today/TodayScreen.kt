@@ -27,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +71,7 @@ import com.healthofatitan.app.integration.whoop.TodayMetricsRepository
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopGlance
 import com.healthofatitan.app.integration.whoop.WhoopStatus
+import com.healthofatitan.app.integration.whoop.day.DayView
 import com.healthofatitan.app.integration.whoop.day.StrainCeiling
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -103,6 +106,8 @@ fun NavGraphBuilder.todayScreen(
     plateOfDay: @Composable () -> Unit = {},
     /** Stream B: «Тренировка дня», a card from another module put in by :app. */
     trainingCard: @Composable () -> Unit = {},
+    /** R3: a plan item opens its screen by route (training → stream B, a meal → stream C). */
+    onOpenRoute: (String) -> Unit = {},
 ) {
     val slots = TodaySlots(
         training = { trainingCard() },
@@ -112,7 +117,7 @@ fun NavGraphBuilder.todayScreen(
         },
     )
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp, slots) else TodayScreen(TodayUiState(), onConnectWhoop, slots = slots)
+        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp, slots, onOpenRoute) else TodayScreen(TodayUiState(), onConnectWhoop, slots = slots)
     }
 }
 
@@ -164,6 +169,7 @@ private fun TodayRoute(
     onConnectWhoop: () -> Unit,
     onOpenHelp: () -> Unit,
     slots: TodaySlots,
+    onOpenRoute: (String) -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
@@ -190,6 +196,7 @@ private fun TodayRoute(
             },
             onOpenHelp = onOpenHelp,
             onSteps = dayModel::refreshSteps,
+            onOpen = onOpenRoute,
         ),
         slots = slots,
     )
@@ -211,6 +218,7 @@ fun TodayScreen(
     val connected = whoop != null && whoop.connected
     val refreshing = connected && state.progress is SyncProgress.Running
     val pull = rememberPullToRefreshState()
+    val marks = rememberDayMarks(actions.onToggle)
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = { if (connected) onSync() },
@@ -229,14 +237,16 @@ fun TodayScreen(
             if (!connected) {
                 NotConnected(onConnectWhoop)
             } else {
-                Connected(whoop!!, state, day, actions, slots, onSync)
+                Connected(whoop!!, state, day, actions, marks, slots, onSync)
             }
         }
+        // R3: «Отмечено · Отменить» for 5 s after a mark, over the content.
+        UndoBar(marks, Modifier.align(Alignment.BottomCenter).padding(horizontal = HotSpacing.edge, vertical = 12.dp))
     }
 }
 
 @Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, slots: TodaySlots, onSync: () -> Unit) {
+private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, marks: DayMarks, slots: TodaySlots, onSync: () -> Unit) {
     val metrics = state.metrics
     val glance = state.glance
     val today = day?.today ?: LocalDate.now()
@@ -244,12 +254,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     val mode = plan?.regime?.mode()
     val nowMin = day?.now?.let { it.hour * 60 + it.minute } ?: 0
     val normReady = whoop.baselineNights >= TodayTexts.NORM_NIGHTS && metrics.dayKey != null
-    val sleep = glance?.sleep?.hours ?: metrics.sleepHours?.value
-    val tokens = listOfNotNull(
-        sleep?.let { "${TitanTexts.SLEEP} ${TitanTexts.hm(it)}" },
-        glance?.recovery?.restingHr?.let { "${TitanTexts.PULSE} ${it.roundToInt()}" },
-        plan?.let { "${TitanTexts.CEILING} ${TitanTexts.ceiling(StrainCeiling.of(it.regime))}" },
-    )
+    val facts = heroFacts(state, plan, mode)
 
     HotOverline(TitanTexts.date(today), modifier = Modifier.align(Alignment.CenterHorizontally))
     // A39 §7 order: safety → mode → «Почему так» → plan → evening; after 18:00 «Закрыть день»
@@ -277,8 +282,8 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     TodayHero(
         mode = mode,
         charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
-        normNights = whoop.baselineNights.coerceAtMost(TodayTexts.NORM_NIGHTS).takeIf { !normReady },
-        tokens = tokens,
+        normNights = whoop.baselineNights.coerceAtMost(TodayTexts.NORM_FULL_NIGHTS).takeIf { !normReady },
+        facts = facts,
         summary = plan?.summary,
         flags = plan?.flags.orEmpty(),
         modifier = Modifier.testTag(TODAY_STATE_TAG),
@@ -286,14 +291,19 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     if (plan != null) {
         RegimeWhy(plan)
         NotificationAsk()
-        nowItem(plan.items, nowMin)?.let { NowCard(plan, it, actions.onToggle, mode!!) }
+        // Y5: one focus card (the item of the moment or the node picked on «Линия дня»), the
+        // line under it, the full list folded. R3: a tap opens, a long press or a swipe marks.
+        var picked by rememberSaveable(plan.dayKey) { mutableStateOf<String?>(null) }
+        val now = nowItem(plan.items, nowMin)
+        val focus = plan.items.firstOrNull { it.id == picked } ?: now
+        focus?.let { FocusCard(plan, it, isNow = it.id == now?.id, mode = mode!!, marks = marks, onOpen = actions.onOpen) }
         slots.afterNow(this)
         if (plan.items.any { it.startMin != null }) {
             HotOverline(TitanTexts.DAY_LINE)
-            DayLine(plan, nowMin, mode!!)
+            DayLine(plan, nowMin, mode!!, selectedId = focus?.id, onSelect = { picked = if (it.id == now?.id) null else it.id })
         }
         slots.training(this)
-        PlanCard(plan, actions.onToggle)
+        PlanCard(plan, marks, actions.onOpen)
         ActivityCard(plan, day?.steps ?: PhoneSteps.Unavailable, mode!!, onPermission = actions.onSteps)
         slots.afterPlan(this)
         SealOverlay(plan, glance)
@@ -304,6 +314,32 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         if (day != null) ActivityCard(null, day.steps, HotMode.ROVNO, onPermission = actions.onSteps)
     }
     SyncFooter(whoop, state, onSync)
+}
+
+/**
+ * The three facts of the hero (Y2): sleep with its composition, the resting pulse of the night and
+ * the load ceiling in strain units. A fact without data is left out; a tap explains each one.
+ */
+private fun heroFacts(state: TodayUiState, plan: DayView?, mode: HotMode?): List<HeroFact> {
+    val glance = state.glance
+    val sleepHours = glance?.sleep?.hours ?: state.metrics.sleepHours?.value
+    val pulse = glance?.recovery?.restingHr?.roundToInt()
+    val ceiling = plan?.let { StrainCeiling.of(it.regime) }
+    return listOfNotNull(
+        sleepHours?.let { h ->
+            HeroFact(FactKind.SLEEP, HeroTexts.sleepChip(h), HeroTexts.sleepSpoken(h)) {
+                SleepFact(h, glance?.sleep?.needHours, glance?.sleep?.stages)
+            }
+        },
+        pulse?.let { bpm -> HeroFact(FactKind.PULSE, "$bpm", HeroTexts.pulseSpoken(bpm)) { PulseFact(bpm) } },
+        if (ceiling != null && mode != null) {
+            HeroFact(FactKind.LOAD, HeroTexts.loadChip(ceiling), HeroTexts.loadSpoken(ceiling)) {
+                LoadFact(ceiling, glance?.dayStrain?.strain, mode)
+            }
+        } else {
+            null
+        },
+    )
 }
 
 /** Not connected: the Titan alone in the dark, one line and the way to WHOOP (A37 s1). */
@@ -381,12 +417,12 @@ private fun SyncFooter(whoop: WhoopStatus, state: TodayUiState, onSync: () -> Un
     val failed = progress as? SyncProgress.Failed
     val text = when (indicator.light) {
         SyncLight.RUNNING -> TodayTexts.LOADING
-        SyncLight.SUCCESS -> (progress as? SyncProgress.Succeeded)?.counts?.let { TodayTexts.done(it.nights, it.workouts) }
+        SyncLight.SUCCESS -> null
         SyncLight.ERROR -> failed?.let { TodayTexts.failure(it.failure, it.httpCode) }
         SyncLight.IDLE -> if (progress is SyncProgress.Idle) TodayTexts.problem(whoop.syncStatus) else null
     }
     Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        HotOverline(TitanTexts.synced(state.glance?.fetchedAt?.takeIf { it > 0 }))
+        HotOverline(TitanTexts.syncedLine(state.glance?.fetchedAt?.takeIf { it > 0 } ?: whoop.lastSyncAt))
         if (text != null) {
             Spacer(Modifier.height(4.dp))
             Text(

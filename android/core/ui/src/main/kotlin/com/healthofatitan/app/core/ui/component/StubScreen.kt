@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.healthofatitan.app.core.ui.theme.HotType
 
+const val STUB_INTRO_TAG = "stub_intro"
+
 /**
  * Screen of a slice that has no data yet, in «Колоннада» (A36): the lead phrase in the hero card
  * with the gold cornice (Cormorant italic, like the phrase of the day), then the blocks the
@@ -38,6 +40,8 @@ fun StubScreen(
     modifier: Modifier = Modifier,
     sectionTitle: String? = null,
     columns: Int = 1,
+    /** One line above the lead (UX review 119, G2: who the mentor is, on the first visit). */
+    intro: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -47,6 +51,9 @@ fun StubScreen(
             .testTag(testTag),
         verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
     ) {
+        if (intro != null) {
+            Text(intro, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.testTag(STUB_INTRO_TAG))
+        }
         HotCard(cornice = true, modifier = Modifier.fillMaxWidth()) {
             Text(lead, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface)
         }

@@ -22,7 +22,12 @@ class TitaniumLogicTest {
         val r = StatusRings(strain = 8.4, strainCeiling = 12.0, untilBedMin = 553, bedtimeMin = 1410, mode = HotMode.ROVNO)
         assertEquals("Нагрузка 8,4 из 12, шаги: нет данных, до отбоя 9 часов 13 минут", StatusRingsTexts.spoken(r))
         assertEquals("Нагрузка: нет данных, шаги: нет данных, до отбоя: нет плана", StatusRingsTexts.spoken(StatusRings.Empty))
-        assertTrue(StatusRingsTexts.why(r).startsWith("потолок нагрузки «Ровно» — 12"))
+        val rows = StatusRingsTexts.explain(r)
+        assertEquals(listOf(RingKind.LOAD, RingKind.STEPS, RingKind.BED), rows.map { it.kind })
+        assertEquals("8,4 из 12", rows[0].value)
+        assertTrue(rows[0].line.contains("0–21"))
+        assertEquals("—", rows[1].value)
+        assertEquals("9:13", rows[2].value)
         assertEquals(0.7f, r.strainFraction!!, 0.001f)
     }
 

@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Process
 import android.os.SystemClock
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -99,6 +100,11 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
+        // UX review 119, R6: a tap on the top of «Сегодня» opened the system «Открыть в: Календарь».
+        // The app sends no such intent; the likely source is the system reading the screen text
+        // (content capture → smart actions on «суббота · 7 ноября», «отбой в 02:50»). Health data
+        // should not reach system text analysis anyway: the whole window is excluded from it.
+        window.decorView.importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
         if (savedInstanceState == null) pendingRoute = routeOf(intent)
         setContent {
             HotTheme {

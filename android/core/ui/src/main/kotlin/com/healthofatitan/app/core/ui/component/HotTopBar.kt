@@ -20,7 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +49,7 @@ const val TOP_BAR_WHY_TAG = "top_bar_why"
  * «Винс · ИИ», week), the three status rings and the mentor's avatar in the corner. There is no
  * SOS button here (D-029): help is two taps away — «аватар › Помощь» (D-033) and «⋮ › Помощь» in
  * the mentor chat — plus the quick settings tile and the launcher shortcut; the crisis card
- * appears by itself on detection. A tap on the rings shows one line «почему».
+ * appears by itself on detection. A tap on the rings opens what each ring is (UX review 119, Y1).
  *
  * @param title the screen title under the line (null on «Сегодня»: the hero speaks there)
  * @param avatar the avatar in the corner with its menu (D-033: settings, mentor, help)
@@ -64,7 +64,8 @@ fun HotTopBar(
     rings: StatusRings = StatusRings.Empty,
     avatar: (@Composable () -> Unit)? = null,
 ) {
-    var why by rememberSaveable { mutableStateOf(false) }
+    // Not saveable: the explanation closes when the screen changes (it stayed open on the device, R2).
+    var why by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -89,11 +90,10 @@ fun HotTopBar(
                 avatar()
             }
         }
+        // UX review 119 (R2, Y1): no run-on status line any more; a tap opens three named rows.
         AnimatedVisibility(why) {
-            Text(
-                StatusRingsTexts.why(rings),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            HotRingsExplainer(
+                rings,
                 modifier = Modifier
                     .padding(start = 4.dp, top = 10.dp)
                     .semantics { liveRegion = LiveRegionMode.Polite }

@@ -18,8 +18,29 @@ from . import rig
 FPS = 60
 
 
+# Path v1 motion tokens (visual-production.md §4.0, PathMotion in core:ui): cubic Béziers
+BEZIER = {"standard": (0.2, 0.0, 0.0, 1.0), "decel": (0.05, 0.7, 0.1, 1.0), "accel": (0.3, 0.0, 0.8, 0.15),
+          "flight": (0.2, 0.7, 0.2, 1.0)}
+
+
+def bezier(x1, y1, x2, y2, u):
+    """CSS / Compose CubicBezierEasing: y at x = u (bisection on the x curve)."""
+    bx = lambda t: 3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t * t * x2 + t ** 3
+    by = lambda t: 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t * t * y2 + t ** 3
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if bx(mid) < u:
+            lo = mid
+        else:
+            hi = mid
+    return by((lo + hi) / 2)
+
+
 def ease(name, u):
     u = min(max(u, 0.0), 1.0)
+    if name in BEZIER:
+        return bezier(*BEZIER[name], u)
     if name == "linear":
         return u
     if name == "sine":
@@ -125,7 +146,8 @@ class Script:
                 o = j["shoulder" + side]
                 tgt = fixed or lerp(ja["hand" + side], jb["hand" + side])
                 ln = p.get("armLen" + side, 1.0)
-                a1, a2 = rig.ik2(o, tgt, rig.L["ua"] * ln, rig.L["fa"] * ln, j["elbow" + side])
+                ul = ln * p.get("uaLen" + side, 1.0)
+                a1, a2 = rig.ik2(o, tgt, rig.L["ua"] * ul, rig.L["fa"] * ln, j["elbow" + side])
                 p["ua" + side] = _near(a1, p["ua" + side])
                 p["fa" + side] = _near(a2, p["fa" + side])
             j = rig.joints(p, self.front)

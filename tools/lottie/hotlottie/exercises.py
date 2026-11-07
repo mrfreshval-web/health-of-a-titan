@@ -13,6 +13,7 @@ from __future__ import annotations
 import math
 
 from . import props as pr
+from . import keyposes as kp
 from .rig import side_offsets
 
 Q = "3q"                 # three-quarter view (threeq.py): the mark's own anatomy, turned
@@ -84,13 +85,50 @@ def both(*fns):
     return extra
 
 
+def _pullup_poses():
+    p = kp.pullup_v4()
+    p["mid"]["uaLenN"] = p["mid"]["uaLenF"] = 0.51
+    return p
+
+
+def _band_poses():
+    return {k: dict(v, ry=44.8) for k, v in kp.band_v4().items()}
+
+
+def _quick_middle(u, k=8.0):
+    """0 → 1 with a short, quick middle: the arms pass the moment they point at the viewer (the band
+    at the face, the arm foreshortened to a stub) in ~3 frames and dwell where they read."""
+    return 0.5 + 0.5 * math.tanh(k * (u - 0.5)) / math.tanh(k / 2)
+
+
+def dislocate(period=4.0):
+    """Band dislocates from the front: the straight arms swing from in front of the thighs (θ 20°)
+    over the head (180°) to behind the hips (340°) and back, one second per quarter. Front view shows
+    the arm foreshortened as it points at the viewer; the band and the arms are in front of the body
+    while θ < 180° and behind the head and torso afterwards (titan.py: arms_back)."""
+    def extra(t, p, seg):
+        q = (t % period) / (period / 4)
+        i, u = min(int(q), 3), q - min(int(q), 3)
+        a, b_ = ((20.0, 180.0), (180.0, 340.0), (340.0, 180.0), (180.0, 20.0))[i]
+        th = a + (b_ - a) * _quick_middle(u)
+        fwd = math.sin(math.radians(th))
+        for side in "NF":
+            ang, ln = kp.band_angles(th, side)
+            p["ua" + side] = p["fa" + side] = ang
+            p["armLen" + side] = ln
+        p["_band_front"] = 1.0 if fwd > 0 or (fwd == 0 and th < 180) else 0.0
+        p["_arms_back"] = 1.0 - p["_band_front"]
+    return extra
+
+
 EXERCISES = {
     # 1 · breath: 4 s in, 6 s out; the belly rises, the hands ride on it
     "ex-breath-long-exhale": dict(
         start="exhale", kind="time", poster="inhale",
-        poses={"inhale": {"base": "inhale", "belly": 1.0, "breath": 0.6}},
+        # v4: the belly rises ~2.6 units from the back (titan.py) and the palms ride on it; the chest stays
+        poses={"inhale": {"base": "inhale", "belly": 1.0, "breath": 0.15}},
         steps=[("move", "inhale", 4.0, "sine"), ("move", "exhale", 6.0, "sine")],
-        contacts=FEET, props_behind=[pr.mat(12, 96)], belly_scale=0.12,
+        contacts=FEET, props_behind=[pr.mat(12, 96)], belly_scale=0.25,
     ),
     # 2 · cat-cow, tempo 3-1-3-1
     "ex-cat-cow": dict(
@@ -139,6 +177,7 @@ EXERCISES = {
         start="start", kind="time", poster="stretch",
         steps=hold("start", "stretch"),
         contacts=[("legF", "ankle"), ("legN", "knee")], springs=HEAD, props_behind=[pr.mat(14, 80)], extra=breathe(),
+        hands=FISTS,                                    # v4: hands on the hips
     ),
     # 9 · lat stretch at the wall: hands stay, hips go back
     "ex-stretch-lat-wall": dict(
@@ -155,9 +194,12 @@ EXERCISES = {
     # 11 · leg swings: a pendulum, the torso stays still, the hand on the wall
     "ex-leg-swings": dict(
         start="back", kind="reps", poster="front",
+        # v4 (Agent 12: the leg went through the wall): side-on to the wall — the wall is behind the
+        # figure, the far hand holds its rail at hand height (arm_f ≈ [115, 95]), the near hand is on
+        # the hip; the leg swings parallel to the wall
         steps=[("move", "front", 0.8, "sine"), ("move", "back", 0.8, "sine")],
-        contacts=[("legF", "ankle"), ("armN", "hand", (76.9, 26.3))], springs={"shN": (3.2, 0.55), "ftN": (4.0, 0.5), "head": (3.0, 0.7)},
-        props_behind=[pr.wall(78.3, top=16.0)], frame_pts=[(78.3, 16)], hands={"N": ("open", ("world", 0.0))},
+        contacts=[("legF", "ankle")], springs={"shN": (3.2, 0.55), "ftN": (4.0, 0.5), "head": (3.0, 0.7)},
+        props_behind=[pr.rail(30.4, 22.0, 80.0, base=89.0)], frame_pts=[(22, 30), (80, 30)], hands=FISTS,
     ),
     # 12 · child's pose: hips to the heels, arms long, breathe into the back
     "ex-stretch-child": dict(
@@ -183,8 +225,9 @@ EXERCISES = {
         start="retract", kind="reps", poster="protract",
         # v2: bigger and readable — retracted, the chest sinks between the shoulder blades (the arms
         # look longer); protracted, the upper back rounds up and the arms look shorter
-        poses={"retract": {"base": "retract", "ry": 70.2, "armLenN": 1.055, "armLenF": 1.055, "spine": -0.06, "head": 72.0},
-               "protract": {"base": "protract", "ry": 67.9, "armLenN": 0.975, "armLenF": 0.975, "spine": 0.34, "head": 82.0}},
+        # v4: the head stays on the line of the body (gaze to the floor), it no longer hangs
+        poses={"retract": {"base": "retract", "ry": 70.2, "armLenN": 1.055, "armLenF": 1.055, "spine": -0.06, "head": 66.0},
+               "protract": {"base": "protract", "ry": 67.9, "armLenN": 0.975, "armLenF": 0.975, "spine": 0.34, "head": 74.0}},
         steps=[("move", "protract", 1.0, "inout"), ("hold", 1.0), ("move", "retract", 1.0, "inout"), ("hold", 1.0)],
         contacts=HANDS + FEET, springs=HEAD, hands=FLAT,
     ),
@@ -202,21 +245,27 @@ EXERCISES = {
     ),
     # 18 · band dislocates, tempo 2-0-2-0: one continuous arc over the head and back
     "ex-band-dislocate": dict(
-        start="front", kind="reps", poster="overhead",
+        # v4: front view, the band drawn in every frame, grip ≈ 2 shoulder widths (Agent 12)
+        start="front", kind="reps", poster="overhead", front=True, poses=_band_poses(),
         steps=[("move", "overhead", 1.0, "in"), ("move", "behind", 1.0, "out"), ("move", "overhead", 1.0, "in"), ("move", "front", 1.0, "out")],
-        contacts=FEET, springs=HEAD, props_held=[pr.stick("N")], hands=FISTS,
+        contacts=FEET, springs=HEAD, extra=dislocate(), props_behind=[pr.band("behind")], props_front=[pr.band("front")],
+        hands=FISTS, frame_pts=[(50, 8), (22, 50), (78, 50)],
     ),
     # 19 · pull-ups: up 1 s, a short pause over the bar, 2 s down, no swing
     "ex-pullup": dict(
-        start="hang", kind="reps", poster="top", floor=False, front=Q,
+        # v4: front view (Agent 12): active hang, the elbows go down and out and never cross the face,
+        # grip 1.3× the rendered deltoid width, chin over the bar; at mid the forearms are vertical (the
+        # upper arms come forward: uaLen)
+        start="hang", kind="reps", poster="top", floor=False, front=True, poses=_pullup_poses(),
         steps=[("move", "mid", 0.55, "in"), ("move", "top", 0.65, "out"), ("hold", 0.5), ("move", "hang", 2.0, "inout"), ("hold", 0.3)],
-        contacts=q_grip(50.0, 8.0),
-        springs={"head": (3.0, 0.7), "shN": (2.2, 0.8), "shF": (2.2, 0.8)},
-        props_behind=[pr.bar(8.0, 28, 72, grip_x=50.0)], frame_pts=[(28, 6), (72, 6)], hands={"N": "fist", "F": "fist"},
+        contacts=[("armN", "hand", (50.0 + kp.PULLUP_GRIP, kp.PULLUP_BAR)), ("armF", "hand", (50.0 - kp.PULLUP_GRIP, kp.PULLUP_BAR))],
+        springs={"head": (3.0, 0.7)},
+        props_behind=[pr.bar(kp.PULLUP_BAR, 26, 74)], frame_pts=[(26, 4), (74, 4)], hands={"N": "fist", "F": "fist"},
     ),
     # 20 · goblet squat, tempo 3-0-1-0
     "ex-goblet-squat": dict(
-        start="stand", kind="reps", poster="bottom", front=Q, arms_over="F",
+        # v4: strict profile (Agent 12), heels down, bell on the sternum, elbows inside the knees
+        start="stand", kind="reps", poster="bottom",
         steps=[("move", "bottom", 3.0, "inout"), ("hold", 0.15), ("move", "stand", 1.0, "inout"), ("hold", 0.35)],
         contacts=FEET, springs=HEAD, props_front=[pr.kettlebell("N")], hands={"N": "fist", "F": "fist"},
     ),

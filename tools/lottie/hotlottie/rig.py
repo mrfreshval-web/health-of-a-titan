@@ -14,7 +14,8 @@ FRONT_HIP = 4.0
 
 ANGLES = ["torso", "head", "uaN", "faN", "uaF", "faF", "thN", "shN", "ftN", "thF", "shF", "ftF"]
 # Non-angle channels: hip position, spine bend, breath (0…1 chest/belly), arm foreshortening.
-LINEAR = ["rx", "ry", "spine", "breath", "belly", "armLenN", "armLenF", "nod"]
+LINEAR = ["rx", "ry", "spine", "breath", "belly", "armLenN", "armLenF", "nod", "uaLenN", "uaLenF"]
+ONE = {"armLenN", "armLenF", "uaLenN", "uaLenF"}       # channels whose neutral value is 1
 CHANNELS = ANGLES + LINEAR
 
 # 3/4 view (v3): the figure faces right and has turned a little towards the viewer, so the near
@@ -83,7 +84,7 @@ def joints(p: dict, front: bool = False) -> dict:
     for side in "NF":
         sw, hw = side_offsets(front, side)
         s0 = (sh[0] + sw, sh[1])
-        e = step(s0, p["ua" + side], L["ua"] * p.get("armLen" + side, 1.0))
+        e = step(s0, p["ua" + side], L["ua"] * p.get("armLen" + side, 1.0) * p.get("uaLen" + side, 1.0))
         out["shoulder" + side] = s0
         out["elbow" + side] = e
         out["hand" + side] = step(e, p["fa" + side], L["fa"] * p.get("armLen" + side, 1.0))
@@ -100,7 +101,8 @@ def joints(p: dict, front: bool = False) -> dict:
 def lerp_pose(a: dict, b: dict, t: float) -> dict:
     out = {}
     for k in CHANNELS:
-        x, y = a.get(k, 0.0), b.get(k, 0.0)
+        d = 1.0 if k in ONE else 0.0
+        x, y = a.get(k, d), b.get(k, d)
         out[k] = x + shortest(x, y) * t if k in ANGLES else x + (y - x) * t
     return out
 

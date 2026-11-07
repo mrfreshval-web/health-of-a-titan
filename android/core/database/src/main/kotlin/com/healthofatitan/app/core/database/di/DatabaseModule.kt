@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
+import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.database.ProfileStore
 import com.healthofatitan.app.core.database.dao.ConsentDao
 import com.healthofatitan.app.core.database.dao.DailyLoopDao
@@ -15,6 +16,7 @@ import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.PathDao
+import com.healthofatitan.app.core.database.dao.PersonProfileDao
 import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.database.dao.TodayDao
 import com.healthofatitan.app.core.database.dao.WeekDao
@@ -94,4 +96,12 @@ object DatabaseModule {
 
     @Provides
     fun provideWeekDao(db: HotDatabase): WeekDao = db.weekDao()
+
+    @Provides
+    fun providePersonProfileDao(db: HotDatabase): PersonProfileDao = db.personProfileDao()
+
+    /** The profile «Я» (A61, D-055): address form, year of birth, sex for calculations. */
+    @Provides
+    @Singleton
+    fun provideProfileSettings(db: HotDatabase): ProfileSettingsStore = ProfileSettingsStore(db.personProfileDao())
 }

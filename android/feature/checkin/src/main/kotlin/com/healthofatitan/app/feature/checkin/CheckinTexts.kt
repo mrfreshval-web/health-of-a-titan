@@ -1,6 +1,8 @@
 package com.healthofatitan.app.feature.checkin
 
 import com.healthofatitan.app.core.model.mentor.MentorPersona
+import com.healthofatitan.app.core.model.profile.AddressForm
+import com.healthofatitan.app.core.model.text.G
 import com.healthofatitan.app.domain.checkin.BodyArea
 import com.healthofatitan.app.domain.checkin.BodyFeel
 import com.healthofatitan.app.domain.checkin.CardId
@@ -158,7 +160,15 @@ object CheckinTexts {
     }
 
     const val AS_YESTERDAY = "Как вчера"
-    const val STACK_HINT = "Добавки — из твоего стека, как ты их назвал. Только факт, без доз."
+    /**
+     * A61 §4.2 example of [G] (D-055): the neutral form is the A61 draft, «как ты их назвал(а)»
+     * only with a chosen address. Wording waits for Agents 16 and 10.
+     */
+    val STACK_HINT = G(
+        n = "Добавки — из твоего стека, твоими словами. Только факт, без доз.",
+        m = "Добавки — из твоего стека, как ты их назвал. Только факт, без доз.",
+        f = "Добавки — из твоего стека, как ты их назвала. Только факт, без доз.",
+    )
     const val ADD_TO_STACK = "Добавить в стек"
     const val STACK_NAME_HINT = "Название, как на банке"
 
@@ -478,9 +488,16 @@ object CheckinTexts {
     }
 
     /** «Твой ритуал работает» — only after a discovery of the ritual (A44 §5). */
-    fun discoveryLine(persona: MentorPersona): String = when (persona) {
+    fun discoveryLine(persona: MentorPersona, address: AddressForm = AddressForm.NEUTRAL): String = when (persona) {
         MentorPersona.BRO -> "Это твоё, не из статьи. Связь, а не приговор."
         MentorPersona.BUTLER -> "Ваша личная закономерность. Связь, не причина."
-        else -> "Ты заметил своё. Связь, не причина."
+        else -> DISCOVERY_SENSEI.of(address)
     }
+
+    /** A61 §4.2 example of [G] (D-055); the neutral form is the A61 draft, review of Agents 16 and 10. */
+    private val DISCOVERY_SENSEI = G(
+        n = "Это твоё наблюдение. Связь, не причина.",
+        m = "Ты заметил своё. Связь, не причина.",
+        f = "Ты заметила своё. Связь, не причина.",
+    )
 }

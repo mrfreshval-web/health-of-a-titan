@@ -52,6 +52,7 @@ import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.TitanLights
 import com.healthofatitan.app.core.ui.component.TitanScene
+import com.healthofatitan.app.core.ui.text.LocalAddressForm
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.Titanium
@@ -138,7 +139,7 @@ fun CloseDayCard(
             if (trainingItem != null) {
                 EveningRow(DailyTexts.TRAINING, { KindBadge(ItemKind.TRAINING, mode.color(), sizeDp = 40) }) {
                     if (trainingAsked) {
-                        Choices(DailyTexts.TRAINING_OPTIONS, training, { training = it }) { value, color -> TrainingChoiceGlyph(value, color) }
+                        Choices(DailyTexts.trainingOptions(LocalAddressForm.current), training, { training = it }) { value, color -> TrainingChoiceGlyph(value, color) }
                     } else {
                         StatusLine(trainingItem.detail ?: trainingItem.title, trainingItem.status)
                     }

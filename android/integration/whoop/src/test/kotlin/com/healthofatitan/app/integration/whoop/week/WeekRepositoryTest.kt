@@ -5,6 +5,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.core.database.ProfileSettingsStore
+import com.healthofatitan.app.core.model.profile.AddressForm
+import com.healthofatitan.app.core.model.profile.ProfileSettings
+import com.healthofatitan.app.core.model.profile.SexForCalc
+import com.healthofatitan.app.domain.today.week.Sex
 import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.domain.today.DayMode
 import com.healthofatitan.app.domain.today.Scenario
@@ -247,4 +252,33 @@ class WeekRepositoryTest {
         val cold = repo.load(clock.now, null)
         assertTrue(cold.view.columns.first().inSupport)
     }
+
+    @Test
+    fun `age and sex of the fitness age live in the profile and its choice wins`() = runTest {
+        // A61 §2.1, D-055: one place for the year of birth and the sex for calculations.
+        val profile = ProfileSettingsStore(db.personProfileDao())
+        val plans = DayPlanRepository(db.metricDao(), db.dayDao(), { null }, clock)
+        val withProfile = WeekRepository(
+            db.weekDao(), db.todayDao(), db.dayDao(), db.metricDao(), db.checkinDao(), plans, glance, WeekSignals.None, clock,
+            profile = profile,
+        )
+        assertEquals(BodyInputs(), withProfile.bodyInputs())
+
+        withProfile.saveBodyInputs(38, Sex.MALE, 88.0)
+        assertEquals(ProfileSettings(birthYear = 1988, sexForCalc = SexForCalc.MALE), profile.current())
+        val inputs = withProfile.bodyInputs()
+        assertEquals(38, inputs.ageYears)
+        assertEquals(Sex.MALE, inputs.sex)
+        assertEquals(88.0, inputs.waistCm)
+
+        // «не указывать» in the profile: the old row does not bring the sex back
+        profile.setSexForCalc(SexForCalc.UNSPECIFIED)
+        assertNull(withProfile.bodyInputs().sex)
+        profile.setSexForCalc(SexForCalc.FEMALE)
+        assertEquals(Sex.FEMALE, withProfile.bodyInputs().sex)
+        // the address form is a separate field and changes nothing here
+        profile.setAddressForm(AddressForm.MASCULINE)
+        assertEquals(Sex.FEMALE, withProfile.bodyInputs().sex)
+    }
 }
+

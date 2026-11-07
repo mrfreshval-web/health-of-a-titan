@@ -7,16 +7,17 @@ import com.healthofatitan.app.core.database.entity.DayPlanEntity
 import com.healthofatitan.app.core.database.entity.EveningCheckEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.PlanItemEntity
+import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.domain.engine.Anchors
 import com.healthofatitan.app.domain.engine.Body
 import com.healthofatitan.app.domain.engine.ContextFacts
 import com.healthofatitan.app.domain.engine.DataFacts
 import com.healthofatitan.app.domain.engine.DayClose
-import com.healthofatitan.app.domain.engine.Evening
 import com.healthofatitan.app.domain.engine.DayEngine
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.DayInput
 import com.healthofatitan.app.domain.engine.DayPlan
+import com.healthofatitan.app.domain.engine.Evening
 import com.healthofatitan.app.domain.engine.EveningFacts
 import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
@@ -31,6 +32,12 @@ import com.healthofatitan.app.domain.metrics.MetricRef
 import com.healthofatitan.app.domain.metrics.Metrics
 import com.healthofatitan.app.integration.whoop.RoutineStore
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -38,12 +45,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 /**
  * The system clock in the phone's **current** time zone: after a flight the day is built by
@@ -104,6 +105,8 @@ class DayPlanRepository(
     private val loop: DailyLoopRepository? = null,
     /** A44 §5: the wake deck (Заряд → SG-SELF energy, morning body → SAF-03 / EVE-01). */
     private val morningSelf: MorningSelfSource? = null,
+    /** A61 §4.1, D-055: the address form of the profile «Я»; neutral until the person chose. */
+    private val address: suspend () -> AddressForm = { AddressForm.NEUTRAL },
 ) {
     private val user = HotDatabase.LOCAL_USER
     private val mutex = Mutex()
@@ -198,6 +201,7 @@ class DayPlanRepository(
             schedule = schedule,
             history = sessions.filter { it.dayKey < today },
             silenceDays = loop?.silenceDays(today) ?: 0,
+            address = runCatching { address() }.getOrDefault(AddressForm.NEUTRAL),
         )
         val plan = DayEngine.plan(input)
 

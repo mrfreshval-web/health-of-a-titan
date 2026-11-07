@@ -38,7 +38,7 @@ object TodayCopy {
     const val EFFORT = "усердие"
     const val MOVEMENT = "движение"
     const val NUTRITION = "питание"
-    const val WATER = "вода"
+    const val WATER = "питьё"
     const val SLEEP_TONIGHT = "сон сегодня"
     const val WATER_ADD = "+ стакан"
     const val WATER_REMOVE = "− стакан"

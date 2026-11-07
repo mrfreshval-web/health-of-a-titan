@@ -122,7 +122,7 @@ class DayActions(
     val onSteps: () -> Unit = {},
     /** Every tap that leaves «Сегодня» for a route: «Почему так», a support, a task, the week. */
     val onOpen: (String) -> Unit = {},
-    /** «вода»: one glass more (+1) or less (−1). */
+    /** «питьё» (D-047, was «вода»): one glass more (+1) or less (−1). */
     val onWater: (LocalDate, Int) -> Unit = { _, _ -> },
     /** A task of the day marked done or taken back (A46 §2.4). */
     val onTaskDone: (LocalDate, DayTask, Boolean) -> Unit = { _, _, _ -> },

@@ -29,6 +29,12 @@ data class TitanPose(
      * a breath into the belly). Drawn as a curve through the torso; not a joint.
      */
     val spine: Double = 0.0,
+    /**
+     * Nod of the head in the front view, degrees, + up (A58-VP §3.1: «Путь» turns the head to the
+     * tier of the lever). The front view keeps the head on the neck; the Lottie generator tilts
+     * the face by it. Side views use [head].
+     */
+    val nod: Double = 0.0,
 ) {
     /** The other side of a one-sided exercise: near and far limbs change places. */
     fun mirrorSides(): TitanPose = copy(armN = armF, armF = armN, legN = legF, legF = legN)
@@ -65,6 +71,7 @@ data class TitanPose(
                 legN = tr(a.legN, b.legN),
                 legF = tr(a.legF, b.legF),
                 spine = l(a.spine, b.spine),
+                nod = l(a.nod, b.nod),
             )
         }
 

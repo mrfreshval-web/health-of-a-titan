@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.database.entity.PathGoalEntity
 import com.healthofatitan.app.core.database.entity.PathStepEntity
 import kotlinx.coroutines.flow.first
@@ -14,13 +13,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 /**
  * «Титаниум» → stream Г «Путь» on the founder's phone: a version-4 database (schema frozen as raw
  * SQL, with a dawn, two nights and two workouts) opens with schema 6 through MIGRATION_4_5 and MIGRATION_5_6.
- * Room validates `path_goal` and `path_step` against the entities; old data survives; a changed
- * goal keeps the old one and its steps as history.
+ * Room validates `path_goal` and `path_step` against the entities (since v11 `path_goal` is the
+ * practical goal of «Путь» v1); old data survives.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -79,17 +77,11 @@ class Migration5To6Test {
         }
     }
 
-    private fun goal(sphere: String, start: String) = PathGoalEntity(
-        userId = "local",
-        sphere = sphere,
-        startDay = start,
-        baseline = 3,
-        stage1 = 4,
-        stage2 = 5,
-        stage3 = 5,
-        status = PathDao.STATUS_ACTIVE,
-        createdAt = 1L,
-        endedDay = null,
+    private fun goal(title: String, start: String) = PathGoalEntity(
+        userId = "local", title = title, why = null, beName = null, kind = "DO", template = "race", startDay = start,
+        deadline = "2027-02-01", stage = 1, mode = "BY_DATE", status = "ACTIVE", criteria = "", obstacle = null, ifThen = null,
+        version = 1, pausedDays = 0, pauseFrom = null, pauseReason = null, pauseUntil = null, takenAt = 1L, releaseToQueue = true,
+        createdAt = 1L, endedDay = null, legacySphere = null,
     )
 
     @Test
@@ -105,17 +97,10 @@ class Migration5To6Test {
             assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
 
             val path = db.pathDao()
-            assertNull(path.active("local"))
-            val first = path.replaceActive(goal("sleep", "2026-11-10"), endedDay = "2026-11-10")
+            assertEquals(0, path.goals("local").size)
+            val first = path.saveGoal(goal("Забег", "2026-11-10"), emptyList(), null)
             path.upsertStep(PathStepEntity("local", first, "2026-11-11", "MINIMAL", 2L))
-            val second = path.replaceActive(goal("body", "2026-11-12"), endedDay = "2026-11-11")
-
-            val goals = path.observeGoals("local").first()
-            assertEquals(listOf(second, first), goals.map { it.id })
-            assertEquals(listOf("ACTIVE", "REPLACED"), goals.map { it.status })
-            assertEquals("2026-11-11", goals.last().endedDay)
-            assertEquals("body", path.active("local")?.sphere)
-            // the old goal's step is kept as history
+            assertEquals(listOf("Забег"), path.observeGoals("local").first().map { it.title })
             assertEquals("MINIMAL", path.step("local", first, "2026-11-11")?.version)
             path.deleteStep("local", first, "2026-11-11")
             assertEquals(0, path.observeSteps("local").first().size)

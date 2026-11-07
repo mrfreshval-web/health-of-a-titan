@@ -236,7 +236,7 @@ private fun MeNumber(label: String, value: String, caption: String?, modifier: M
 // ---------------------------------------------------------------- «Опоры»
 
 /**
- * «Опоры» (A46 §2.3): five columns — усердие, движение, питание, вода, сон сегодня — never red
+ * «Опоры» (A46 §2.3): five columns — усердие, движение, питание, питьё (D-047), сон сегодня — never red
  * (T-04). A tap opens the support with its source; «+ стакан» adds a glass at once.
  */
 @Composable

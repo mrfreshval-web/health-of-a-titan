@@ -212,5 +212,85 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+    /**
+     * «Путь» v1 (A54–A57, D-046…D-048): the practical goal with its components, versions, change
+     * cards, the Titan of the horizon, the letter and the marks. `path_goal` is rebuilt: the v10
+     * goals of the 12-week path keep their id, start and history; their status follows the state
+     * model of A56 §5 (REPLACED → RELEASED, DONE → TAKEN), the sphere stays in `legacy_sphere` and
+     * becomes two components (the sphere leads, Water guards), with version 1 «MIGRATED».
+     * Note: the module «Неделя» may take 10 → 11 too — whoever merges second renumbers.
+     */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_goal_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`title` TEXT NOT NULL, `why` TEXT, `be_name` TEXT, `kind` TEXT NOT NULL, `template` TEXT, `start_day` TEXT NOT NULL, " +
+                    "`deadline` TEXT NOT NULL, `stage` INTEGER NOT NULL, `mode` TEXT NOT NULL, `status` TEXT NOT NULL, `criteria` TEXT NOT NULL, " +
+                    "`obstacle` TEXT, `if_then` TEXT, `version` INTEGER NOT NULL, `paused_days` INTEGER NOT NULL, `pause_from` TEXT, " +
+                    "`pause_reason` TEXT, `pause_until` TEXT, `taken_at` INTEGER NOT NULL, `release_to_queue` INTEGER NOT NULL, " +
+                    "`created_at` INTEGER NOT NULL, `ended_day` TEXT, `legacy_sphere` TEXT)",
+            )
+            db.execSQL(
+                "INSERT INTO `path_goal_new` (`id`, `user_id`, `title`, `why`, `be_name`, `kind`, `template`, `start_day`, `deadline`, " +
+                    "`stage`, `mode`, `status`, `criteria`, `obstacle`, `if_then`, `version`, `paused_days`, `pause_from`, `pause_reason`, " +
+                    "`pause_until`, `taken_at`, `release_to_queue`, `created_at`, `ended_day`, `legacy_sphere`) " +
+                    "SELECT `id`, `user_id`, " +
+                    "CASE `sphere` WHEN 'sleep' THEN 'Сон 7 часов' WHEN 'body' THEN 'Тренировки' ELSE 'Цель на 12 недель' END, " +
+                    "NULL, NULL, 'DO', 'legacy', `start_day`, date(`start_day`, '+84 days'), 1, 'BY_DATE', " +
+                    "CASE `status` WHEN 'REPLACED' THEN 'RELEASED' WHEN 'DONE' THEN 'TAKEN' ELSE `status` END, " +
+                    "CASE `sphere` WHEN 'sleep' THEN 'ночи от 7 ч из 7' ELSE 'дни с тренировкой из 7' END || '|' || " +
+                    "`stage1` || '.0|' || min(`stage3` + 1, 7) || '.0||' || CASE `sphere` WHEN 'sleep' THEN 'sleep_nights' ELSE 'runs' END, " +
+                    "NULL, NULL, 1, 0, NULL, NULL, NULL, `created_at`, 0, `created_at`, `ended_day`, `sphere` FROM `path_goal`",
+            )
+            db.execSQL("DROP TABLE `path_goal`")
+            db.execSQL("ALTER TABLE `path_goal_new` RENAME TO `path_goal`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_path_goal_user_id_status` ON `path_goal` (`user_id`, `status`)")
+
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_goal_component` (`user_id` TEXT NOT NULL, `goal_id` INTEGER NOT NULL, " +
+                    "`component` TEXT NOT NULL, `role` TEXT NOT NULL, `target_mark` INTEGER, `start_mark` INTEGER, `safe_version` TEXT, " +
+                    "`is_lever` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, PRIMARY KEY(`goal_id`, `component`))",
+            )
+            db.execSQL(
+                "INSERT INTO `path_goal_component` SELECT `user_id`, `id`, CASE `legacy_sphere` WHEN 'sleep' THEN 'sleep' ELSE 'cardio' END, " +
+                    "'LEAD', NULL, NULL, NULL, 1, 0 FROM `path_goal`",
+            )
+            db.execSQL(
+                "INSERT INTO `path_goal_component` SELECT `user_id`, `id`, CASE `legacy_sphere` WHEN 'sleep' THEN 'rest' ELSE 'sleep' END, " +
+                    "'GUARD', NULL, NULL, NULL, 0, 1 FROM `path_goal`",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_goal_version` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`goal_id` INTEGER NOT NULL, `v` INTEGER NOT NULL, `snapshot` TEXT NOT NULL, `change_type` TEXT NOT NULL, " +
+                    "`initiator` TEXT NOT NULL, `reason` TEXT, `at` INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_path_goal_version_goal_id_v` ON `path_goal_version` (`goal_id`, `v`)")
+            db.execSQL(
+                "INSERT INTO `path_goal_version` (`user_id`, `goal_id`, `v`, `snapshot`, `change_type`, `initiator`, `reason`, `at`) " +
+                    "SELECT `user_id`, `id`, 1, '', 'MIGRATED', 'PERSON', NULL, `created_at` FROM `path_goal`",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_change_proposal` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`goal_id` INTEGER NOT NULL, `from_version` INTEGER NOT NULL, `change_type` TEXT NOT NULL, `before` TEXT NOT NULL, " +
+                    "`after` TEXT NOT NULL, `effects` TEXT NOT NULL, `initiator` TEXT NOT NULL, `soft` INTEGER NOT NULL, " +
+                    "`suggest_talk` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `expires_at` INTEGER NOT NULL, `state` TEXT NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_path_change_proposal_goal_id_state` ON `path_change_proposal` (`goal_id`, `state`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_horizon` (`goal_id` INTEGER NOT NULL, `user_id` TEXT NOT NULL, `transferred` TEXT NOT NULL, " +
+                    "`shown_step` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`goal_id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_letter` (`goal_id` INTEGER NOT NULL, `user_id` TEXT NOT NULL, `text` TEXT NOT NULL, " +
+                    "`open_at` TEXT NOT NULL, `written_on` TEXT NOT NULL, `opened_at` INTEGER, PRIMARY KEY(`goal_id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_mark` (`user_id` TEXT NOT NULL, `goal_id` INTEGER NOT NULL, `component` TEXT NOT NULL, " +
+                    "`mark` INTEGER NOT NULL, `day_key` TEXT NOT NULL, `source` TEXT NOT NULL, `at` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`goal_id`, `component`, `mark`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
 }

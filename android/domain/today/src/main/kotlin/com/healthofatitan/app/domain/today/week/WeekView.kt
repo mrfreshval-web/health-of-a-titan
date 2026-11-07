@@ -85,9 +85,9 @@ object WeekBuilder {
         val goalsNote = when {
             i.plan.goals.isEmpty() -> WeekCopy.GOAL_EMPTY
             i.sickNow -> WeekCopy.GOAL_PAUSED
+            i.kind == WeekKind.FIRST -> WeekCopy.GOAL_FIRST_WEEK
             status == PlanStatus.AUTO -> WeekCopy.GOAL_AUTO
             status == PlanStatus.PROPOSED -> WeekCopy.GOAL_PROPOSED
-            i.kind == WeekKind.FIRST -> WeekCopy.GOAL_FIRST_WEEK
             else -> null
         }
         val patterns = PatternRules.select(i.patterns)

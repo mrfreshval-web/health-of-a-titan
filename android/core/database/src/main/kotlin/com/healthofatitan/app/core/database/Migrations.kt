@@ -212,5 +212,44 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+    /**
+     * «Неделя» (A52, D-044, D-045): the plan of a week and its goals, the score of each day counted
+     * at 04:00 the next day, the frames of the Titan of the week and what the person enters for the
+     * fitness age. New tables only; nothing existing changes; no WHOOP values. If «Путь» takes 11
+     * too, whichever merges second renumbers.
+     */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_plan` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `status` TEXT NOT NULL, " +
+                    "`assembled_at` INTEGER NOT NULL, `ritual_done_at` INTEGER, `pushed_at` INTEGER, `pride` TEXT, `carry` TEXT, " +
+                    "PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_goal` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `goal_id` TEXT NOT NULL, " +
+                    "`sphere` TEXT NOT NULL, `kind` TEXT NOT NULL, `measure` TEXT NOT NULL, `title` TEXT NOT NULL, `target` INTEGER NOT NULL, " +
+                    "`unit` TEXT NOT NULL, `source` TEXT NOT NULL, `sort_order` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`, `goal_id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_day_score` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `in_support` INTEGER NOT NULL, " +
+                    "`supports_filled` INTEGER NOT NULL, `tasks_done` INTEGER NOT NULL, `mode` TEXT, `sick` INTEGER NOT NULL, " +
+                    "`fills` TEXT NOT NULL, `computed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_frame` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `pose` TEXT NOT NULL, " +
+                    "`mode` TEXT NOT NULL, `light_level` REAL NOT NULL, `columns` TEXT NOT NULL, `sky` TEXT NOT NULL, `detail` TEXT, " +
+                    "`days_in_support` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `revealed_at` INTEGER, `fitness_age` REAL, " +
+                    "`computed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `body_input` (`user_id` TEXT NOT NULL, `kind` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`value` REAL, `text` TEXT, `at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `kind`, `day_key`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+        MIGRATION_9_10, MIGRATION_10_11,
+    )
 }

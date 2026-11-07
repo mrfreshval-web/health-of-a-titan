@@ -17,6 +17,7 @@ import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.database.dao.TodayDao
+import com.healthofatitan.app.core.database.dao.WeekDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -90,4 +91,7 @@ object DatabaseModule {
 
     @Provides
     fun provideTodayDao(db: HotDatabase): TodayDao = db.todayDao()
+
+    @Provides
+    fun provideWeekDao(db: HotDatabase): WeekDao = db.weekDao()
 }

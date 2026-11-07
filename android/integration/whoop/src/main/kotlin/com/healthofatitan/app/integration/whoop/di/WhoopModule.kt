@@ -29,7 +29,11 @@ import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
 import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
-import com.healthofatitan.app.integration.whoop.day.LegacyWeekPlanSource
+import com.healthofatitan.app.core.database.dao.WeekDao
+import com.healthofatitan.app.integration.whoop.week.WeekRepository
+import com.healthofatitan.app.integration.whoop.week.WeekSignals
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import com.healthofatitan.app.integration.whoop.day.TodayMarksRepository
 import com.healthofatitan.app.integration.whoop.day.TodayMorning
 import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
@@ -159,10 +163,33 @@ object WhoopModule {
     @Singleton
     fun provideTodayMarks(dao: TodayDao): TodayMarksRepository = TodayMarksRepository(dao, SystemZoneClock)
 
-    /** Tasks of the day come from the week; «Неделя» (A52) replaces the legacy source here. */
+    /**
+     * «Неделя» (A52, D-044): the goals of the week in Room 11, their progress from the plan, WHOOP
+     * sessions and memory, the day scores and the Titan of the week. [WeekSignals] is bound in :app.
+     */
     @Provides
     @Singleton
-    fun provideWeekPlan(plans: DayPlanRepository, dayDao: DayDao): WeekPlanSource = LegacyWeekPlanSource(plans, dayDao)
+    fun provideWeek(
+        weekDao: WeekDao,
+        todayDao: TodayDao,
+        dayDao: DayDao,
+        metricDao: MetricDao,
+        checkinDao: CheckinDao,
+        plans: DayPlanRepository,
+        syncer: WhoopSyncer,
+        signals: WeekSignals,
+        store: WhoopCredentialStore,
+        dawn: DawnRepository,
+    ): WeekRepository = WeekRepository(
+        weekDao, todayDao, dayDao, metricDao, checkinDao, plans, syncer.glance, signals, SystemZoneClock,
+        whoopConnected = store.credentials.map { it != null },
+        haiku = { day -> runCatching { dawn.shownHaiku(day).first() }.getOrNull() },
+    )
+
+    /** Tasks of the day come from the week (A52 §2.2): the real source replaces the legacy one. */
+    @Provides
+    @Singleton
+    fun provideWeekPlan(week: WeekRepository): WeekPlanSource = week
 
     @Provides
     @Singleton

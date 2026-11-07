@@ -46,3 +46,7 @@ include(":domain:metrics")
 include(":integration:whoop")
 // Slice 2 (day rules A09, plan, morning push):
 include(":domain:engine")
+// Stream Г «Наставник и Путь» (D-030, D-033, A42): mentor character, 12-week goal, tab «Путь».
+include(":core:datastore")
+include(":domain:path")
+include(":feature:path")

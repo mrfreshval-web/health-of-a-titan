@@ -80,5 +80,25 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /**
+     * Stream Г «Путь» (D-033, A42 §3): the 12-week goal and the user's steps of the day. Process
+     * goals only («N days of 7»), no raw WHOOP values. Tables are prefixed `path_`.
+     */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_goal` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`sphere` TEXT NOT NULL, `start_day` TEXT NOT NULL, `baseline` INTEGER, `stage1` INTEGER NOT NULL, " +
+                    "`stage2` INTEGER NOT NULL, `stage3` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, " +
+                    "`ended_day` TEXT)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_path_goal_user_id_status` ON `path_goal` (`user_id`, `status`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_step` (`user_id` TEXT NOT NULL, `goal_id` INTEGER NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`version` TEXT NOT NULL, `done_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `goal_id`, `day_key`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }

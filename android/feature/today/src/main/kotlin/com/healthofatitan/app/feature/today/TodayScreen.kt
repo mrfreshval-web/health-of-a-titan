@@ -87,10 +87,11 @@ import kotlin.math.roundToInt
  * slice 1 stand in. Pull down to refresh: the short «Титан приходит» (0.7 s) is the indicator.
  *
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
+ * @param pathStep «шаг дня» of the path (A42 §3.1, stream Г): a slot, the path module owns it.
  */
-fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, stateful: Boolean = true) {
+fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, stateful: Boolean = true, pathStep: @Composable () -> Unit = {}) {
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop) else TodayScreen(TodayUiState(), onConnectWhoop)
+        if (stateful) TodayRoute(onConnectWhoop, pathStep) else TodayScreen(TodayUiState(), onConnectWhoop, pathStep = pathStep)
     }
 }
 
@@ -124,6 +125,7 @@ class TodayViewModel @Inject constructor(
 @Composable
 private fun TodayRoute(
     onConnectWhoop: () -> Unit,
+    pathStep: @Composable () -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
@@ -136,6 +138,7 @@ private fun TodayRoute(
         onSync = viewModel::sync,
         day = day.takeIf { it.loaded },
         actions = DayActions(onToggle = dayModel::toggle, onEvening = dayModel::saveEvening),
+        pathStep = pathStep,
     )
 }
 
@@ -149,6 +152,7 @@ fun TodayScreen(
     /** Slice 2: the day (regime, plan, evening); null while it loads. */
     day: DayUiState? = null,
     actions: DayActions = DayActions(),
+    pathStep: @Composable () -> Unit = {},
 ) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
@@ -172,14 +176,21 @@ fun TodayScreen(
             if (!connected) {
                 NotConnected(onConnectWhoop)
             } else {
-                Connected(whoop!!, state, day, actions, onSync)
+                Connected(whoop!!, state, day, actions, onSync, pathStep)
             }
         }
     }
 }
 
 @Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, onSync: () -> Unit) {
+private fun ColumnScope.Connected(
+    whoop: WhoopStatus,
+    state: TodayUiState,
+    day: DayUiState?,
+    actions: DayActions,
+    onSync: () -> Unit,
+    pathStep: @Composable () -> Unit,
+) {
     val metrics = state.metrics
     val glance = state.glance
     val today = day?.today ?: LocalDate.now()
@@ -220,6 +231,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         if (day != null) DayPending()
         Tiles(state)
     }
+    pathStep()
     val eveningDay = day?.eveningFor
     when {
         eveningDay != null -> EveningDeckCard(eveningDay, actions.onEvening)

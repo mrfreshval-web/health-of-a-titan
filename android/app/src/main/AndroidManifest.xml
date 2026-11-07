@@ -39,6 +39,28 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Health Connect privacy rationale for READ_STEPS (D-024, A18 И3b.5): Android 13- and,
+             through the alias, the permission usage screen of Android 14+. -->
+        <activity
+            android:name=".health.HealthRationaleActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Hot">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".health.HealthRationaleActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".sos.SosTileService"
             android:exported="true"

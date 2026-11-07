@@ -95,12 +95,15 @@ data class RoutineAnchorEntity(
 )
 
 /**
- * The evening deck (A25 §2.3, D-027: ≤ 3 taps, only what is not in the data), S4. A skipped card
- * is null, never 0.
+ * The evening deck and «Закрыть день» (A25 §2.3, A18 И4.1, D-027: one tap each, only what is not
+ * in the data), S4. A skipped card is null, never 0.
  *
  * @property dayKey the HoT day being closed; the next morning reads it
  * @property alcohol В4 servings 0…4 (4 = 4+)
  * @property body FINE / SORE / SICK
+ * @property training DONE / CHANGED / NOT_TODAY (schema 5)
+ * @property food PLATE / PARTLY / JUST_ATE (schema 5)
+ * @property planHelped «План помог?» — the last tap that closes the day (schema 5)
  */
 @Entity(tableName = "evening_check", primaryKeys = ["user_id", "day_key"])
 data class EveningCheckEntity(
@@ -109,4 +112,7 @@ data class EveningCheckEntity(
     val alcohol: Int?,
     val body: String?,
     @ColumnInfo(name = "answered_at") val answeredAt: Long,
+    val training: String? = null,
+    val food: String? = null,
+    @ColumnInfo(name = "plan_helped") val planHelped: Boolean? = null,
 )

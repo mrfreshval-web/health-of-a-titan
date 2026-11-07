@@ -23,7 +23,10 @@ import com.healthofatitan.app.navigation.HotApp
 import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.feature.today.toStatusRings
 import com.healthofatitan.app.integration.whoop.day.DawnRepository
+import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.healthconnect.PhoneSteps
+import com.healthofatitan.app.integration.healthconnect.StepsRepository
 import com.healthofatitan.app.integration.whoop.day.HeaderRingsMapper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -46,10 +49,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var dawn: DawnRepository
 
-    /** D-029 header rings: the plan, the WHOOP glance (memory only) and the clock, once a minute. */
+    @Inject
+    lateinit var dailyLoop: DailyLoopRepository
+
+    @Inject
+    lateinit var steps: StepsRepository
+
+    /**
+     * D-029 header rings: the plan, the WHOOP glance (memory only), the phone's steps (Health
+     * Connect, memory only) and the clock, once a minute. With steps the middle ring is solid.
+     */
     private val rings by lazy {
-        combine(plans.latest, whoop.glance, minuteTicks()) { plan, glance, now ->
-            HeaderRingsMapper.of(plan, glance, now, ZoneId.systemDefault()).toStatusRings()
+        combine(plans.latest, whoop.glance, steps.state, minuteTicks()) { plan, glance, phone, now ->
+            val ready = phone as? PhoneSteps.Ready
+            HeaderRingsMapper.of(plan, glance, now, ZoneId.systemDefault())
+                .copy(steps = ready?.today, stepsGoal = ready?.goal)
+                .toStatusRings()
         }
     }
 
@@ -100,6 +115,9 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // A18 И1.2 ①: every app start refreshes the 28-day window unless it is fresh (WorkManager).
         lifecycleScope.launch { runCatching { whoop.onAppOpen() } }
+        // A18 И4.4: the date of this open (silence is counted in whole days without one).
+        lifecycleScope.launch { runCatching { dailyLoop.recordOpen() } }
+        lifecycleScope.launch { runCatching { steps.refresh() } }
     }
 
     override fun onNewIntent(intent: Intent) {

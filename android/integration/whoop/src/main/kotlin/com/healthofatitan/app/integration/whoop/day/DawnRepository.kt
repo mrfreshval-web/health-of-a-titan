@@ -22,8 +22,8 @@ import java.time.LocalDateTime
 
 /**
  * Crisis signals of the day (A07 CrisisGuard: CARE / EMERGENCY flags). While they are on, the
- * morning has no haiku (A37 §4, STYLE.md §6.3): the crisis card speaks instead. CrisisGuard is
- * not built yet (slice 3, A18): until then the default source reports none.
+ * morning has no haiku (A37 §4, STYLE.md §6.3): the crisis card speaks instead. The source is
+ * [DailyLoopRepository]: a CrisisGuard level ≥ 2 in the last 72 hours.
  */
 fun interface CrisisSignals {
     fun active(): Boolean

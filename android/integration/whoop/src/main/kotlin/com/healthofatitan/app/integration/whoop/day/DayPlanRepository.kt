@@ -11,6 +11,8 @@ import com.healthofatitan.app.domain.engine.Anchors
 import com.healthofatitan.app.domain.engine.Body
 import com.healthofatitan.app.domain.engine.ContextFacts
 import com.healthofatitan.app.domain.engine.DataFacts
+import com.healthofatitan.app.domain.engine.DayClose
+import com.healthofatitan.app.domain.engine.Evening
 import com.healthofatitan.app.domain.engine.DayEngine
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.DayInput
@@ -68,6 +70,8 @@ data class DayItemView(
     val startMin: Int?,
     val endMin: Int?,
     val status: ItemStatus,
+    /** `ruleId@ver` that made the item (A09 §6): ACT-01 / RET-01 mark a walk (A35 §4 steps). */
+    val rule: RuleRef? = null,
 )
 
 /** The stored day as «Сегодня» shows it (never recomputed for past days, A09 §6). */
@@ -95,6 +99,8 @@ class DayPlanRepository(
     private val dayDao: DayDao,
     private val alarms: NextAlarmSource,
     private val clock: Clock,
+    /** RET-01: silence before today (A18 И4.4); null in tests that do not need it. */
+    private val loop: DailyLoopRepository? = null,
 ) {
     private val user = HotDatabase.LOCAL_USER
     private val mutex = Mutex()
@@ -186,6 +192,7 @@ class DayPlanRepository(
             context = ContextFacts(tzShift, tzDays),
             schedule = schedule,
             history = sessions.filter { it.dayKey < today },
+            silenceDays = loop?.silenceDays(today) ?: 0,
         )
         val plan = DayEngine.plan(input)
 
@@ -266,6 +273,30 @@ class DayPlanRepository(
         dayDao.upsertEvening(EveningCheckEntity(user, day.toString(), alcohol, body?.name, clock.millis()))
     }
 
+    /**
+     * «Закрыть день» (A18 И4.1): every answer may be empty; the training answer lights the plan
+     * item («сделал» → отмечено тобой, «изменил» → изменено), never undoes what WHOOP confirmed.
+     */
+    suspend fun closeDay(day: LocalDate, close: DayClose) {
+        val key = day.toString()
+        dayDao.upsertEvening(
+            EveningCheckEntity(
+                userId = user,
+                dayKey = key,
+                alcohol = close.alcohol,
+                body = close.body?.name,
+                answeredAt = clock.millis(),
+                training = close.training?.name,
+                food = close.food?.name,
+                planHelped = close.planHelped,
+            ),
+        )
+        val item = dayDao.items(user, key).firstOrNull { it.itemId == DayEngine.Ids.TRAINING } ?: return
+        val current = ItemStatus.entries.firstOrNull { it.name == item.status } ?: ItemStatus.OPEN
+        val next = Evening.trainingStatus(current, close.training)
+        if (next != current) dayDao.setItemStatus(user, key, item.itemId, next.name, clock.millis())
+    }
+
     companion object {
         /** A09 REG-05: no scored night by this time → the default day (MANUAL). */
         val MANUAL_FROM: LocalTime = LocalTime.of(9, 30)
@@ -292,6 +323,7 @@ class DayPlanRepository(
                 startMin = e.slotStart,
                 endMin = e.slotEnd,
                 status = ItemStatus.entries.firstOrNull { it.name == e.status } ?: ItemStatus.OPEN,
+                rule = RuleRef.parse(e.ruleRef),
             )
         },
         bedtimeMin = p.bedtimeMin,

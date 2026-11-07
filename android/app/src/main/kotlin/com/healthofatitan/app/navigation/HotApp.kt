@@ -144,7 +144,12 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (fullScreen) Modifier else Modifier.padding(padding),
             ) {
-                todayScreen(onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } }, stateful = stateful)
+                todayScreen(
+                    onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    // CrisisGuard level ≥ 2 in the evening note opens the crisis card (A07 §4.1, D-029)
+                    onOpenHelp = { navController.openSos() },
+                    stateful = stateful,
+                )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
                 meScreen(

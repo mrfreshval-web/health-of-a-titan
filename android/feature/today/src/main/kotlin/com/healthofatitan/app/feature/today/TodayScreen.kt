@@ -45,6 +45,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotRatioBar
@@ -57,6 +58,7 @@ import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.component.TitanScene
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
+import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.whoop.SyncIndicator
 import com.healthofatitan.app.integration.whoop.SyncIndicators
 import com.healthofatitan.app.integration.whoop.SyncLight
@@ -85,14 +87,31 @@ import kotlin.math.roundToInt
  * tokens), «Почему так», «Сейчас» — the one next action, «Линия дня», the full plan, the
  * evening deck, and the WHOOP sync line. Before today's plan exists the four WHOOP tiles of
  * slice 1 stand in. Pull down to refresh: the short «Титан приходит» (0.7 s) is the indicator.
+ * Stream A: in the evening «Закрыть день» comes first, phone steps sit under the plan, and after
+ * 7+ days of silence «С возвращением» is shown once before the screen.
  *
+ * @param onOpenHelp the crisis card (SOS): CrisisGuard level ≥ 2 in the evening note opens it.
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
  */
-fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, stateful: Boolean = true) {
+fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, onOpenHelp: () -> Unit = {}, stateful: Boolean = true) {
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop) else TodayScreen(TodayUiState(), onConnectWhoop)
+        if (stateful) TodayRoute(onConnectWhoop, onOpenHelp) else TodayScreen(TodayUiState(), onConnectWhoop)
     }
 }
+
+/**
+ * Places for the cards of the other streams (Б «Тренировка», В «Еда», Г «Путь») on «Сегодня»:
+ * each stream adds its own composable here instead of rebuilding the layout.
+ *
+ * @param afterNow under «Сейчас» (the next action)
+ * @param afterPlan under the plan and the steps
+ * @param evening next to «Закрыть день» in the evening
+ */
+class TodaySlots(
+    val afterNow: @Composable ColumnScope.() -> Unit = {},
+    val afterPlan: @Composable ColumnScope.() -> Unit = {},
+    val evening: @Composable ColumnScope.() -> Unit = {},
+)
 
 const val TODAY_SCREEN_TAG = "screen_today"
 const val TODAY_CONNECT_TAG = "today_connect_whoop"
@@ -124,18 +143,34 @@ class TodayViewModel @Inject constructor(
 @Composable
 private fun TodayRoute(
     onConnectWhoop: () -> Unit,
+    onOpenHelp: () -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val day by dayModel.state.collectAsStateWithLifecycle()
+    val welcome by dayModel.welcome.collectAsStateWithLifecycle()
     LaunchedEffect(day.plan?.dayKey, day.today) { dayModel.opened() }
+    if (welcome) {
+        WelcomeBackScreen(today = day.today, onStart = dayModel::welcomeSeen)
+        return
+    }
     TodayScreen(
         state = state,
         onConnectWhoop = onConnectWhoop,
         onSync = viewModel::sync,
         day = day.takeIf { it.loaded },
-        actions = DayActions(onToggle = dayModel::toggle, onEvening = dayModel::saveEvening),
+        actions = DayActions(
+            onToggle = dayModel::toggle,
+            onEvening = dayModel::saveEvening,
+            onCloseDay = dayModel::closeDay,
+            onCrisis = { a ->
+                dayModel.crisis(a)
+                if (a.level.autoShowHelp) onOpenHelp()
+            },
+            onOpenHelp = onOpenHelp,
+            onSteps = dayModel::refreshSteps,
+        ),
     )
 }
 
@@ -149,6 +184,7 @@ fun TodayScreen(
     /** Slice 2: the day (regime, plan, evening); null while it loads. */
     day: DayUiState? = null,
     actions: DayActions = DayActions(),
+    slots: TodaySlots = TodaySlots(),
 ) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
@@ -172,14 +208,14 @@ fun TodayScreen(
             if (!connected) {
                 NotConnected(onConnectWhoop)
             } else {
-                Connected(whoop!!, state, day, actions, onSync)
+                Connected(whoop!!, state, day, actions, slots, onSync)
             }
         }
     }
 }
 
 @Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, onSync: () -> Unit) {
+private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, slots: TodaySlots, onSync: () -> Unit) {
     val metrics = state.metrics
     val glance = state.glance
     val today = day?.today ?: LocalDate.now()
@@ -195,8 +231,22 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
     )
 
     HotOverline(TitanTexts.date(today), modifier = Modifier.align(Alignment.CenterHorizontally))
-    // A39 §7 order: safety → mode → «Почему так» → plan → evening
+    // A39 §7 order: safety → mode → «Почему так» → plan → evening; after 18:00 «Закрыть день»
+    // moves to the top (A11 §3.1), right under safety.
     plan?.let { SafetyCard(it) }
+    val eveningDay = day?.eveningFor
+    val eveningPlan = day?.plan
+    if (eveningDay != null && eveningPlan != null) {
+        CloseDayCard(
+            plan = eveningPlan,
+            day = eveningDay,
+            mode = eveningPlan.regime.mode(),
+            onClose = actions.onCloseDay,
+            onCrisis = actions.onCrisis,
+            onOpenHelp = actions.onOpenHelp,
+        )
+        slots.evening(this)
+    }
     TodayHero(
         mode = mode,
         charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
@@ -210,20 +260,24 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         RegimeWhy(plan)
         NotificationAsk()
         nowItem(plan.items, nowMin)?.let { NowCard(plan, it, actions.onToggle, mode!!) }
+        slots.afterNow(this)
         if (plan.items.any { it.startMin != null }) {
             HotOverline(TitanTexts.DAY_LINE)
             DayLine(plan, nowMin, mode!!)
         }
         PlanCard(plan, actions.onToggle)
+        ActivityCard(plan, day?.steps ?: PhoneSteps.Unavailable, mode!!, onPermission = actions.onSteps)
+        slots.afterPlan(this)
         SealOverlay(plan, glance)
     } else {
         if (day != null) DayPending()
         Tiles(state)
+        if (day != null) ActivityCard(null, day.steps, HotMode.ROVNO, onPermission = actions.onSteps)
     }
-    val eveningDay = day?.eveningFor
-    when {
-        eveningDay != null -> EveningDeckCard(eveningDay, actions.onEvening)
-        day?.eveningJustSaved == true -> EveningSaved()
+    // The closed day glows, whatever was marked (A37 §3 «без стыда»).
+    val closedPlan = day?.plan
+    if (eveningDay == null && day?.closedFor != null && closedPlan != null) {
+        DayClosedCard(closedPlan, day.closed, closedPlan.regime.mode())
     }
     SyncFooter(whoop, state, onSync)
 }

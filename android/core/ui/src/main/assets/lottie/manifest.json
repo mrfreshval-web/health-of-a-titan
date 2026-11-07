@@ -326,11 +326,11 @@
   "path-earth": {
    "file": "lottie/path-earth.json",
    "kind": "path",
-   "frames": 60,
+   "frames": 44,
    "markers": {
     "poster": 0
    },
-   "bytes": 94078
+   "bytes": 95456
   },
   "path-hold": {
    "file": "lottie/path-hold.json",
@@ -377,7 +377,7 @@
    "markers": {
     "poster": 0
    },
-   "bytes": 98496
+   "bytes": 108153
   }
  }
 }

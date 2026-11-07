@@ -247,6 +247,12 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         )
         slots.evening(this)
     }
+    // The closed day glows, whatever was marked (A37 §3 «без стыда»).
+    val closedPlan = day?.plan
+    if (eveningDay == null && day?.closedFor != null && closedPlan != null) {
+        DayClosedCard(closedPlan, day.closed, closedPlan.regime.mode())
+        slots.evening(this)
+    }
     TodayHero(
         mode = mode,
         charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
@@ -273,11 +279,6 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         if (day != null) DayPending()
         Tiles(state)
         if (day != null) ActivityCard(null, day.steps, HotMode.ROVNO, onPermission = actions.onSteps)
-    }
-    // The closed day glows, whatever was marked (A37 §3 «без стыда»).
-    val closedPlan = day?.plan
-    if (eveningDay == null && day?.closedFor != null && closedPlan != null) {
-        DayClosedCard(closedPlan, day.closed, closedPlan.regime.mode())
     }
     SyncFooter(whoop, state, onSync)
 }

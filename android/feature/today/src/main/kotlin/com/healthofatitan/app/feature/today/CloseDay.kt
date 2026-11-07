@@ -280,19 +280,19 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit, modifi
     val ink = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         onClick = onClick,
-        shape = CircleShape,
+        shape = RoundedCornerShape(18.dp),
         color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent,
         border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else tokens.rule),
-        modifier = modifier.heightIn(min = 48.dp).semantics { this.selected = selected; role = Role.RadioButton },
+        modifier = modifier.heightIn(min = 72.dp).semantics { this.selected = selected; role = Role.RadioButton },
     ) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        Column(
+            Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             Box(Modifier.clearAndSetSemantics { }) { glyph(ink) }
-            Spacer(Modifier.width(6.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = ink, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

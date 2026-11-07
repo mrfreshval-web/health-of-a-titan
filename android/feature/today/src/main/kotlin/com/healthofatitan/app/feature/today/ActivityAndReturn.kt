@@ -143,7 +143,7 @@ fun WelcomeBackScreen(today: LocalDate, onStart: () -> Unit, modifier: Modifier 
             ringTrack = HotThemeTokens.colors.hairline,
             ringStroke = 8f,
         )
-        Text(DailyTexts.WELCOME_TITLE, style = HotType.headline, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
+        Text(DailyTexts.WELCOME_TITLE, style = HotType.headline, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
         Text(DailyTexts.WELCOME_LINE, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Text(DailyTexts.newStart(today), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))

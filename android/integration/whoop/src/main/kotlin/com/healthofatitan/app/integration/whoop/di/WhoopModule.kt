@@ -6,6 +6,8 @@ import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
 import com.healthofatitan.app.integration.whoop.EdgeClient
 import com.healthofatitan.app.integration.whoop.EncryptedWhoopCredentialStore
+import com.healthofatitan.app.integration.whoop.FileSyncLogStore
+import com.healthofatitan.app.integration.whoop.SyncLogStore
 import com.healthofatitan.app.integration.whoop.WhoopAccessTokens
 import com.healthofatitan.app.integration.whoop.WhoopApi
 import com.healthofatitan.app.integration.whoop.WhoopConnection
@@ -17,7 +19,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
+import java.io.File
 import okhttp3.OkHttpClient
 import java.time.Clock
 import javax.inject.Singleton
@@ -50,8 +56,13 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideSyncer(api: WhoopApi, dao: MetricDao, store: WhoopCredentialStore, clock: Clock): WhoopSyncer =
-        WhoopSyncer(api, dao, store, clock)
+    fun provideSyncLog(@ApplicationContext context: Context, json: Json): SyncLogStore =
+        FileSyncLogStore(File(context.noBackupFilesDir, "whoop_sync_log.json"), json)
+
+    @Provides
+    @Singleton
+    fun provideSyncer(api: WhoopApi, dao: MetricDao, store: WhoopCredentialStore, clock: Clock, log: SyncLogStore): WhoopSyncer =
+        WhoopSyncer(api, dao, store, clock, log)
 
     @Provides
     @Singleton
@@ -68,5 +79,8 @@ object WhoopModule {
         scheduler: WhoopSyncScheduler,
         dao: MetricDao,
         clock: Clock,
-    ): WhoopConnection = WhoopConnection(config, edge, store, tokens, syncer, scheduler, dao, clock)
+    ): WhoopConnection = WhoopConnection(
+        config, edge, store, tokens, syncer, scheduler, dao, clock,
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    )
 }

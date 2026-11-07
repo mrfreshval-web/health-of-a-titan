@@ -104,15 +104,17 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
                 modifier = Modifier.testTag(ME_WHOOP_ROW_TAG),
             )
         }
-        listOf("Цели и условия жизни", "Стек и покупки", "Практики", "Скрининг", "Настройки").forEach {
-            HotPendingCard(title = it, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp))
-        }
+        HotPendingCard(
+            title = "Скоро",
+            caption = "Цели · Стек · Практики · Скрининг · Настройки",
+            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+        )
     }
 }
 
 private fun whoopCaption(status: WhoopStatus?): String = when {
     status == null || !status.connected -> WhoopTexts.NOT_CONNECTED
-    else -> WhoopTexts.statusProblem(status.syncStatus) ?: WhoopTexts.CONNECTED
+    else -> WhoopTexts.statusProblem(status.syncStatus) ?: status.lastSyncAt?.let { WhoopTexts.syncLine(it) } ?: WhoopTexts.CONNECTED
 }
 
 @Composable

@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
@@ -58,7 +59,12 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) pendingRoute = routeOf(intent)
         setContent {
             HotTheme {
-                HotApp(pendingRoute = pendingRoute, onPendingRouteConsumed = { pendingRoute = null })
+                val syncProgress by whoop.progress.collectAsStateWithLifecycle()
+                HotApp(
+                    pendingRoute = pendingRoute,
+                    onPendingRouteConsumed = { pendingRoute = null },
+                    syncProgress = syncProgress,
+                )
             }
         }
     }

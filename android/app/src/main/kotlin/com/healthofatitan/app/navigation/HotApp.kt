@@ -12,6 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +33,8 @@ import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotTopBar
+import com.healthofatitan.app.core.ui.component.SyncMarkPhase
+import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.whoopScreen
@@ -35,6 +42,11 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.todayScreen
 import com.healthofatitan.app.feature.week.weekScreen
+import com.healthofatitan.app.integration.whoop.SyncIndicator
+import com.healthofatitan.app.integration.whoop.SyncIndicators
+import com.healthofatitan.app.integration.whoop.SyncLight
+import com.healthofatitan.app.integration.whoop.SyncProgress
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
@@ -56,6 +68,8 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
  * @param pendingRoute route requested from outside (tile, shortcut, deep link), consumed once.
  * @param stateful false draws every screen from its default state without ViewModels: the
  *   navigation tests run without Hilt.
+ * @param syncProgress live WHOOP sync: the mark in every tab header turns into the compact sync
+ *   indicator, and a sync the user asked for ends with a haptic tick (success or failure).
  */
 @Composable
 fun HotApp(
@@ -63,6 +77,7 @@ fun HotApp(
     onPendingRouteConsumed: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
     stateful: Boolean = true,
+    syncProgress: SyncProgress = SyncProgress.Idle,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -78,6 +93,9 @@ fun HotApp(
         }
     }
 
+    val sync = rememberTopBarSync(syncProgress)
+    SyncHaptics(sync)
+
     // «Ночное небо» behind every tab (A36 §4); SOS draws its own sober background on top.
     HotBackground {
         Scaffold(
@@ -89,6 +107,8 @@ fun HotApp(
                         overline = nested?.backLabel ?: TabHeaders.overline(currentTab, LocalDate.now()),
                         onSosClick = { navController.openSos() },
                         onBack = if (nested != null) ({ if (!navController.popBackStack()) navController.openTab(nested.tab.route) }) else null,
+                        // The WHOOP screen has the big mark itself; one animated titan per screen.
+                        sync = if (currentRoute == HotRoute.WHOOP) null else sync.toMark(),
                     )
                 }
             },
@@ -111,6 +131,37 @@ fun HotApp(
         }
     }
 }
+
+/** How long a failed sync stays visible in the header before the mark rests again. */
+private const val TOP_BAR_ERROR_MS = 8_000L
+
+@Composable
+private fun rememberTopBarSync(progress: SyncProgress): SyncIndicator {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(progress) {
+        now = System.currentTimeMillis()
+        val next = SyncIndicators.nextChangeAt(progress, now, TOP_BAR_ERROR_MS) ?: return@LaunchedEffect
+        delay(next - now + 50)
+        now = System.currentTimeMillis()
+    }
+    return SyncIndicators.of(progress, now, TOP_BAR_ERROR_MS)
+}
+
+/** One haptic tick per sync the user started: «Confirm» on success, «Reject» on failure. */
+@Composable
+private fun SyncHaptics(sync: SyncIndicator) {
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(sync.key, sync.light) {
+        if (!sync.haptic) return@LaunchedEffect
+        when (sync.light) {
+            SyncLight.SUCCESS -> haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            SyncLight.ERROR -> haptics.performHapticFeedback(HapticFeedbackType.Reject)
+            else -> Unit
+        }
+    }
+}
+
+private fun SyncIndicator.toMark(): SyncMarkState = SyncMarkState(SyncMarkPhase.valueOf(light.name), progress, key, celebrate)
 
 /** A screen inside a tab (mockup 09 «← Я · Настройки»): its tab stays selected, the bar shows the way back. */
 private class NestedScreen(val tab: HotTab, val title: String, val backLabel: String)

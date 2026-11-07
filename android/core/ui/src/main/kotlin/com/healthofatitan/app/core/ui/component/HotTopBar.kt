@@ -49,6 +49,7 @@ fun HotTopBar(
     modifier: Modifier = Modifier,
     overline: String? = null,
     onBack: (() -> Unit)? = null,
+    sync: SyncMarkState? = null,
 ) {
     Column(
         modifier = modifier
@@ -57,7 +58,7 @@ fun HotTopBar(
             .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 8.dp, bottom = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            HotLockup()
+            HotLockup(sync = sync)
             Spacer(Modifier.weight(1f))
             SosButton(onClick = onSosClick)
         }

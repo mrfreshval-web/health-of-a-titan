@@ -40,14 +40,21 @@ fun HotMark(modifier: Modifier = Modifier, size: Dp = 28.dp, tint: Color = Mater
  * Short lockup «знак + HoT» (brand/mark-v2 `hot-lockup-short`): the mark and the wordmark in
  * Cormorant SemiBold with 0.12 em tracking, in gold. Mixed case on purpose: «HoT» is never set
  * in capitals (A36 §3 rule 3).
+ *
+ * @param sync when not null and not idle, the mark becomes the compact sync indicator
+ *   ([HotSyncMark]): the app's global «data is coming» signal in every tab header.
  */
 @Composable
-fun HotLockup(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+fun HotLockup(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, sync: SyncMarkState? = null) {
     Row(
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = HOT_BRAND_NAME },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HotMark(tint = color)
+        if (sync != null && sync.phase != SyncMarkPhase.IDLE) {
+            HotSyncMark(state = sync, size = 28.dp)
+        } else {
+            HotMark(tint = color)
+        }
         Spacer(Modifier.width(10.dp))
         Text("HoT", style = HotType.wordmark, color = color)
     }

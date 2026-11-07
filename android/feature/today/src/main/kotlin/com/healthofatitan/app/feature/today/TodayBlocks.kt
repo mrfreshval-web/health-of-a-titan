@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotMode
@@ -301,7 +302,7 @@ private fun SupportColumn(s: SupportView, color: Color, modifier: Modifier, onCl
         Text(
             s.label,
             // «движение», «сон сегодня» are wider than a fifth of the card: two short lines, never cut
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, letterSpacing = 0.sp),
             color = HotThemeTokens.colors.textTertiary,
             maxLines = 2,
             minLines = 2,

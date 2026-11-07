@@ -7,20 +7,19 @@ import kotlin.math.min
 import kotlin.test.assertTrue
 
 /**
- * A11 §12.1: red is reserved for red flags and emergency help. Facet and mode tokens must not
- * be red (hue within ±15° of 0° with noticeable saturation).
+ * A11 §12.1: red is reserved for red flags and emergency help. Mode, light and glass tokens
+ * must not be red (hue within ±15° of 0° with noticeable saturation).
  */
 class RedOnlyForFlagsTest {
 
     private fun HotColors.all(): Map<String, Color> = mapOf(
-        "facetCharge" to facetCharge, "facetBalance" to facetBalance, "facetRhythm" to facetRhythm,
-        "facetClarity" to facetClarity, "facetWeatherLight" to facetWeatherLight,
-        "facetWeatherHeavy" to facetWeatherHeavy, "facetConnections" to facetConnections,
-        "facetFuel" to facetFuel, "facetBackpack" to facetBackpack, "modeRazgon" to modeRazgon,
-        "modeRovno" to modeRovno, "modeBerezhno" to modeBerezhno,
+        "modeRazgon" to modeRazgon, "modeRovno" to modeRovno, "modeBerezhno" to modeBerezhno,
         "rule" to rule, "ruleSoft" to ruleSoft, "hairline" to hairline, "textTertiary" to textTertiary,
-        "skyTop" to skyTop,
-    )
+        "skyTop" to skyTop, "glassTop" to glassTop, "glassBottom" to glassBottom, "glassEdge" to glassEdge,
+        "knockout" to knockout,
+    ) + dawnFill.mapIndexed { i, c -> "dawnFill$i" to c } +
+        titanLight.mapIndexed { i, c -> "titanLight$i" to c } +
+        columnLight.mapIndexed { i, c -> "columnLight$i" to c }
 
     private fun isRed(c: Color): Boolean {
         val mx = max(c.red, max(c.green, c.blue))
@@ -33,7 +32,7 @@ class RedOnlyForFlagsTest {
     }
 
     @Test
-    fun `facet and mode tokens are not red in both themes`() {
+    fun `mode light and glass tokens are not red in both themes`() {
         for ((theme, colors) in listOf("dark" to DarkHotColors, "light" to LightHotColors)) {
             colors.all().forEach { (name, color) ->
                 assertTrue(!isRed(color), "$theme.$name looks red; red is only for flags (A11 §12.1)")
@@ -45,13 +44,14 @@ class RedOnlyForFlagsTest {
     fun `no colour scheme role outside error is red`() {
         for ((theme, scheme) in listOf("dark" to HotDarkScheme, "light" to HotLightScheme)) {
             mapOf(
-                "primary" to scheme.primary, "primaryContainer" to scheme.primaryContainer,
+                "primary" to scheme.primary,
                 "secondary" to scheme.secondary, "tertiary" to scheme.tertiary,
                 "background" to scheme.background, "surface" to scheme.surface,
                 "surfaceContainer" to scheme.surfaceContainer, "onSurface" to scheme.onSurface,
-                "outline" to scheme.outline,
+                "outline" to scheme.outline, "onPrimary" to scheme.onPrimary,
+                "primaryContainer" to scheme.primaryContainer, "tertiaryContainer" to scheme.tertiaryContainer,
             ).forEach { (name, color) ->
-                assertTrue(!isRed(color), "$theme.$name looks red; red is only for flags (A36 §2.1)")
+                assertTrue(!isRed(color), "$theme.$name looks red; red is only for flags (A37 §9.1)")
             }
         }
     }

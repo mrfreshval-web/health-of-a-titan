@@ -2,6 +2,7 @@ package com.healthofatitan.app.integration.whoop.di
 
 import android.app.AlarmManager
 import android.content.Context
+import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
@@ -16,7 +17,10 @@ import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
 import com.healthofatitan.app.integration.whoop.WhoopSyncScheduler
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
+import com.healthofatitan.app.integration.whoop.day.CrisisSignals
+import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DayNotifier
+import com.healthofatitan.app.integration.whoop.day.HaikuLibrary
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
@@ -103,6 +107,28 @@ object WhoopModule {
     @Singleton
     fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource): DayPlanRepository =
         DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock)
+
+    /** CrisisGuard (A07) is not built yet: no crisis signals until slice 3 brings it. */
+    @Provides
+    @Singleton
+    fun provideCrisisSignals(): CrisisSignals = CrisisSignals.None
+
+    /** «Рассвет»: the haiku library comes from the content pipeline (assets/content/haiku). */
+    @Provides
+    @Singleton
+    fun provideDawn(
+        @ApplicationContext context: Context,
+        metricDao: MetricDao,
+        dawnDao: DawnDao,
+        plans: DayPlanRepository,
+        crisis: CrisisSignals,
+    ): DawnRepository {
+        val library by lazy {
+            runCatching { context.assets.open(HaikuLibrary.ASSET).bufferedReader().use { HaikuLibrary.parse(it.readText()) } }
+                .getOrDefault(emptyList())
+        }
+        return DawnRepository(metricDao, dawnDao, plans, { library }, crisis, SystemZoneClock)
+    }
 
     @Provides
     @Singleton

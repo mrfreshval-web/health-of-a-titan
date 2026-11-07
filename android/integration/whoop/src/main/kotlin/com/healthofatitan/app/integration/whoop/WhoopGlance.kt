@@ -19,7 +19,12 @@ data class WhoopGlance(
     val sleep: SleepGlance?,
     val recovery: RecoveryGlance?,
     val workout: WorkoutGlance?,
+    /** Today's WHOOP day strain (the latest cycle), 0–21; memory only (D-029 header ring). */
+    val dayStrain: StrainGlance? = null,
 )
+
+/** The day strain of the latest WHOOP cycle and the cycle's start. */
+data class StrainGlance(val cycleStart: Instant, val strain: Double)
 
 /** Last main sleep: [hours] asleep (light + deep + REM), [needHours] = WHOOP's sleep need. */
 data class SleepGlance(val wakeDay: LocalDate, val end: Instant, val hours: Double, val needHours: Double?)
@@ -58,7 +63,10 @@ internal object WhoopGlanceMapper {
                 val trimp = z?.let { (it.one * 1 + it.two * 2 + it.three * 3 + it.four * 4 + it.five * 5) / 60_000.0 }
                 WorkoutGlance(start, minutes, w.sportName?.takeIf { it.isNotBlank() }, trimp)
             }
-        return WhoopGlance(fetchedAt, sleepGlance, recovery, workout)
+        val strain = window.cycles
+            .mapNotNull { c -> c.score?.strain?.takeIf { it >= 0.0 }?.let { v -> parse(c.start)?.let { StrainGlance(it, v) } } }
+            .maxByOrNull { it.cycleStart }
+        return WhoopGlance(fetchedAt, sleepGlance, recovery, workout, strain)
     }
 
     private fun parse(text: String): Instant? =

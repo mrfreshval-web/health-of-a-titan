@@ -44,7 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
-import com.healthofatitan.app.core.ui.theme.Kolonnada
+import com.healthofatitan.app.core.ui.theme.Titanium
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
@@ -70,6 +70,8 @@ data class SyncMarkState(
     val celebrate: Boolean = false,
     /** The ring follows [progress] without easing (a finger pulling to refresh). */
     val tracking: Boolean = false,
+    /** Pull-to-refresh: the short version of «Титан приходит» (frames 04 → 07, 0.7 s). */
+    val quick: Boolean = false,
 ) {
     companion object {
         val Idle = SyncMarkState()
@@ -110,9 +112,39 @@ data class SyncMarkStyle(
     val litWidth: Float = 150f,
     /** Comet tail length, in art units. */
     val trail: Float = 430f,
+    /** How the art moves: the pulse sweep of A36 or «Титан приходит» of A37 §5. */
+    val choreography: SyncChoreography = SyncChoreography.PULSE_SWEEP,
+    /** «Титан приходит»: the full arrival and the pull-to-refresh version (A37 §5). */
+    val arriveMillis: Int = 1500,
+    val quickMillis: Int = 700,
 )
 
+/** The two sync animations: «Пульс сквозь колоннаду» (A36) and «Титан приходит» (A37 §5). */
+enum class SyncChoreography { PULSE_SWEEP, TITAN_ARRIVES }
+
 object HotSyncMarkDefaults {
+    /**
+     * «Титаниум» (A37 §5): the Titan comes out of the fog in the theme's warm line of light; the
+     * ring and the light turn into [mode] once the data arrives. Never red on error.
+     */
+    @Composable
+    fun titanStyle(mode: HotMode? = null): SyncMarkStyle {
+        val tokens = HotThemeTokens.colors
+        val scheme = MaterialTheme.colorScheme
+        val accent = mode?.color() ?: tokens.modeRovno
+        return SyncMarkStyle(
+            accent = accent,
+            accentHighlight = scheme.primary,
+            muted = tokens.textTertiary,
+            track = tokens.rule,
+            onAccent = scheme.background,
+            errorBadge = scheme.surfaceContainerHigh,
+            onErrorBadge = scheme.onSurfaceVariant,
+            glow = tokens.glow,
+            choreography = SyncChoreography.TITAN_ARRIVES,
+        )
+    }
+
     /** The style from the current theme tokens. */
     @Composable
     fun style(): SyncMarkStyle {
@@ -120,13 +152,13 @@ object HotSyncMarkDefaults {
         val scheme = MaterialTheme.colorScheme
         return SyncMarkStyle(
             accent = scheme.primary,
-            accentHighlight = if (tokens.isDark) Kolonnada.GoldHi else scheme.primary,
+            accentHighlight = if (tokens.isDark) Titanium.DawnHi else scheme.primary,
             muted = tokens.textTertiary,
             track = tokens.ruleSoft,
             onAccent = scheme.onPrimary,
             errorBadge = scheme.surfaceContainerHigh,
             onErrorBadge = scheme.onSurfaceVariant,
-            glow = tokens.isDark,
+            glow = tokens.glow,
         )
     }
 }
@@ -169,6 +201,13 @@ object HotMarkArt : SyncMarkArt {
 }
 
 /**
+ * The Titan of mark v2 for «Титан приходит» (A37 §5): the same ring, pulse and parts as
+ * [HotMarkArt] (they stay the fallback geometry), drawn by [TitanScene] from the generated
+ * layers (brand/mark-v2/android/build_titan_layers.py): line art from 120 dp, silhouettes below.
+ */
+object TitanArrivesArt : SyncMarkArt by HotMarkArt
+
+/**
  * «Пульс сквозь колоннаду» — the HoT mark as the sync indicator (brand/mark-v2, A36 §4, §7).
  *
  * - **Running:** a pulse comet sweeps left to right along the mark's own ECG line; every column
@@ -185,7 +224,11 @@ object HotMarkArt : SyncMarkArt {
  * Visual parameters come from [style] (theme tokens) and the figure from [art], so the look can
  * be replaced without touching the state logic or the screens.
  *
+ * With [SyncMarkStyle.choreography] = [SyncChoreography.TITAN_ARRIVES] the same states play
+ * «Титан приходит» instead (A37 §5, [TitanArrival]).
+ *
  * @param badge the check / «!» badge; off by default below 56 dp (top bar, small indicators)
+ * @param haptics tactile ticks of the arrival (palms, push); one mark per screen sets it
  */
 @Composable
 fun HotSyncMark(
@@ -194,9 +237,14 @@ fun HotSyncMark(
     size: Dp = 96.dp,
     badge: Boolean = size >= 56.dp,
     contentDescription: String? = null,
-    style: SyncMarkStyle = HotSyncMarkDefaults.style(),
-    art: SyncMarkArt = HotMarkArt,
+    style: SyncMarkStyle = HotSyncMarkDefaults.titanStyle(),
+    art: SyncMarkArt = TitanArrivesArt,
+    haptics: Boolean = false,
 ) {
+    if (style.choreography == SyncChoreography.TITAN_ARRIVES) {
+        TitanArrival(state, modifier, size, contentDescription, style, haptics)
+        return
+    }
     val reduceMotion = rememberReduceMotion()
     val phase = state.phase
     val animate = !reduceMotion

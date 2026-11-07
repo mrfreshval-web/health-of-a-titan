@@ -1,23 +1,21 @@
 package com.healthofatitan.app.feature.today
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -46,19 +45,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.ui.R
-import com.healthofatitan.app.core.ui.component.HotCard
-import com.healthofatitan.app.core.ui.component.HotNormRing
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotRatioBar
-import com.healthofatitan.app.core.ui.component.HotSourceChip
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.component.HotStatTile
 import com.healthofatitan.app.core.ui.component.HotSyncMark
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
+import com.healthofatitan.app.core.ui.component.TitanScene
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.integration.whoop.SyncIndicator
@@ -71,6 +67,7 @@ import com.healthofatitan.app.integration.whoop.TodayMetricsRepository
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopGlance
 import com.healthofatitan.app.integration.whoop.WhoopStatus
+import com.healthofatitan.app.integration.whoop.day.StrainCeiling
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -78,14 +75,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
 /**
- * Tab «Сегодня» (A11 §1.1). Slice 1: what WHOOP brought, from the first sync on — last night's
- * sleep against the need, recovery inputs, the last workout — and, once the norm is learned,
- * Заряд and Весы. While the norm is calibrating a ring «9/14» stands in for any explanation.
- * Pull down to refresh: the HoT mark is the indicator.
+ * Tab «Сегодня» in «Титаниум» (A37 §1 scenario 2, s2). From top to bottom: the date, the hero
+ * (the Titan inside the Заряд ring, lit by the day's mode, with the mode word and three data
+ * tokens), «Почему так», «Сейчас» — the one next action, «Линия дня», the full plan, the
+ * evening deck, and the WHOOP sync line. Before today's plan exists the four WHOOP tiles of
+ * slice 1 stand in. Pull down to refresh: the short «Титан приходит» (0.7 s) is the indicator.
  *
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
  */
@@ -123,9 +122,21 @@ class TodayViewModel @Inject constructor(
 }
 
 @Composable
-private fun TodayRoute(onConnectWhoop: () -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
+private fun TodayRoute(
+    onConnectWhoop: () -> Unit,
+    viewModel: TodayViewModel = hiltViewModel(),
+    dayModel: DayViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    TodayScreen(state, onConnectWhoop, onSync = viewModel::sync, day = { DayRoute() })
+    val day by dayModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(day.plan?.dayKey, day.today) { dayModel.opened() }
+    TodayScreen(
+        state = state,
+        onConnectWhoop = onConnectWhoop,
+        onSync = viewModel::sync,
+        day = day.takeIf { it.loaded },
+        actions = DayActions(onToggle = dayModel::toggle, onEvening = dayModel::saveEvening),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,8 +146,9 @@ fun TodayScreen(
     onConnectWhoop: () -> Unit,
     modifier: Modifier = Modifier,
     onSync: () -> Unit = {},
-    /** Slice 2: the day block (regime, plan, evening), see DaySection.kt. */
-    day: @Composable ColumnScope.() -> Unit = {},
+    /** Slice 2: the day (regime, plan, evening); null while it loads. */
+    day: DayUiState? = null,
+    actions: DayActions = DayActions(),
 ) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
@@ -158,30 +170,108 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
         ) {
             if (!connected) {
-                NotConnectedCard(onConnectWhoop)
+                NotConnected(onConnectWhoop)
             } else {
-                StateCard(whoop!!, state, onSync)
-                day()
-                Tiles(state)
+                Connected(whoop!!, state, day, actions, onSync)
             }
         }
     }
 }
 
-/** Pull-to-refresh: the ring of the mark draws with the finger, then the pulse runs while syncing. */
+@Composable
+private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, onSync: () -> Unit) {
+    val metrics = state.metrics
+    val glance = state.glance
+    val today = day?.today ?: LocalDate.now()
+    val plan = day?.plan?.takeIf { day.planToday }
+    val mode = plan?.regime?.mode()
+    val nowMin = day?.now?.let { it.hour * 60 + it.minute } ?: 0
+    val normReady = whoop.baselineNights >= TodayTexts.NORM_NIGHTS && metrics.dayKey != null
+    val sleep = glance?.sleep?.hours ?: metrics.sleepHours?.value
+    val tokens = listOfNotNull(
+        sleep?.let { "${TitanTexts.SLEEP} ${TitanTexts.hm(it)}" },
+        glance?.recovery?.restingHr?.let { "${TitanTexts.PULSE} ${it.roundToInt()}" },
+        plan?.let { "${TitanTexts.CEILING} ${TitanTexts.ceiling(StrainCeiling.of(it.regime))}" },
+    )
+
+    HotOverline(TitanTexts.date(today), modifier = Modifier.align(Alignment.CenterHorizontally))
+    // A39 §7 order: safety → mode → «Почему так» → plan → evening
+    plan?.let { SafetyCard(it) }
+    TodayHero(
+        mode = mode,
+        charge = metrics.charge?.value?.roundToInt()?.takeIf { normReady },
+        normNights = whoop.baselineNights.coerceAtMost(TodayTexts.NORM_NIGHTS).takeIf { !normReady },
+        tokens = tokens,
+        summary = plan?.summary,
+        flags = plan?.flags.orEmpty(),
+        modifier = Modifier.testTag(TODAY_STATE_TAG),
+    )
+    if (plan != null) {
+        RegimeWhy(plan)
+        NotificationAsk()
+        nowItem(plan.items, nowMin)?.let { NowCard(plan, it, actions.onToggle, mode!!) }
+        if (plan.items.any { it.startMin != null }) {
+            HotOverline(TitanTexts.DAY_LINE)
+            DayLine(plan, nowMin, mode!!)
+        }
+        PlanCard(plan, actions.onToggle)
+        SealOverlay(plan, glance)
+    } else {
+        if (day != null) DayPending()
+        Tiles(state)
+    }
+    val eveningDay = day?.eveningFor
+    when {
+        eveningDay != null -> EveningDeckCard(eveningDay, actions.onEvening)
+        day?.eveningJustSaved == true -> EveningSaved()
+    }
+    SyncFooter(whoop, state, onSync)
+}
+
+/** Not connected: the Titan alone in the dark, one line and the way to WHOOP (A37 s1). */
+@Composable
+private fun NotConnected(onConnectWhoop: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(Modifier.height(24.dp))
+        TitanScene(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 320.dp).aspectRatio(1f),
+            ring = { 1f },
+            ringDashed = true,
+            ringColor = HotThemeTokens.colors.rule,
+            ringStroke = 6f,
+        )
+        Spacer(Modifier.height(24.dp))
+        Text(
+            TodayTexts.LEAD_NOT_CONNECTED,
+            style = HotType.quote,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(28.dp))
+        HotPrimaryButton(
+            text = TodayTexts.CONNECT,
+            onClick = onConnectWhoop,
+            trailingArrow = true,
+            modifier = Modifier.fillMaxWidth().testTag(TODAY_CONNECT_TAG),
+        )
+    }
+}
+
+/** Pull-to-refresh: the ring draws with the finger, then the short «Титан приходит» runs (0.7 s). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BoxScope.PullIndicator(pull: PullToRefreshState, refreshing: Boolean, progress: SyncProgress) {
     val fraction = pull.distanceFraction
     if (!refreshing && fraction <= 0f) return
+    val running = progress as? SyncProgress.Running
     val mark = if (refreshing) {
-        SyncMarkState(SyncMarkPhase.RUNNING, (progress as? SyncProgress.Running)?.step?.fraction, (progress as? SyncProgress.Running)?.startedAt ?: 0L)
+        SyncMarkState(SyncMarkPhase.RUNNING, running?.step?.fraction, running?.startedAt ?: 0L, quick = true)
     } else {
-        SyncMarkState(SyncMarkPhase.RUNNING, fraction.coerceIn(0f, 1f), tracking = true)
+        SyncMarkState(SyncMarkPhase.RUNNING, fraction.coerceIn(0f, 1f), tracking = true, quick = true)
     }
     HotSyncMark(
         state = mark,
-        size = 40.dp,
+        size = 44.dp,
         modifier = Modifier
             .align(Alignment.TopCenter)
             .graphicsLayer {
@@ -190,21 +280,6 @@ private fun BoxScope.PullIndicator(pull: PullToRefreshState, refreshing: Boolean
                 alpha = (f * 1.6f).coerceIn(0f, 1f)
             },
     )
-}
-
-@Composable
-private fun NotConnectedCard(onConnectWhoop: () -> Unit) {
-    HotCard(cornice = true, modifier = Modifier.fillMaxWidth()) {
-        HotSyncMark(SyncMarkState.Idle, size = 88.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(Modifier.height(16.dp))
-        Text(TodayTexts.LEAD_NOT_CONNECTED, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(18.dp))
-        HotPrimaryButton(
-            text = TodayTexts.CONNECT,
-            onClick = onConnectWhoop,
-            modifier = Modifier.fillMaxWidth().testTag(TODAY_CONNECT_TAG),
-        )
-    }
 }
 
 /** Live indicator for the status line; re-evaluated when a fresh success goes stale. */
@@ -220,31 +295,10 @@ private fun rememberSyncIndicator(progress: SyncProgress): SyncIndicator {
     return SyncIndicators.of(progress, now)
 }
 
+/** «WHOOP · 06:41» at the end of the day, with the sync status and «Повторить» on a final failure. */
 @Composable
-private fun StateCard(whoop: WhoopStatus, state: TodayUiState, onSync: () -> Unit) {
-    val metrics = state.metrics
-    val normReady = whoop.baselineNights >= TodayTexts.NORM_NIGHTS && metrics.dayKey != null
-    HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(TODAY_STATE_TAG)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            HotOverline(TodayTexts.STATE_TITLE, modifier = Modifier.weight(1f))
-            HotSourceChip("WHOOP", R.drawable.core_ui_ic_band)
-        }
-        Spacer(Modifier.height(14.dp))
-        if (normReady) {
-            Ready(metrics)
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                HotNormRing(whoop.baselineNights.coerceAtMost(TodayTexts.NORM_NIGHTS), TodayTexts.NORM_NIGHTS, size = 56.dp)
-                Spacer(Modifier.width(14.dp))
-                Text(TodayTexts.NORM, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-            }
-        }
-        StatusLine(whoop, state.progress, onSync)
-    }
-}
-
-@Composable
-private fun StatusLine(whoop: WhoopStatus, progress: SyncProgress, onSync: () -> Unit) {
+private fun SyncFooter(whoop: WhoopStatus, state: TodayUiState, onSync: () -> Unit) {
+    val progress = state.progress
     val indicator = rememberSyncIndicator(progress)
     val failed = progress as? SyncProgress.Failed
     val text = when (indicator.light) {
@@ -252,56 +306,26 @@ private fun StatusLine(whoop: WhoopStatus, progress: SyncProgress, onSync: () ->
         SyncLight.SUCCESS -> (progress as? SyncProgress.Succeeded)?.counts?.let { TodayTexts.done(it.nights, it.workouts) }
         SyncLight.ERROR -> failed?.let { TodayTexts.failure(it.failure, it.httpCode) }
         SyncLight.IDLE -> if (progress is SyncProgress.Idle) TodayTexts.problem(whoop.syncStatus) else null
-    } ?: return
-    Spacer(Modifier.height(10.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (indicator.light == SyncLight.SUCCESS) MaterialTheme.colorScheme.primary else HotThemeTokens.colors.textTertiary,
-            modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
-        )
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        HotOverline(TitanTexts.synced(state.glance?.fetchedAt?.takeIf { it > 0 }))
+        if (text != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (indicator.light == SyncLight.SUCCESS) MaterialTheme.colorScheme.primary else HotThemeTokens.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
         if (indicator.light == SyncLight.ERROR && failed?.willRetry == false) {
             HotTextButton(TodayTexts.RETRY, onClick = onSync)
         }
     }
 }
 
-@Composable
-private fun Ready(metrics: TodayMetrics) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(HotSpacing.cardGap)) {
-        Facet(
-            title = TodayTexts.CHARGE,
-            word = TodayTexts.chargeWord(metrics.charge?.level),
-            value = metrics.charge?.value?.let { "${it.roundToInt()} · ${TodayTexts.NORM_50}" },
-            modifier = Modifier.weight(1f),
-        )
-        Facet(
-            title = TodayTexts.BALANCE,
-            word = TodayTexts.balanceWord(metrics.balance?.level),
-            value = null,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun Facet(title: String, word: String, value: String?, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(7.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(word, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        if (value != null) {
-            Text(value, style = MaterialTheme.typography.bodyMedium, color = HotThemeTokens.colors.textTertiary)
-        }
-    }
-}
-
-/** Four facts of the morning as tiles: sleep, recovery, workout, steps. Numbers, not sentences. */
+/** Four facts of the morning as tiles: sleep, recovery, workout, steps. Shown until today's plan exists. */
 @Composable
 private fun Tiles(state: TodayUiState) {
     val glance = state.glance
@@ -355,7 +379,7 @@ private fun Tiles(state: TodayUiState) {
 }
 
 @Composable
-private fun TileRow(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+private fun TileRow(content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),

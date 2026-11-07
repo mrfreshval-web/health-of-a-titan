@@ -1,0 +1,43 @@
+# Screenshots of «Титаниум» (A37) rendered by Robolectric native graphics: opt-in, never blocks CI.
+# Run by hand (Actions → Screenshots → Run workflow); the PNGs come as an artifact.
+name: Screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Render
+        env:
+          HOT_SCREENSHOTS: "1"
+        run: ./gradlew :app:testDebugUnitTest --tests '*TitaniumScreenshots*' --stacktrace
+      - name: Print as base64 (artifact storage may be unreachable from agents)
+        if: always()
+        run: |
+          for f in app/build/screenshots/*.png; do
+            echo "::group::PNG $(basename "$f")"
+            echo "BEGIN-PNG $(basename "$f")"
+            base64 -w 0 "$f"; echo
+            echo "END-PNG"
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: screenshots
+          path: android/app/build/screenshots/

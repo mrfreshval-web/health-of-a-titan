@@ -24,10 +24,11 @@ const val HOT_BRAND_NAME = "Health of a Titan"
 
 /**
  * The HoT mark at UI sizes: ring, two columns and the titan as silhouettes (brand/mark-v2 §4,
- * the same reduction as the notification icon). Line art of the master does not survive < 64 dp.
+ * the same reduction as the notification icon). Line art of the master does not survive < 120 dp
+ * (A37 §14): there the scene uses the silhouettes too.
  */
 @Composable
-fun HotMark(modifier: Modifier = Modifier, size: Dp = 28.dp, tint: Color = MaterialTheme.colorScheme.primary) {
+fun HotMark(modifier: Modifier = Modifier, size: Dp = 28.dp, tint: Color = MaterialTheme.colorScheme.onSurface) {
     Icon(
         painter = painterResource(R.drawable.core_ui_ic_hot_mark),
         contentDescription = null,
@@ -37,15 +38,15 @@ fun HotMark(modifier: Modifier = Modifier, size: Dp = 28.dp, tint: Color = Mater
 }
 
 /**
- * Short lockup «знак + HoT» (brand/mark-v2 `hot-lockup-short`): the mark and the wordmark in
- * Cormorant SemiBold with 0.12 em tracking, in gold. Mixed case on purpose: «HoT» is never set
- * in capitals (A36 §3 rule 3).
+ * Short lockup «знак + HoT»: in the app the wordmark is Geist Mono with wide tracking (A37 §3
+ * «Логотип»; Cormorant stays in the store and the splash). Mixed case on purpose: «HoT» is never
+ * set in capitals.
  *
  * @param sync when not null and not idle, the mark becomes the compact sync indicator
  *   ([HotSyncMark]): the app's global «data is coming» signal in every tab header.
  */
 @Composable
-fun HotLockup(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, sync: SyncMarkState? = null) {
+fun HotLockup(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurface, sync: SyncMarkState? = null) {
     Row(
         modifier = modifier.semantics(mergeDescendants = true) { contentDescription = HOT_BRAND_NAME },
         verticalAlignment = Alignment.CenterVertically,

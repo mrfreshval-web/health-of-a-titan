@@ -13,8 +13,14 @@ object HotRoute {
     /** «Я → Подключения → WHOOP» (A11 §11, A18 И1.1); lives under the «Я» tab. */
     const val WHOOP = "whoop"
 
-    /** Outside the tabs: reachable in 1 tap from every screen, tile and shortcut. */
+    /**
+     * Outside the tabs, the crisis screen. D-029: no header button any more; reachable in ≤ 2 taps
+     * («Я › Помощь», «⋮ › Помощь» in the mentor chat), from the quick settings tile and the shortcut.
+     */
     const val SOS = "sos"
+
+    /** «Рассвет» (A37 §4): the morning screen, once a day at the first open; outside the tabs. */
+    const val DAWN = "dawn"
 
     const val DEEP_LINK_SCHEME = "hot"
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"

@@ -1,7 +1,8 @@
 package com.healthofatitan.app.core.ui.component
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,120 +18,137 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 
-/** TalkBack label for the SOS button (A11 §1.3). */
-const val SOS_BUTTON_DESCRIPTION = "SOS, срочная поддержка"
-const val SOS_BUTTON_TAG = "sos_button"
 const val TOP_BAR_TITLE_TAG = "top_bar_title"
 const val TOP_BAR_BACK_TAG = "top_bar_back"
+const val TOP_BAR_GLYPH_TAG = "top_bar_glyph"
+const val TOP_BAR_WHY_TAG = "top_bar_why"
 
 /**
- * Header of every tab screen, «Колоннада» (A36 §10, screens 02/06/07): the short lockup
- * «знак + HoT» on the left and SOS always on the right (A11 §1.3), then the gold overline and
- * the screen title in Cormorant. Transparent: it sits on the night-sky background.
+ * Header of every tab, «Титаниум» (A37 §1, mockup s2; D-029): the Titan glyph in a glass circle
+ * (it becomes the sync indicator «Титан приходит» while data comes), the telemetry line (date,
+ * «Винс · ИИ», week) and the three status rings on the right. There is no SOS button here any
+ * more (D-029): help is two taps away — «Я › Помощь» and «⋮ › Помощь» in the mentor chat — plus
+ * the quick settings tile and the launcher shortcut; the crisis card appears by itself on
+ * detection. A tap on the rings shows one line «почему».
+ *
+ * @param title the screen title under the line (null on «Сегодня»: the hero speaks there)
  */
 @Composable
 fun HotTopBar(
-    title: String,
-    onSosClick: () -> Unit,
+    title: String?,
     modifier: Modifier = Modifier,
     overline: String? = null,
     onBack: (() -> Unit)? = null,
     sync: SyncMarkState? = null,
+    rings: StatusRings = StatusRings.Empty,
 ) {
+    var why by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 8.dp, bottom = 12.dp),
+            .padding(start = HotSpacing.edge - 4.dp, end = HotSpacing.edge - 8.dp, top = 10.dp, bottom = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            HotLockup(sync = sync)
-            Spacer(Modifier.weight(1f))
-            SosButton(onClick = onSosClick)
-        }
-        Spacer(Modifier.size(14.dp))
-        if (onBack != null) {
-            // Nested screen (mockup 09 «← Я · Настройки»): the way back and where it leads.
-            Surface(
-                onClick = onBack,
-                shape = CircleShape,
-                color = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .semantics { contentDescription = "Назад" + (overline?.let { ": $it" } ?: "") }
-                    .testTag(TOP_BAR_BACK_TAG),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                    Icon(painterResource(R.drawable.core_ui_ic_back), contentDescription = null, modifier = Modifier.size(24.dp))
-                    if (overline != null) {
-                        Spacer(Modifier.width(12.dp))
-                        Text(overline, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics { })
-                    }
+            if (onBack != null) {
+                BackButton(onBack, overline)
+            } else {
+                TitanGlyph(sync)
+                Spacer(Modifier.width(12.dp))
+                if (overline != null) {
+                    HotOverline(overline, modifier = Modifier.weight(1f, fill = false))
                 }
             }
-        } else if (overline != null) {
-            HotOverline(overline)
-            Spacer(Modifier.size(2.dp))
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            HotStatusRings(rings, onClick = { why = !why }, expanded = why)
         }
-        Text(
-            title,
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .semantics { heading() }
-                .testTag(TOP_BAR_TITLE_TAG),
-        )
+        AnimatedVisibility(why) {
+            Text(
+                StatusRingsTexts.why(rings),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(start = 4.dp, top = 10.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite }
+                    .testTag(TOP_BAR_WHY_TAG),
+            )
+        }
+        if (title != null) {
+            Spacer(Modifier.size(18.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .semantics { heading() }
+                    .testTag(TOP_BAR_TITLE_TAG),
+            )
+        }
     }
 }
 
-/**
- * SOS pill: neutral, sober and always visible — no gold, no red, no glow (A36 §11 rule 7).
- * 48 dp touch target; one tap opens the offline SOS screen.
- */
+/** The Titan glyph in a glass circle, 44 dp; the live sync indicator while data comes. */
 @Composable
-fun SosButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, HotThemeTokens.colors.hairline),
-        modifier = modifier
-            .heightIn(min = 48.dp)
-            .semantics { contentDescription = SOS_BUTTON_DESCRIPTION }
-            .testTag(SOS_BUTTON_TAG),
+private fun TitanGlyph(sync: SyncMarkState?) {
+    val tokens = HotThemeTokens.colors
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(44.dp)
+            .border(1.dp, tokens.rule, CircleShape)
+            .semantics(mergeDescendants = true) { contentDescription = HOT_BRAND_NAME }
+            .testTag(TOP_BAR_GLYPH_TAG),
     ) {
-        Row(
-            modifier = Modifier.padding(start = 14.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.core_ui_ic_sos),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "SOS",
-                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 0.08.em),
-                modifier = Modifier.clearAndSetSemantics { },
-            )
+        if (sync != null && sync.phase != SyncMarkPhase.IDLE) {
+            HotSyncMark(state = sync, size = 40.dp, haptics = true)
+        } else {
+            HotMark(size = 26.dp, tint = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+@Composable
+private fun BackButton(onBack: () -> Unit, label: String?) {
+    Surface(
+        onClick = onBack,
+        shape = CircleShape,
+        color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = "Назад" + (label?.let { ": $it" } ?: "") }
+            .testTag(TOP_BAR_BACK_TAG),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, end = 12.dp)) {
+            Icon(painterResource(R.drawable.core_ui_ic_back), contentDescription = null, modifier = Modifier.size(24.dp))
+            if (label != null) {
+                Spacer(Modifier.width(10.dp))
+                HotOverline(label, modifier = Modifier.clearAndSetSemantics { })
+            }
         }
     }
 }

@@ -31,12 +31,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
-import com.healthofatitan.app.core.ui.theme.Kolonnada
+import com.healthofatitan.app.core.ui.theme.Titanium
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.unit.sp
 
 /**
- * The one primary action of a screen (A36 §6, §11 rule 1): a gold capsule with the vertical
- * gradient #E6C77E → #CFA845 and a 1 dp light rim on top; 56 dp high. In the light theme it is
- * flat «тёмное золото». [loading] keeps the size and shows a quiet spinner instead of the label.
+ * The one primary action of a screen (A37 §9.1 «Рассвет», §9.5): a dawn capsule
+ * #FFE1AE → #FFC77A → #FFB05E with dark text, 56 dp high and the only thing that glows besides the
+ * hero. In the light theme the same pill without the glow. [loading] keeps the size and shows a
+ * quiet spinner instead of the label; [trailingArrow] adds «→» («Начать день →»).
  */
 @Composable
 fun HotPrimaryButton(
@@ -45,15 +48,13 @@ fun HotPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     loading: Boolean = false,
+    trailingArrow: Boolean = false,
 ) {
-    val dark = HotThemeTokens.colors.isDark
-    val gradient = if (dark) {
-        Brush.verticalGradient(listOf(Kolonnada.GoldButtonTop, Kolonnada.GoldButtonBottom))
-    } else {
-        Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary))
-    }
-    val content = MaterialTheme.colorScheme.onPrimary
+    val tokens = HotThemeTokens.colors
+    val gradient = Brush.verticalGradient(tokens.dawnFill)
+    val content = Titanium.OnDawn
     val active = enabled && !loading
+    val glow = tokens.dawnFill[1]
     Surface(
         onClick = onClick,
         enabled = active,
@@ -62,6 +63,16 @@ fun HotPrimaryButton(
         contentColor = content,
         modifier = modifier
             .heightIn(min = 56.dp)
+            .drawBehind {
+                if (tokens.glow && active) {
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(listOf(glow.copy(alpha = 0f), glow.copy(alpha = 0.22f))),
+                        topLeft = Offset(-6.dp.toPx(), 2.dp.toPx()),
+                        size = size.copy(width = size.width + 12.dp.toPx(), height = size.height + 10.dp.toPx()),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height),
+                    )
+                }
+            }
             .semantics {
                 role = Role.Button
                 if (loading) stateDescription = "Подождите"
@@ -72,34 +83,36 @@ fun HotPrimaryButton(
                 .background(gradient, CircleShape)
                 .drawWithContent {
                     drawContent()
-                    if (dark) {
-                        drawLine(
-                            brush = Brush.horizontalGradient(
-                                0f to Color.Transparent,
-                                0.5f to Kolonnada.GoldHi.copy(alpha = 0.8f),
-                                1f to Color.Transparent,
-                            ),
-                            start = Offset(size.height / 2, 1.dp.toPx()),
-                            end = Offset(size.width - size.height / 2, 1.dp.toPx()),
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                    }
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            0f to Color.Transparent,
+                            0.5f to Color.White.copy(alpha = 0.7f),
+                            1f to Color.Transparent,
+                        ),
+                        start = Offset(size.height / 2, 1.dp.toPx()),
+                        end = Offset(size.width - size.height / 2, 1.dp.toPx()),
+                        strokeWidth = 1.dp.toPx(),
+                    )
                 }
                 .heightIn(min = 56.dp)
                 .fillMaxWidth()
-                .then(if (active) Modifier else Modifier.background(MaterialTheme.colorScheme.background.copy(alpha = 0.35f), CircleShape)),
+                .then(if (active) Modifier else Modifier.background(MaterialTheme.colorScheme.background.copy(alpha = 0.45f), CircleShape)),
             contentAlignment = Alignment.Center,
         ) {
             if (loading) {
                 CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = content)
             } else {
-                Text(text, style = MaterialTheme.typography.labelLarge, color = content)
+                Text(
+                    if (trailingArrow) "$text  →" else text,
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 17.sp),
+                    color = content,
+                )
             }
         }
     }
 }
 
-/** Secondary action: an ivory-hairline capsule, 48 dp (A36 §6: no second filled button). */
+/** Secondary action: a glass capsule with a hairline, 48 dp (A37: no second filled button). */
 @Composable
 fun HotSecondaryButton(
     text: String,
@@ -112,7 +125,7 @@ fun HotSecondaryButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = CircleShape,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, HotThemeTokens.colors.rule),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         modifier = modifier.heightIn(min = 48.dp),
     ) {
@@ -126,7 +139,7 @@ fun HotSecondaryButton(
     }
 }
 
-/** Quiet text action in gold (A36 mockup 09 «Поправить»). Never red: red is only for SOS. */
+/** Quiet text action in the dawn accent. Never red: red is only for the crisis card and flags. */
 @Composable
 fun HotTextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     TextButton(onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 48.dp)) {

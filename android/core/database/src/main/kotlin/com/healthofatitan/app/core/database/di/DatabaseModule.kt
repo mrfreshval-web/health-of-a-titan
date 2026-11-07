@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
 import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
@@ -56,4 +57,7 @@ object DatabaseModule {
 
     @Provides
     fun provideDayDao(db: HotDatabase): DayDao = db.dayDao()
+
+    @Provides
+    fun provideDawnDao(db: HotDatabase): DawnDao = db.dawnDao()
 }

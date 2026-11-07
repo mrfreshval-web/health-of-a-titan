@@ -5,8 +5,10 @@ import kotlinx.serialization.Serializable
 
 /*
  * WHOOP API v2 records, **in memory only** (D-009, A14 §3.2). Only the fields HoT needs are
- * declared; the JSON parser ignores everything else (SpO₂, skin temperature, Recovery %, strain,
- * kJ are never even deserialised — A25 P7, data minimisation). These classes are never stored.
+ * declared; the JSON parser ignores everything else (SpO₂, skin temperature, Recovery %, kJ are
+ * never even deserialised — A25 P7, data minimisation). These classes are never stored.
+ * The cycle's day strain is read for the header ring «нагрузка против потолка режима» (D-029):
+ * memory only, like the glance, never written to the database, a file or a log (R-11).
  * Sleep need and the sport name are read for «Сегодня» ([WhoopGlance], memory only) and for the
  * routine of slice 2 ([WhoopRoutineMapper]): only the 28-night median of the baseline need and a
  * STRENGTH/CARDIO class are stored, never the raw values (R-11, D-009).
@@ -28,7 +30,14 @@ internal data class WhoopCycle(
     val end: String? = null,
     @SerialName("timezone_offset") val timezoneOffset: String? = null,
     @SerialName("score_state") val scoreState: String? = null,
-)
+    val score: Score? = null,
+) {
+    @Serializable
+    internal data class Score(
+        /** Day strain 0–21 (WHOOP scale), memory only. */
+        val strain: Double? = null,
+    )
+}
 
 @Serializable
 internal data class WhoopRecovery(

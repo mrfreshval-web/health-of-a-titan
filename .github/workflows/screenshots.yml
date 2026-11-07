@@ -4,8 +4,6 @@ name: Screenshots
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["claude/titanium-ui"]
 
 permissions:
   contents: read

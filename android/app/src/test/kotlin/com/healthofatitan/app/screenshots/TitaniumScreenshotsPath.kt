@@ -44,8 +44,8 @@ import com.healthofatitan.app.feature.path.PersonaScreen
 import com.healthofatitan.app.feature.path.toPath
 import com.healthofatitan.app.feature.today.DayUiState
 import com.healthofatitan.app.feature.today.TodayScreen
-import com.healthofatitan.app.feature.today.TodayUiState
 import com.healthofatitan.app.feature.today.TodaySlots
+import com.healthofatitan.app.feature.today.TodayUiState
 import com.healthofatitan.app.feature.today.mode
 import com.healthofatitan.app.integration.whoop.FacetValue
 import com.healthofatitan.app.integration.whoop.TodayMetrics

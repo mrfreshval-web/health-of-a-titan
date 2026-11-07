@@ -22,6 +22,12 @@ object HotRoute {
     /** «Рассвет» (A37 §4): the morning screen, once a day at the first open; outside the tabs. */
     const val DAWN = "dawn"
 
+    /** Stream B «Тренировка» (A40 §7): the session of the day, under «Сегодня». */
+    const val TRAINING = "training"
+
+    /** The workout player, full screen outside the tabs; its notification opens it. */
+    const val TRAINING_PLAYER = "training_player"
+
     const val DEEP_LINK_SCHEME = "hot"
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"

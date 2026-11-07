@@ -72,6 +72,7 @@ dependencies {
     implementation(project(":feature:week"))
     implementation(project(":feature:me"))
     implementation(project(":feature:sos"))
+    implementation(project(":feature:training"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

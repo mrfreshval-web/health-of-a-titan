@@ -88,9 +88,14 @@ import kotlin.math.roundToInt
  *
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
  */
-fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, stateful: Boolean = true) {
+fun NavGraphBuilder.todayScreen(
+    onConnectWhoop: () -> Unit,
+    stateful: Boolean = true,
+    /** Stream B: «Тренировка дня», a card from another module put in by :app. */
+    trainingCard: @Composable () -> Unit = {},
+) {
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop) else TodayScreen(TodayUiState(), onConnectWhoop)
+        if (stateful) TodayRoute(onConnectWhoop, trainingCard) else TodayScreen(TodayUiState(), onConnectWhoop)
     }
 }
 
@@ -124,6 +129,7 @@ class TodayViewModel @Inject constructor(
 @Composable
 private fun TodayRoute(
     onConnectWhoop: () -> Unit,
+    trainingCard: @Composable () -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
@@ -136,6 +142,7 @@ private fun TodayRoute(
         onSync = viewModel::sync,
         day = day.takeIf { it.loaded },
         actions = DayActions(onToggle = dayModel::toggle, onEvening = dayModel::saveEvening),
+        trainingCard = trainingCard,
     )
 }
 
@@ -149,6 +156,8 @@ fun TodayScreen(
     /** Slice 2: the day (regime, plan, evening); null while it loads. */
     day: DayUiState? = null,
     actions: DayActions = DayActions(),
+    /** Stream B: «Тренировка дня» (shown in the plan of a connected day). */
+    trainingCard: @Composable () -> Unit = {},
 ) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
@@ -172,14 +181,21 @@ fun TodayScreen(
             if (!connected) {
                 NotConnected(onConnectWhoop)
             } else {
-                Connected(whoop!!, state, day, actions, onSync)
+                Connected(whoop!!, state, day, actions, onSync, trainingCard)
             }
         }
     }
 }
 
 @Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, onSync: () -> Unit) {
+private fun ColumnScope.Connected(
+    whoop: WhoopStatus,
+    state: TodayUiState,
+    day: DayUiState?,
+    actions: DayActions,
+    onSync: () -> Unit,
+    trainingCard: @Composable () -> Unit,
+) {
     val metrics = state.metrics
     val glance = state.glance
     val today = day?.today ?: LocalDate.now()
@@ -214,11 +230,13 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
             HotOverline(TitanTexts.DAY_LINE)
             DayLine(plan, nowMin, mode!!)
         }
+        trainingCard()
         PlanCard(plan, actions.onToggle)
         SealOverlay(plan, glance)
     } else {
         if (day != null) DayPending()
         Tiles(state)
+        trainingCard()
     }
     val eveningDay = day?.eveningFor
     when {

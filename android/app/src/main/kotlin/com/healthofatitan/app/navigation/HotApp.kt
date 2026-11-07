@@ -50,6 +50,9 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.dawnScreen
 import com.healthofatitan.app.feature.today.todayScreen
+import com.healthofatitan.app.feature.training.TrainingDayCardRoute
+import com.healthofatitan.app.feature.training.TrainingTexts
+import com.healthofatitan.app.feature.training.trainingScreens
 import com.healthofatitan.app.feature.week.weekScreen
 import com.healthofatitan.app.integration.whoop.SyncIndicator
 import com.healthofatitan.app.integration.whoop.SyncIndicators
@@ -96,14 +99,18 @@ fun HotApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val inSos = currentRoute == HotRoute.SOS
-    val fullScreen = inSos || currentRoute == HotRoute.DAWN
+    val fullScreen = inSos || currentRoute == HotRoute.DAWN || currentRoute == HotRoute.TRAINING_PLAYER
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
 
     LaunchedEffect(pendingRoute) {
         if (pendingRoute != null) {
             navController.currentBackStackEntryFlow.first() // wait until NavHost has set the graph
-            if (pendingRoute == HotRoute.SOS) navController.openSos() else navController.openTab(pendingRoute)
+            when (pendingRoute) {
+                HotRoute.SOS -> navController.openSos()
+                HotRoute.TRAINING_PLAYER -> navController.navigate(HotRoute.TRAINING_PLAYER) { launchSingleTop = true }
+                else -> navController.openTab(pendingRoute)
+            }
             onPendingRouteConsumed()
         }
     }
@@ -144,7 +151,14 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (fullScreen) Modifier else Modifier.padding(padding),
             ) {
-                todayScreen(onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } }, stateful = stateful)
+                todayScreen(
+                    onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    stateful = stateful,
+                    // Stream B: «Тренировка дня», its own card from :feature:training.
+                    trainingCard = {
+                        if (stateful) TrainingDayCardRoute(onOpen = { navController.navigate(HotRoute.TRAINING) { launchSingleTop = true } })
+                    },
+                )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
                 meScreen(
@@ -155,6 +169,12 @@ fun HotApp(
                 whoopScreen(stateful = stateful)
                 dawnScreen(onStart = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
                 sosScreen(onClose = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
+                trainingScreens(
+                    onOpenPlayer = { navController.navigate(HotRoute.TRAINING_PLAYER) { launchSingleTop = true } },
+                    onFeelBad = { navController.openSos() },
+                    onClosePlayer = { if (!navController.popBackStack(HotRoute.TODAY, inclusive = false)) navController.openTab(HotRoute.TODAY) },
+                    stateful = stateful,
+                )
             }
         }
     }
@@ -194,6 +214,7 @@ private class NestedScreen(val tab: HotTab, val title: String, val backLabel: St
 
 private val NESTED = mapOf(
     HotRoute.WHOOP to NestedScreen(HotTab.ME, "WHOOP", "Я · Подключения"),
+    HotRoute.TRAINING to NestedScreen(HotTab.TODAY, TrainingTexts.SCREEN_TITLE, TrainingTexts.BACK_LABEL),
 )
 
 /**

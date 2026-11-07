@@ -89,6 +89,9 @@ import com.healthofatitan.app.domain.engine.FiredRule
 import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.RuleSet
+import com.healthofatitan.app.domain.today.DayTask
+import com.healthofatitan.app.domain.today.Ritual
+import com.healthofatitan.app.domain.today.TaskMove
 import com.healthofatitan.app.integration.whoop.day.DayItemView
 import com.healthofatitan.app.integration.whoop.day.DayView
 import java.time.LocalDate
@@ -117,9 +120,30 @@ class DayActions(
     val onOpenHelp: () -> Unit = {},
     /** Health Connect answered the permission request, or the steps should be re-read. */
     val onSteps: () -> Unit = {},
-    /** R3: a tap on the training or a meal opens its screen (stream B player, stream C «Тарелка дня»). */
+    /** Every tap that leaves «Сегодня» for a route: «Почему так», a support, a task, the week. */
     val onOpen: (String) -> Unit = {},
-)
+    /** «вода»: one glass more (+1) or less (−1). */
+    val onWater: (LocalDate, Int) -> Unit = { _, _ -> },
+    /** A task of the day marked done or taken back (A46 §2.4). */
+    val onTaskDone: (LocalDate, DayTask, Boolean) -> Unit = { _, _, _ -> },
+    /** T-08: «Не сегодня» — back to its week goal. */
+    val onTaskToWeek: (TaskMove) -> Unit = {},
+    /** The undo of «Не сегодня». */
+    val onTaskBack: (LocalDate, String) -> Unit = { _, _ -> },
+    /** A tap on a ritual point of «Ритм дня». */
+    val onRitual: (Ritual) -> Unit = {},
+    val onConnectWhoop: () -> Unit = NO_CONNECT,
+    /** «Начать с малого» (4.9): the return is seen. */
+    val onStartSmall: () -> Unit = {},
+) {
+    fun copyWith(onConnectWhoop: () -> Unit): DayActions = DayActions(
+        onToggle, onEvening, onCloseDay, onCrisis, onOpenHelp, onSteps, onOpen,
+        onWater, onTaskDone, onTaskToWeek, onTaskBack, onRitual, onConnectWhoop, onStartSmall,
+    )
+}
+
+/** No «Подключить WHOOP» given: the screen's own callback is used. */
+val NO_CONNECT: () -> Unit = {}
 
 /** Where a fired rule stands in «Почему так» (A39 §7): safety → data → regime → context. */
 internal enum class WhyKind { SAFETY, DATA, REGIME, CONTEXT }

@@ -20,7 +20,6 @@ import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotSyncMark
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.component.TitanSeal
@@ -112,13 +111,12 @@ class TitaniumScreenshots {
         windDownMin = 22 * 60,
     )
 
-    private val rings = StatusRings(strain = 8.4, strainCeiling = 12.0, untilBedMin = 12 * 60 + 20, dayFraction = 0.28f, bedtimeMin = 23 * 60, mode = HotMode.ROVNO)
 
     @Composable
     private fun TodayWithHeader(regime: Regime) {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                HotTopBar(title = null, rings = rings.copy(mode = regime.mode()))
+                HotTopBar(title = null)
                 TodayScreen(
                     TodayUiState(whoop = whoop, metrics = metrics),
                     onConnectWhoop = {},

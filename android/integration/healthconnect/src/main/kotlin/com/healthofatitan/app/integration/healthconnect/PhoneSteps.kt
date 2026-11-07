@@ -38,8 +38,9 @@ sealed interface PhoneSteps {
      * @param today phone steps since local midnight
      * @param goal the personal median of earlier days ([Steps.goal])
      * @param inSlot the most steps in a walk-long stretch around the planned walk, null when not asked
+     * @param hourly steps in each hour of today (A46 «часы с движением»), memory only
      */
-    data class Ready(val today: Int, val goal: Int, val inSlot: Int? = null) : PhoneSteps {
+    data class Ready(val today: Int, val goal: Int, val inSlot: Int? = null, val hourly: List<Int>? = null) : PhoneSteps {
         val fraction: Float get() = Steps.fraction(today, goal)
     }
 }
@@ -148,7 +149,7 @@ class StepsRepository(
         }
         val total = todayChunks.sumOf { it.count }.toInt()
         val inSlot = walk?.let { w -> StepMath.bestWindow(todayChunks, w.from, minOf(w.to, now), w.minutes) }
-        return PhoneSteps.Ready(total, goal, inSlot)
+        return PhoneSteps.Ready(total, goal, inSlot, StepMath.hourly(todayChunks, today.atStartOfDay(zone).toInstant()))
     }
 
     private companion object {

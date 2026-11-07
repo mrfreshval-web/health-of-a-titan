@@ -26,13 +26,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.model.profile.ProfileSettings
 import com.healthofatitan.app.core.model.safety.HelpNumbers
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotListRow
 import com.healthofatitan.app.core.ui.component.HotPendingCard
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.theme.HotType
+import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopRoute
 import com.healthofatitan.app.feature.me.whoop.WhoopScreen
@@ -61,12 +64,22 @@ fun NavGraphBuilder.meScreen(
     onOpenNutrition: () -> Unit = {},
     /** Rows of other modules under «Еда и тело» (state cards: «Что спрашивать»); :app puts them in. */
     rows: @Composable ColumnScope.() -> Unit = {},
+    /** The card «Ты» (A61 §5.2, D-055): the profile. */
+    onOpenProfile: () -> Unit = {},
 ) {
     composable(route = HotRoute.ME) {
         if (stateful) {
-            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition, rows)
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition, onOpenProfile, rows)
         } else {
-            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition, rows = rows)
+            MeScreen(
+                whoop = null,
+                onOpenWhoop = onOpenWhoop,
+                onOpenHelp = onOpenHelp,
+                onOpenMentor = onOpenMentor,
+                onOpenNutrition = onOpenNutrition,
+                onOpenProfile = onOpenProfile,
+                rows = rows,
+            )
         }
     }
 }
@@ -82,10 +95,14 @@ const val ME_WHOOP_ROW_TAG = "me_whoop_row"
 const val ME_HELP_ROW_TAG = "me_help_row"
 const val ME_MENTOR_ROW_TAG = "me_mentor_row"
 const val ME_NUTRITION_ROW_TAG = "me_nutrition_row"
+const val ME_PROFILE_ROW_TAG = "me_profile_row"
 
 @HiltViewModel
-class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel() {
+class MeViewModel @Inject constructor(connection: WhoopConnection, profile: ProfileSettingsStore) : ViewModel() {
     val whoop: StateFlow<WhoopStatus?> = connection.status
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val profile: StateFlow<ProfileSettings?> = profile.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
@@ -95,11 +112,22 @@ private fun MeRoute(
     onOpenHelp: () -> Unit,
     onOpenMentor: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenProfile: () -> Unit,
     rows: @Composable ColumnScope.() -> Unit,
     viewModel: MeViewModel = hiltViewModel(),
 ) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenMentor = onOpenMentor, onOpenNutrition = onOpenNutrition, rows = rows)
+    val profile by viewModel.profile.collectAsStateWithLifecycle()
+    MeScreen(
+        whoop = whoop,
+        onOpenWhoop = onOpenWhoop,
+        onOpenHelp = onOpenHelp,
+        onOpenMentor = onOpenMentor,
+        onOpenNutrition = onOpenNutrition,
+        onOpenProfile = onOpenProfile,
+        profile = profile,
+        rows = rows,
+    )
 }
 
 @Composable
@@ -110,6 +138,8 @@ fun MeScreen(
     onOpenHelp: () -> Unit = {},
     onOpenMentor: () -> Unit = {},
     onOpenNutrition: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    profile: ProfileSettings? = null,
     rows: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
@@ -125,6 +155,16 @@ fun MeScreen(
                 "HoT — wellness-приложение, не медицинское изделие: не ставит диагнозов и не назначает лечение.",
                 style = HotType.quote,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        // A61 §5.2 (D-055): the card «Ты» on top, help right under it — still two taps from any tab.
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = ProfileTexts.SECTION_YOU,
+                onClick = onOpenProfile,
+                caption = profileCaption(profile),
+                divider = false,
+                modifier = Modifier.testTag(ME_PROFILE_ROW_TAG),
             )
         }
         // D-029 / D-033: help is «аватар › Помощь» in two taps from any tab and the first row here;
@@ -175,6 +215,10 @@ fun MeScreen(
         )
     }
 }
+
+/** «Как к тебе обращаться: не важно»; the sex for calculations is not shown here (S3). */
+private fun profileCaption(profile: ProfileSettings?): String =
+    profile?.let { "${ProfileTexts.ADDRESS_TITLE}: ${ProfileTexts.address(it.addressForm)}" } ?: ProfileTexts.ROW_CAPTION
 
 private fun whoopCaption(status: WhoopStatus?): String = when {
     status == null || !status.connected -> WhoopTexts.NOT_CONNECTED

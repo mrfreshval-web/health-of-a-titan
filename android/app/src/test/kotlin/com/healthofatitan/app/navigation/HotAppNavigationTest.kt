@@ -2,6 +2,7 @@ package com.healthofatitan.app.navigation
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -32,6 +33,13 @@ import com.healthofatitan.app.feature.me.ME_HELP_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_MENTOR_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.ME_NUTRITION_ROW_TAG
+import com.healthofatitan.app.feature.me.ME_PROFILE_ROW_TAG
+import com.healthofatitan.app.feature.me.profile.PROFILE_ME_SCREEN_TAG
+import com.healthofatitan.app.feature.me.profile.ProfileTexts
+import com.healthofatitan.app.feature.me.profile.addressTag
+import com.healthofatitan.app.feature.me.profile.sexTag
+import com.healthofatitan.app.core.model.profile.AddressForm
+import com.healthofatitan.app.core.model.profile.SexForCalc
 import com.healthofatitan.app.feature.me.ME_WHOOP_ROW_TAG
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.PROFILE_SCREEN_TAG
@@ -302,6 +310,27 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(PROFILE_SCREEN_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(NutritionTexts.SET_UP)
         compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `settings open the profile with the address form, neutral until chosen`() {
+        // A61 §5, D-055: the card «Ты» on top of the settings, help right under it.
+        launch()
+        compose.onNodeWithTag(AVATAR_TAG).performClick()
+        compose.onNodeWithTag(AVATAR_SETTINGS_TAG).performClick()
+        compose.onNodeWithTag(ME_HELP_ROW_TAG).assertExists()
+        compose.onNodeWithTag(ME_PROFILE_ROW_TAG).performClick()
+        compose.onNodeWithTag(PROFILE_ME_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(ProfileTexts.TITLE)
+        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+        compose.onNodeWithTag(addressTag(AddressForm.NEUTRAL)).assertIsSelected()
+        compose.onNodeWithTag(addressTag(AddressForm.FEMININE)).performClick()
+        compose.onNodeWithTag(addressTag(AddressForm.FEMININE)).assertIsSelected()
+        compose.onNodeWithTag(addressTag(AddressForm.NEUTRAL)).assertIsNotSelected()
+        // the sex for calculations is a separate field: still not given
+        compose.onNodeWithTag(sexTag(SexForCalc.UNSPECIFIED)).performScrollTo().assertIsSelected()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }

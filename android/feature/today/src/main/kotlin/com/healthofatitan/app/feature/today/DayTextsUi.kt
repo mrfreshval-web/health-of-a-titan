@@ -51,6 +51,7 @@ object DayUiTexts {
         DayFlag.PRELIMINARY_NORM -> "норма складывается"
         DayFlag.DATA_LIMITED -> "данных мало"
         DayFlag.MANUAL -> "без данных ночи"
+        DayFlag.RETURN -> "возвращение"
     }
 
     fun slot(startMin: Int?, endMin: Int?): String = when {

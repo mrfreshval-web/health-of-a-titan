@@ -44,12 +44,16 @@ import com.healthofatitan.app.core.ui.component.StatusRings
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
+import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.PlateOfDay
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
+import com.healthofatitan.app.feature.path.PathTodayStep
+import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.pathScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.dawnScreen
 import com.healthofatitan.app.feature.today.todayScreen
@@ -62,12 +66,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
-/** Bottom tabs «Сегодня · Наставник · Неделя · Я» (A11 §1.1). */
+/** Bottom tabs «Сегодня · Наставник · Неделя · Путь» (A11 §1.1, D-033: «Я» became «Путь»). */
 enum class HotTab(val route: String, val label: String, @param:DrawableRes val icon: Int) {
     TODAY(HotRoute.TODAY, "Сегодня", R.drawable.core_ui_ic_today),
     MENTOR(HotRoute.MENTOR, "Наставник", R.drawable.core_ui_ic_mentor),
     WEEK(HotRoute.WEEK, "Неделя", R.drawable.core_ui_ic_week),
-    ME(HotRoute.ME, "Я", R.drawable.core_ui_ic_me),
+    PATH(HotRoute.PATH, "Путь", R.drawable.core_ui_ic_path),
     ;
 
     val testTag: String get() = "tab_$route"
@@ -75,8 +79,10 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
 
 /**
  * App shell: one Activity, NavHost with 4 tabs + `sos` and `dawn` outside the tabs (A14 §7, ADR-01).
- * D-029: the header of every tab is the Titan glyph and three rings; help is «Я › Помощь» and
- * «⋮ › Помощь» in the mentor chat (≤ 2 taps), the quick settings tile and the shortcut open it in one.
+ * D-029 / D-033: the header of every tab is the Titan glyph, three rings and the mentor's avatar;
+ * help is «аватар › Помощь» and «⋮ › Помощь» in the mentor chat (≤ 2 taps from any tab), the
+ * quick settings tile and the shortcut open it in one. Settings and the mentor's character live
+ * under the same avatar.
  *
  * @param pendingRoute route requested from outside (tile, shortcut, deep link), consumed once.
  * @param stateful false draws every screen from its default state without ViewModels: the
@@ -85,6 +91,7 @@ enum class HotTab(val route: String, val label: String, @param:DrawableRes val i
  *   indicator, and a sync the user asked for ends with a haptic tick (success or failure).
  * @param rings the three header rings (D-029), from data only.
  * @param dawnDue «Рассвет» is due (first open of the day after 05:00, plan ready): shown once.
+ * @param persona the mentor's character for the avatar (D-030); null = not chosen yet (Сенсей).
  */
 @Composable
 fun HotApp(
@@ -95,6 +102,7 @@ fun HotApp(
     syncProgress: SyncProgress = SyncProgress.Idle,
     rings: StatusRings = StatusRings.Empty,
     dawnDue: Boolean = false,
+    persona: MentorPersona? = null,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -128,13 +136,21 @@ fun HotApp(
             topBar = {
                 if (!fullScreen) {
                     HotTopBar(
-                        // «Сегодня» has no title: the hero is the screen (A37 s2)
-                        title = nested?.title ?: currentTab.label.takeIf { currentTab != HotTab.TODAY },
-                        overline = nested?.backLabel ?: TabHeaders.overline(currentTab, LocalDate.now()),
+                        // «Сегодня» and «Путь» have no title: the hero speaks there (A37 s2, j2-path)
+                        title = nested?.title ?: currentTab.label.takeIf { currentTab != HotTab.TODAY && currentTab != HotTab.PATH },
+                        overline = if (nested != null) nested.backLabel else TabHeaders.overline(currentTab, LocalDate.now()),
                         onBack = if (nested != null) ({ if (!navController.popBackStack()) navController.openTab(nested.tab.route) }) else null,
                         // The WHOOP screen has the big mark itself; one animated titan per screen.
                         sync = if (currentRoute == HotRoute.WHOOP) null else sync.toMark(),
                         rings = rings,
+                        avatar = {
+                            AvatarMenu(
+                                persona = persona,
+                                onHelp = { navController.openSos() },
+                                onMentor = { navController.navigate(HotRoute.MENTOR_PERSONA) { launchSingleTop = true } },
+                                onSettings = { navController.navigate(HotRoute.ME) { launchSingleTop = true } },
+                            )
+                        },
                     )
                 }
             },
@@ -150,7 +166,11 @@ fun HotApp(
                 val openNutrition = { route: String -> navController.navigate(route) { launchSingleTop = true } }
                 todayScreen(
                     onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    // CrisisGuard level ≥ 2 in the evening note opens the crisis card (A07 §4.1, D-029)
+                    onOpenHelp = { navController.openSos() },
                     stateful = stateful,
+                    // stream Г: «шаг дня» of the path, owned by :feature:path (A42 §3.1)
+                    pathStep = { if (stateful) PathTodayStep(onOpenPath = { navController.openTab(HotRoute.PATH) }) },
                     plateOfDay = {
                         PlateOfDay(
                             onOpenMeal = { openNutrition(HotRoute.nutritionMeal(it)) },
@@ -161,12 +181,15 @@ fun HotApp(
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
+                pathScreen(stateful = stateful)
                 meScreen(
                     onOpenWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
                     onOpenHelp = { navController.openSos() },
+                    onOpenMentor = { navController.navigate(HotRoute.MENTOR_PERSONA) { launchSingleTop = true } },
                     stateful = stateful,
                     onOpenNutrition = { openNutrition(HotRoute.NUTRITION_PROFILE) },
                 )
+                mentorPersonaScreen(stateful = stateful)
                 nutritionScreens(onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
                 whoopScreen(stateful = stateful)
                 dawnScreen(onStart = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
@@ -205,13 +228,18 @@ private fun SyncHaptics(sync: SyncIndicator) {
 
 private fun SyncIndicator.toMark(): SyncMarkState = SyncMarkState(SyncMarkPhase.valueOf(light.name), progress, key, celebrate)
 
-/** A screen inside a tab (mockup 09 «← Я · Настройки»): its tab stays selected, the bar shows the way back. */
-private class NestedScreen(val tab: HotTab, val title: String, val backLabel: String)
+/**
+ * A screen under the avatar (D-033): «Путь» stays selected in the bar, the header shows the way
+ * back. [backLabel] null: the arrow alone (the avatar can be opened from any tab).
+ */
+private class NestedScreen(val tab: HotTab, val title: String, val backLabel: String?)
 
 private val NESTED = mapOf(
-    HotRoute.WHOOP to NestedScreen(HotTab.ME, "WHOOP", "Я · Подключения"),
-    HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.ME, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
-    HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.ME, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),
+    HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
+    HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
+    HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
+    HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
+    HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.PATH, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),
     HotRoute.NUTRITION_MEAL to NestedScreen(HotTab.TODAY, NutritionTexts.PLATE_OF_DAY, NutritionTexts.MEAL_BACK),
 )
 

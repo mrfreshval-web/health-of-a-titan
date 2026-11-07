@@ -3,10 +3,12 @@ package com.healthofatitan.app.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
+import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.database.entity.BaselineSnapshotEntity
 import com.healthofatitan.app.core.database.entity.ConsentRecordEntity
 import com.healthofatitan.app.core.database.entity.DawnLogEntity
@@ -15,7 +17,11 @@ import com.healthofatitan.app.core.database.entity.EveningCheckEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.NutritionEveningEntity
 import com.healthofatitan.app.core.database.entity.NutritionProfileEntity
+import com.healthofatitan.app.core.database.entity.PathGoalEntity
+import com.healthofatitan.app.core.database.entity.PathStepEntity
 import com.healthofatitan.app.core.database.entity.PlanItemEntity
+import com.healthofatitan.app.core.database.entity.ReturnLogEntity
+import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import com.healthofatitan.app.core.database.entity.RoutineAnchorEntity
 import com.healthofatitan.app.core.database.entity.SyncStateEntity
 import com.healthofatitan.app.core.database.entity.TrainingSessionEntity
@@ -37,10 +43,14 @@ import kotlin.reflect.KClass
         RoutineAnchorEntity::class,
         EveningCheckEntity::class,
         DawnLogEntity::class,
+        ReturnLogEntity::class,
+        SafetyEventEntity::class,
+        PathGoalEntity::class,
+        PathStepEntity::class,
         NutritionProfileEntity::class,
         NutritionEveningEntity::class,
     ],
-    version = 5,
+    version = 7,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -51,6 +61,10 @@ abstract class HotDatabase : RoomDatabase() {
     abstract fun dayDao(): DayDao
 
     abstract fun dawnDao(): DawnDao
+
+    abstract fun dailyLoopDao(): DailyLoopDao
+
+    abstract fun pathDao(): PathDao
 
     abstract fun nutritionDao(): NutritionDao
 
@@ -72,6 +86,10 @@ abstract class HotDatabase : RoomDatabase() {
             RoutineAnchorEntity::class,
             EveningCheckEntity::class,
             DawnLogEntity::class,
+            ReturnLogEntity::class,
+            SafetyEventEntity::class,
+            PathGoalEntity::class,
+            PathStepEntity::class,
             NutritionProfileEntity::class,
             NutritionEveningEntity::class,
         )

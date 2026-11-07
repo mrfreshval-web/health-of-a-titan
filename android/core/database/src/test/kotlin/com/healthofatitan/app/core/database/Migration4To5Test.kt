@@ -5,25 +5,21 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.healthofatitan.app.core.database.entity.NutritionEveningEntity
-import com.healthofatitan.app.core.model.profile.AllergySeverity
-import com.healthofatitan.app.core.model.profile.ProfileCategory
-import com.healthofatitan.app.core.model.profile.UserConstraints
+import com.healthofatitan.app.core.database.entity.EveningCheckEntity
+import com.healthofatitan.app.core.database.entity.ReturnLogEntity
+import com.healthofatitan.app.core.database.entity.SafetyEventEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
- * «Титаниум» → stream C «Еда» on the founder's phone: a version-4 database (schema 1–4 frozen as
- * raw SQL, with a plan and a dawn) opens with schema 5 through MIGRATION_4_5 only. Room validates
- * `nutrition_profile` and `nutrition_evening`; the plan survives; the S4 profile needs consent,
- * is deleted by category and entirely when the consent is revoked.
+ * «Титаниум» → stream A on the founder's phone: a version-4 database (schema frozen as raw SQL,
+ * with an evening answered in slice 2) opens with schema 5 through MIGRATION_4_5 only. Room
+ * validates the new `evening_check` columns, `return_log` and `safety_event`; the old evening stays.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
@@ -66,22 +62,22 @@ class Migration4To5Test {
                     "PRIMARY KEY(`user_id`, `anchor_id`))",
                 "CREATE TABLE IF NOT EXISTS `evening_check` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
                     "`alcohol` INTEGER, `body` TEXT, `answered_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`))",
+                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "CREATE TABLE IF NOT EXISTS `dawn_log` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `haiku_id` TEXT, " +
                     "`text_key` TEXT, `image` TEXT, `mode` TEXT NOT NULL, `shown_at` INTEGER NOT NULL, " +
                     "PRIMARY KEY(`user_id`, `day_key`))",
                 "CREATE INDEX IF NOT EXISTS `index_dawn_log_user_id_haiku_id` ON `dawn_log` (`user_id`, `haiku_id`)",
-                "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
                 "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'titanium')",
-                "INSERT INTO day_plan VALUES ('local', '2026-11-10', 'STEADY', 'STEADY', 1, 'SG-SLEEP', '', '', 'day@2', " +
+                "INSERT INTO evening_check VALUES ('local', '2026-11-10', 1, 'SORE', 20)",
+                "INSERT INTO day_plan VALUES ('local', '2026-11-10', 'STEADY', 'STEADY', 1, 'SG-SLEEP', '', '', 'day@1', " +
                     "'Ровно · день по плану', 'Сон 6 ч 40 мин.', 1410, 840, 1350, 10, NULL)",
-                "INSERT INTO dawn_log VALUES ('local', '2026-11-10', 'hk-ravno-001', NULL, 'dawn', 'STEADY', 1)",
             ).forEach(db::execSQL)
             db.version = 4
         }
     }
 
     @Test
-    fun `version 4 upgrades to 5, keeps the plan and stores the S4 profile by category`() = runTest {
+    fun `version 4 upgrades to 5, keeps the evening and accepts the daily loop`() = runTest {
         val name = "migration-4-5.db"
         createVersion4(name)
         val db = Room.databaseBuilder(context, HotDatabase::class.java, name)
@@ -90,44 +86,32 @@ class Migration4To5Test {
             .build()
         try {
             db.openHelper.writableDatabase // runs and validates MIGRATION_4_5
-            assertEquals("STEADY", db.dayDao().plan("local", "2026-11-10")?.regime)
-            assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
+            val day = db.dayDao()
+            val old = day.evening("local", "2026-11-10")
+            assertEquals("SORE", old?.body)
+            assertNull(old?.training)
+            assertNull(old?.planHelped)
+            day.upsertEvening(EveningCheckEntity("local", "2026-11-11", 0, "FINE", 30L, "DONE", "PLATE", true))
+            assertEquals(true, day.evening("local", "2026-11-11")?.planHelped)
+            assertEquals("PLATE", day.observeLatestEvening("local").first()?.food)
 
-            var t = 1_000L
-            val store = ProfileStore(db.nutritionDao(), db.consentDao()) { t++ }
-            val profile = UserConstraints(
-                allergies = mapOf("peanut" to AllergySeverity.ANAPHYLAXIS),
-                diets = setOf("vegan"),
-                injuries = setOf("knee_injury"),
-            )
+            val loop = db.dailyLoopDao()
+            loop.log(ReturnLogEntity("local", "2026-11-08", ReturnLogEntity.KIND_OPEN, 1L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 2L))
+            loop.log(ReturnLogEntity("local", "2026-11-11", ReturnLogEntity.KIND_OPEN, 3L)) // ignored
+            assertEquals("2026-11-08", loop.lastBefore("local", ReturnLogEntity.KIND_OPEN, "2026-11-11"))
+            assertEquals("2026-11-11", loop.last("local", ReturnLogEntity.KIND_OPEN))
+            assertNull(loop.last("local", ReturnLogEntity.KIND_NUDGE))
+            assertEquals(1, loop.observeCount("local", ReturnLogEntity.KIND_OPEN, "2026-11-11").first())
 
-            // Without consent nothing is read, even if rows exist.
-            store.save(profile)
-            assertEquals(UserConstraints.NONE, store.profile.first().constraints)
-
-            store.setConsent(true)
-            assertTrue(store.profile.first().consented)
-            assertEquals(profile, store.profile.first().constraints)
-
-            store.setNutritionLevel("structured")
-            store.delete(ProfileCategory.DIETS)
-            val afterDelete = store.profile.first()
-            assertEquals(emptySet(), afterDelete.constraints.diets)
-            assertEquals(profile.allergies, afterDelete.constraints.allergies)
-            assertEquals("structured", afterDelete.nutritionLevel)
-
-            db.nutritionDao().upsertEvening(NutritionEveningEntity("local", "2026-11-10", "plate", 5L))
-            assertEquals("plate", db.nutritionDao().observeEvening("local", "2026-11-10").first()?.mark)
-
-            // Revoking consent deletes every category; the level is not health data and stays.
-            store.setConsent(false)
-            val revoked = store.profile.first()
-            assertFalse(revoked.consented)
-            assertTrue(db.nutritionDao().profile("local").all { it.category == ProfileStore.LEVEL_KEY })
-            assertEquals("structured", revoked.nutritionLevel)
-
-            store.deleteAll()
-            assertNull(db.nutritionDao().observeEvening("local", "2026-11-10").first())
+            assertEquals(0, loop.maxLevelSince("local", 0L))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 100L, level = 2, reason = "DIRECT", source = "EVENING"))
+            loop.insertSafety(SafetyEventEntity(userId = "local", dayKey = "2026-11-11", at = 200L, level = 1, reason = null, source = "MENTOR"))
+            assertEquals(2, loop.maxLevelSince("local", 50L))
+            assertEquals(1, loop.maxLevelSince("local", 150L))
+            assertEquals(100L, loop.lastAt("local", 2))
+            assertNull(loop.lastAt("local", 3))
+            assertEquals(listOf(200L, 100L), loop.safetyEvents("local").map { it.at })
         } finally {
             db.close()
         }

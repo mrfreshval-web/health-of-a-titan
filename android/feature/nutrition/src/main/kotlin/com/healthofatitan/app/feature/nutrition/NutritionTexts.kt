@@ -47,7 +47,7 @@ object NutritionTexts {
 
     // Profile screen (mockup n2)
     const val PROFILE_TITLE = "Еда и тело"
-    const val PROFILE_BACK = "Я · Еда и тело"
+    const val PROFILE_BACK = "Настройки · Еда и тело"
     const val ONLY_ON_PHONE = "только на телефоне"
     const val DELETE_ALL = "удалить всё"
     const val DELETE = "удалить"

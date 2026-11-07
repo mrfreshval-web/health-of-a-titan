@@ -46,7 +46,7 @@ import com.healthofatitan.app.core.ui.component.HotSecondaryButton
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.component.HotStatTile
 import com.healthofatitan.app.core.ui.component.HotTextButton
-import com.healthofatitan.app.core.ui.component.TitanSeal
+import com.healthofatitan.app.core.ui.component.TitanSealMoment
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.training.PlayerPhase
@@ -340,7 +340,7 @@ private fun ColumnScope.Summary(run: WorkoutRun, now: Long, actions: PlayerActio
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.height(8.dp))
-        TitanSeal(key = run.id, spoken = TrainingTexts.SEAL_SPOKEN, modifier = Modifier.size(240.dp))
+        TitanSealMoment(key = run.id, spoken = TrainingTexts.SEAL_SPOKEN, modifier = Modifier.size(240.dp))
         Text(TrainingTexts.SUMMARY_TITLE, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Text(run.session.template.nameRu, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

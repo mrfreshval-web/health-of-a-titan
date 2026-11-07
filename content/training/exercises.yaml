@@ -562,7 +562,7 @@ exercises:
     progressions: [ex-band-dislocate]
     swaps: [ex-band-dislocate]
     animation:
-      view: side
+      view: front
       loop: false
       props: [wall]
       poses:

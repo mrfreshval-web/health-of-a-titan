@@ -14,5 +14,7 @@ dependencies {
     api(libs.androidx.compose.material3)
     api(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    // Lottie of the Titan (Agent 17, tools/lottie → assets/lottie): the player and «Сегодня».
+    api(libs.lottie.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

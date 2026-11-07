@@ -3,6 +3,9 @@ package com.healthofatitan.app.feature.training
 import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.airbnb.lottie.LottieCompositionFactory
+import com.healthofatitan.app.core.ui.component.LottieEntry
+import com.healthofatitan.app.core.ui.component.TitanLottie
+import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -12,17 +15,17 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The Lottie files of Agent 17 (tools/lottie): every top-20 exercise of the brief and every
- * heroic moment is in the manifest, parses with lottie-android, has its markers and the layer
- * names the app recolours, and stays within the size budget.
+ * The Lottie files of Agent 17 (tools/lottie, v2 — the Titan of the mark as a cut-out rig): every
+ * top-20 exercise of the brief and every heroic moment is in the manifest, parses with
+ * lottie-android, has its markers and the layer names the app recolours, and stays within the
+ * size budget. The files live in core:ui (assets/lottie), the player of this module plays them.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], application = Application::class)
 class TitanLottieTest {
 
     private val dir: File by lazy {
-        listOf(File("src/main/assets/lottie"), File("feature/training/src/main/assets/lottie"), File("android/feature/training/src/main/assets/lottie"))
-            .first { it.isDirectory }
+        listOf("../../core/ui", "core/ui", "android/core/ui").map { File(it, "src/main/assets/lottie") }.first { it.isDirectory }
     }
 
     private val manifest: Map<String, LottieEntry> by lazy { TitanLottie.parse(File(dir, "manifest.json").readText()) }
@@ -62,6 +65,20 @@ class TitanLottieTest {
     }
 
     @Test
+    fun `the limbs of both sides share one drawing`() {
+        // v2: a limb piece is a precomp asset used by the near and the far side (the size budget)
+        listOf("ex-goblet-squat", "ex-pullup", "ex-stretch-quad").forEach { id ->
+            val doc = JSONObject(File(dir, "$id.json").readText())
+            val layers = doc.getJSONArray("layers")
+            val refs = (0 until layers.length()).mapNotNull { layers.getJSONObject(it).optString("refId").ifEmpty { null } }
+            val assets = doc.getJSONArray("assets").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") }.toSet() }
+            assertTrue(refs.size >= 10, "$id: ${refs.size} piece layers")
+            assertTrue(refs.size > refs.toSet().size, "$id: no piece is shared")
+            refs.forEach { assertTrue(it in assets, "$id: $it") }
+        }
+    }
+
+    @Test
     fun `exercise markers carry the key poses of the brief`() {
         val keys = mapOf(
             "ex-goblet-squat" to setOf("stand", "bottom"),
@@ -97,6 +114,13 @@ class TitanLottieTest {
         assertEquals(3, TitanLottie.stops(emptyList()).size)
         assertEquals(3, TitanLottie.stops(listOf(androidx.compose.ui.graphics.Color.White)).size)
         assertEquals(3, TitanLottie.stops(List(5) { androidx.compose.ui.graphics.Color.Red }).size)
+    }
+
+    @Test
+    fun `the seal has the ring closing and the heroes are named as the brief`() {
+        listOf(TitanLottie.HERO_SEAL, TitanLottie.HERO_LEVEL_UP, TitanLottie.HERO_RECORD, TitanLottie.HERO_FIRST_SKILL, TitanLottie.HERO_TEST_PASSED)
+            .forEach { assertTrue(it in manifest, it) }
+        assertTrue("seal" in manifest.getValue(TitanLottie.HERO_SEAL).markers)
     }
 
     private companion object {

@@ -1,7 +1,6 @@
 package com.healthofatitan.app.core.ui.theme
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -82,7 +81,6 @@ data class PathColors(
 
         val current: PathColors
             @Composable
-            @ReadOnlyComposable
             get() = if (HotThemeTokens.colors.isDark) Dark else Light
     }
 }

@@ -87,6 +87,23 @@ object SliceGeometry {
 
     fun dayPoint(p: Pt): Pt = Pt(DAY_LEFT + p.x * DAY_SCALE, DAY_TOP + p.y * DAY_SCALE)
 
+    /**
+     * The Lottie view of the day Titan (tools/lottie `paths.py`): the canvas holds the rig box with
+     * a margin of [LOTTIE_MARGIN] rig units on every side (the held vault's hands reach y ≈ −6),
+     * so the view is 156 × 156 at (116; 129.4) and the rig still maps by [dayPoint].
+     */
+    const val LOTTIE_MARGIN = 10.0
+    const val LOTTIE_SIZE = (100.0 + 2 * LOTTIE_MARGIN) * DAY_SCALE
+    const val LOTTIE_LEFT = DAY_LEFT - LOTTIE_MARGIN * DAY_SCALE
+    const val LOTTIE_TOP = DAY_TOP - LOTTIE_MARGIN * DAY_SCALE
+
+    /**
+     * The head of a front view with a nod (§3.1, `figure.py`): it cannot turn in the picture plane,
+     * so it lifts by 0.1 rig unit per degree (+ up) and foreshortens by 0.4 % per degree.
+     * Returns the centre's lift and the vertical scale.
+     */
+    fun nodHead(nod: Double): Pair<Double, Double> = (0.1 * nod) to (1.0 - 0.004 * kotlin.math.abs(nod))
+
     /** Height of the rig figure, units of the rig (canon of the mark v2). */
     const val RIG_HEIGHT = 83.6
 

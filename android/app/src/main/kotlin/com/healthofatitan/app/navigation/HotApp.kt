@@ -69,6 +69,7 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.pathRitualScreen
 import com.healthofatitan.app.feature.path.pathScreen
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.CloseDayExtras
@@ -144,7 +145,7 @@ fun HotApp(
     val currentRoute = backStackEntry?.destination?.route
     val inSos = currentRoute == HotRoute.SOS
     val fullScreen = inSos || currentRoute == HotRoute.DAWN || currentRoute == HotRoute.TRAINING_PLAYER ||
-        currentRoute == HotRoute.BREATHER || currentRoute in CHECKIN_FULL_SCREEN
+        currentRoute == HotRoute.BREATHER || currentRoute == HotRoute.PATH_RITUAL || currentRoute in CHECKIN_FULL_SCREEN
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
 
@@ -275,7 +276,8 @@ fun HotApp(
                 )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
-                pathScreen(stateful = stateful)
+                pathScreen(stateful = stateful, onOpenRitual = { open(HotRoute.PATH_RITUAL) }, onHelp = { navController.openSos() })
+                pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
                 behindScreen()
                 meScreen(
                     onOpenWhoop = { open(HotRoute.WHOOP) },

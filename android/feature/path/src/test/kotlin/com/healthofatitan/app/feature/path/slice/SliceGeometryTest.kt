@@ -24,6 +24,15 @@ class SliceGeometryTest {
     }
 
     @Test
+    fun `the lottie view of paths py is 156 square at 116, 129_4`() {
+        assertEquals(156.0, g.LOTTIE_SIZE, 1e-9)
+        assertEquals(116.0, g.LOTTIE_LEFT, 1e-9)
+        assertEquals(129.4, g.LOTTIE_TOP, 1e-9)
+        assertEquals(g.CX, g.LOTTIE_LEFT + g.LOTTIE_SIZE / 2, 1e-9)
+        assertEquals(1.0 to 0.96, g.nodHead(10.0).let { (l, s) -> Math.round(l * 100) / 100.0 to Math.round(s * 100) / 100.0 })
+    }
+
+    @Test
     fun `the day titan stands on the horizon`() {
         val j = Rig.joints(g.HOLD, front = true)
         val feet = maxOf(g.dayPoint(j.ankleN).y, g.dayPoint(j.ankleF).y)

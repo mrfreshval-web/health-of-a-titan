@@ -64,7 +64,7 @@ object PathTemplates {
             listOf("подтяг", "турник"),
             listOf(ComponentKey.STRENGTH to Role.LEAD, ComponentKey.MOBILITY to Role.PROP, ComponentKey.SLEEP to Role.GUARD, ComponentKey.REST to Role.GUARD),
             listOf(c("подтягивания подряд", 1.0, 3.0, "", PathMetric.PULLUPS), c("силовые в неделю", 2.0, 3.0, "", PathMetric.STRENGTH_SESSIONS)),
-            "силовые срываются в недели переработок",
+            "в недели переработок силовые уходят первыми",
         ),
         GoalTemplate(
             RACE, "Забег", GoalKind.DO,

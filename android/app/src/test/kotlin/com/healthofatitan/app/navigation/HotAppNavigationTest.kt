@@ -42,10 +42,12 @@ import com.healthofatitan.app.feature.me.whoop.WHOOP_SCREEN_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_HELP_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_MENU_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_SCREEN_TAG
-import com.healthofatitan.app.feature.path.PATH_HERO_TAG
-import com.healthofatitan.app.feature.path.PATH_PROPOSAL_TAG
+import com.healthofatitan.app.feature.path.PATH_EMPTY_TAG
+import com.healthofatitan.app.feature.path.PATH_NAME_GOAL_TAG
 import com.healthofatitan.app.feature.path.PATH_SCREEN_TAG
-import com.healthofatitan.app.feature.path.PATH_TITAN_TAG
+import com.healthofatitan.app.feature.path.PATH_SLICE_TAG
+import com.healthofatitan.app.feature.path.RITUAL_HELP_TAG
+import com.healthofatitan.app.feature.path.RITUAL_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PERSONA_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PERSONA_STRONG_WORDS_TAG
 import com.healthofatitan.app.feature.path.personaTag
@@ -259,12 +261,15 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `path tab shows the titan, a goal from data and your titan`() {
+    fun `path tab shows the slice of the world and names a goal in the ritual, help in one tap`() {
         launch()
         compose.onNodeWithTag(HotTab.PATH.testTag).performClick()
-        compose.onNodeWithTag(PATH_HERO_TAG).assertExists()
-        compose.onNodeWithTag(PATH_PROPOSAL_TAG).assertExists()
-        compose.onNodeWithTag(PATH_TITAN_TAG).assertExists()
+        compose.onNodeWithTag(PATH_SLICE_TAG).assertExists()
+        compose.onNodeWithTag(PATH_EMPTY_TAG).assertExists()
+        compose.onNodeWithTag(PATH_NAME_GOAL_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(RITUAL_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(RITUAL_HELP_TAG).performClick()
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
     }
 
     @Test

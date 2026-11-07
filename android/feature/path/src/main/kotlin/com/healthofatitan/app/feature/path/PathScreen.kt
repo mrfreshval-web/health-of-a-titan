@@ -1,39 +1,49 @@
 package com.healthofatitan.app.feature.path
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +51,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthofatitan.app.core.model.nav.HotRoute
+import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
@@ -48,252 +59,421 @@ import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
-import com.healthofatitan.app.domain.path.GoalPlan
-import com.healthofatitan.app.domain.path.GoalProgress
-import com.healthofatitan.app.domain.path.PathState
-import com.healthofatitan.app.domain.path.SphereLight
-import com.healthofatitan.app.domain.path.StepVersion
+import com.healthofatitan.app.core.ui.theme.PathColors
+import com.healthofatitan.app.domain.path.BalanceKind
+import com.healthofatitan.app.domain.path.ChangeProposal
+import com.healthofatitan.app.domain.path.ChangeResult
+import com.healthofatitan.app.domain.path.ComponentKey
+import com.healthofatitan.app.domain.path.Element
+import com.healthofatitan.app.domain.path.ElementView
+import com.healthofatitan.app.domain.path.GoalChange
+import com.healthofatitan.app.domain.path.GoalStatus
+import com.healthofatitan.app.domain.path.PartState
+import com.healthofatitan.app.domain.path.PathCopy
+import com.healthofatitan.app.domain.path.PathLexicon
+import com.healthofatitan.app.domain.path.PathOverview
+import com.healthofatitan.app.domain.path.PracticalGoal
+import com.healthofatitan.app.domain.path.Refusal
+import com.healthofatitan.app.domain.path.StageRules
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
 const val PATH_SCREEN_TAG = "screen_path"
-const val PATH_HERO_TAG = "path_hero"
-const val PATH_PROPOSAL_TAG = "path_proposal"
-const val PATH_TAKE_TAG = "path_take"
-const val PATH_OTHER_TAG = "path_other"
-const val PATH_CHANGE_TAG = "path_change"
 const val PATH_GOAL_TAG = "path_goal"
-const val PATH_TITAN_TAG = "path_your_titan"
+const val PATH_WHY_TAG = "path_why"
+const val PATH_EMPTY_TAG = "path_empty"
+const val PATH_NAME_GOAL_TAG = "path_name_goal"
+const val PATH_BALANCE_TAG = "path_balance"
+const val PATH_TRAIL_TAG = "path_trail"
+const val PATH_MENU_TAG = "path_menu"
+const val PATH_UNDO_TAG = "path_undo"
+
+fun elementTag(e: Element) = "path_element_${e.name.lowercase()}"
 
 /**
- * Tab «Путь» (D-033, A42 §3.1): the Titan in the ring of the 12-week goal, one line «цель ·
- * этап · неделя», the step of the day, «Твой Титан» by six spheres and the goal history.
- * Settings, the mentor and help live under the avatar in the header corner.
+ * Tab «Путь» (A55 §1, A58-VP §5.1): the goal, «Зачем», «Срез мира» with both Titans, the balance
+ * and its one step, the trail of the stage, the three elements and the milestones. No ring with a
+ * frieze in this slice (D-048 п. 6). Settings, the mentor and help stay under the avatar.
  *
- * @param stateful false renders the default state without ViewModels (navigation tests).
+ * @param stateful false renders the empty path without ViewModels (navigation tests)
  */
-fun NavGraphBuilder.pathScreen(stateful: Boolean = true) {
+fun NavGraphBuilder.pathScreen(
+    stateful: Boolean = true,
+    onOpenRitual: () -> Unit = {},
+    onHelp: () -> Unit = {},
+) {
     composable(route = HotRoute.PATH) {
-        if (stateful) PathRoute() else PathScreen(PathView(PathState.empty(LocalDate.now())), PathActions())
+        if (stateful) {
+            PathRoute(onOpenRitual, onHelp)
+        } else {
+            PathScreen(PathUi(PathData.empty(LocalDate.now())), PathActions(onNameGoal = onOpenRitual, onFromCarrying = onOpenRitual))
+        }
     }
 }
 
+/** The screen's state: the data and what a change in progress shows. */
+data class PathUi(
+    val data: PathData,
+    val proposal: ChangeProposal? = null,
+    val refusal: String? = null,
+    val undo: Boolean = false,
+    /** One phrase for TalkBack after a moment (§1.6 «Моменты»). */
+    val announce: String? = null,
+)
+
 class PathActions(
-    val onTake: (GoalPlan) -> Unit = {},
-    val onToggleStep: (StepVersion) -> Unit = {},
+    val onNameGoal: () -> Unit = {},
+    val onFromCarrying: () -> Unit = {},
+    val onMark: (ComponentKey, Int) -> Unit = { _, _ -> },
+    val onPropose: (GoalChange) -> Unit = {},
+    val onApply: (override: Boolean) -> Unit = {},
+    val onKeep: () -> Unit = {},
+    val onUndo: () -> Unit = {},
+    val onHelp: () -> Unit = {},
 )
 
 @HiltViewModel
 class PathViewModel @Inject constructor(private val repository: PathRepository) : ViewModel() {
-    val view: StateFlow<PathView?> = repository.view
+    private val transient = MutableStateFlow(PathUi(PathData.empty(LocalDate.now())))
+
+    val ui: StateFlow<PathUi?> = combine(repository.data, transient) { d, t -> t.copy(data = d) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun take(plan: GoalPlan) {
-        viewModelScope.launch { repository.take(plan) }
+    fun mark(key: ComponentKey, mark: Int) {
+        viewModelScope.launch {
+            val moved = repository.markTaken(key, mark)
+            transient.update { it.copy(announce = if (moved) PathCopy.a11yFireMoved(mark, key) else PathCopy.markTaken(mark)) }
+        }
     }
 
-    fun toggleStep(version: StepVersion) {
-        viewModelScope.launch { repository.toggleStep(version) }
+    fun propose(change: GoalChange) {
+        viewModelScope.launch { show(repository.propose(change)) }
+    }
+
+    fun apply(override: Boolean) {
+        val p = transient.value.proposal ?: return
+        viewModelScope.launch { show(repository.apply(p, override)) }
+    }
+
+    fun keep() = transient.update { it.copy(proposal = null, refusal = null) }
+
+    fun undo() {
+        viewModelScope.launch {
+            repository.undo()
+            transient.update { it.copy(undo = false) }
+        }
+    }
+
+    private fun show(result: ChangeResult) = transient.update {
+        when (result) {
+            is ChangeResult.Proposed -> it.copy(proposal = result.proposal, refusal = null)
+            is ChangeResult.Applied -> it.copy(proposal = null, refusal = null, undo = true)
+            is ChangeResult.Refused -> it.copy(
+                proposal = if (result.reason == Refusal.SOFT_LIMIT) it.proposal else null,
+                refusal = result.violations.firstOrNull()?.let(PathCopy::violation) ?: if (result.reason == Refusal.SOFT_LIMIT) PathCopy.SOFT_LIMIT else null,
+            )
+        }
     }
 }
 
 @Composable
-private fun PathRoute(viewModel: PathViewModel = hiltViewModel()) {
-    val view by viewModel.view.collectAsStateWithLifecycle()
+private fun PathRoute(onOpenRitual: () -> Unit, onHelp: () -> Unit, viewModel: PathViewModel = hiltViewModel()) {
+    val ui by viewModel.ui.collectAsStateWithLifecycle()
     PathScreen(
-        view = view ?: PathView(PathState.empty(LocalDate.now())),
-        actions = PathActions(onTake = viewModel::take, onToggleStep = viewModel::toggleStep),
+        ui = ui ?: PathUi(PathData.empty(LocalDate.now())),
+        actions = PathActions(
+            onNameGoal = onOpenRitual,
+            onFromCarrying = onOpenRitual,
+            onMark = viewModel::mark,
+            onPropose = viewModel::propose,
+            onApply = viewModel::apply,
+            onKeep = viewModel::keep,
+            onUndo = viewModel::undo,
+            onHelp = onHelp,
+        ),
     )
 }
 
+/** Which sheet of the path is open. */
+sealed interface PathSheet {
+    data object Menu : PathSheet
+    data object Pause : PathSheet
+    data object Release : PathSheet
+    data object Crossroads : PathSheet
+    data class Part(val key: ComponentKey) : PathSheet
+}
+
+/**
+ * @param still no motion (screenshots)
+ */
 @Composable
-fun PathScreen(view: PathView, actions: PathActions, modifier: Modifier = Modifier) {
-    val s = view.state
-    val active = s.active?.takeIf { !it.finished }
-    var choosing by rememberSaveable { mutableStateOf(false) }
-    var pick by rememberSaveable { mutableIntStateOf(0) }
+fun PathScreen(ui: PathUi, actions: PathActions, modifier: Modifier = Modifier, still: Boolean = false, initialSheet: PathSheet? = null) {
+    val ov = ui.data.overview
+    val goal = ov.goal
+    var expanded by rememberSaveable(goal?.id) { mutableStateOf(defaultElement(ov).name) }
+    var whyShown by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf(initialSheet) }
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 4.dp, bottom = HotSpacing.sectionGap)
+            .padding(top = 8.dp, bottom = HotSpacing.sectionGap)
             .testTag(PATH_SCREEN_TAG),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
     ) {
-        PathHero(s.active, Modifier.fillMaxWidth().widthIn(max = 380.dp).aspectRatio(1f).testTag(PATH_HERO_TAG))
-        if (active != null) {
-            GoalLine(active)
-        } else if (s.active?.finished == true) {
-            Text(PathTexts.CYCLE_DONE, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
-        }
-        if (active == null || choosing) {
-            val proposals = s.proposals
-            if (proposals.isNotEmpty()) {
-                ProposalCard(
-                    plan = proposals[pick % proposals.size],
-                    more = proposals.size > 1,
-                    replacing = active != null,
-                    onTake = {
-                        actions.onTake(it)
-                        choosing = false
-                        pick = 0
-                    },
-                    onOther = { pick = (pick + 1) % proposals.size },
-                    onKeep = { choosing = false },
+        if (goal != null) {
+            GoalHeader(goal, ov, onMenu = { sheet = PathSheet.Menu }, modifier = Modifier.padding(horizontal = HotSpacing.edge))
+            val why = goal.why
+            if (!why.isNullOrBlank() && (ov.whyVisible || whyShown)) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    why,
+                    style = HotType.voice,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = HotSpacing.edge).testTag(PATH_WHY_TAG),
                 )
             }
-        } else {
-            PathStepCard(
-                plan = active.goal.plan,
-                version = s.stepVersion,
-                done = s.stepDone,
-                marked = s.stepMarked,
-                weekDone = active.weekDone,
-                weekTarget = active.weekTarget,
-                bedtimeMin = view.bedtimeMin,
-                onToggle = { actions.onToggleStep(s.stepVersion) },
-            )
-        }
-        YourTitan(s.spheres, s.litSpheres)
-        if (active != null && !choosing) {
-            HotTextButton(PathTexts.CHANGE, onClick = { choosing = true }, modifier = Modifier.testTag(PATH_CHANGE_TAG))
-        }
-        if (s.past.isNotEmpty()) PastGoals(s.past)
-    }
-}
-
-/** «Сон 7 ч · 5 из 7» with its pictogram, and «этап 2 из 3 · неделя 6 из 12» (A42 §3.1). */
-@Composable
-private fun GoalLine(p: GoalProgress) {
-    val primary = MaterialTheme.colorScheme.primary
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.testTag(PATH_GOAL_TAG)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SphereIcon(p.goal.plan.sphere, size = 30.dp, color = primary)
-            Spacer(Modifier.width(12.dp))
-            Text(PathTexts.goal(p.goal.plan), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         }
         Spacer(Modifier.height(8.dp))
-        HotOverline(PathTexts.where(p.stage, p.week))
+        WorldSlice(
+            overview = ov,
+            mode = ui.data.mode,
+            onTier = { expanded = it.name },
+            onPart = { key -> sheet = PathSheet.Part(key) },
+            onStar = { whyShown = !whyShown },
+            still = still,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        ui.announce?.let { a ->
+            Text(
+                a,
+                style = PathText.caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = HotSpacing.edge, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+        Column(
+            Modifier.padding(horizontal = HotSpacing.edge),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Spacer(Modifier.height(0.dp))
+            if (goal == null) {
+                EmptyCard(actions)
+            } else {
+                BalanceCard(ov, onStep = { ov.balance.lever?.let { sheet = PathSheet.Part(it) } })
+                if (ui.undo) {
+                    HotTextButton(PathCopy.UNDO, onClick = actions.onUndo, modifier = Modifier.testTag(PATH_UNDO_TAG))
+                }
+                Spacer(Modifier.height(16.dp))
+                StageTrail(ov)
+                Spacer(Modifier.height(8.dp))
+                ov.elements.forEach { ev ->
+                    ElementCard(
+                        ev, expanded = expanded == ev.element.name,
+                        onToggle = { expanded = ev.element.name },
+                        onPart = { sheet = PathSheet.Part(it) },
+                        still = still,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                Milestones(goal, ov.today)
+            }
+        }
+    }
+    PathSheets(ui, actions, sheet, onSheet = { sheet = it })
+}
+
+private fun defaultElement(ov: PathOverview): Element = ov.balance.lever?.element ?: ov.goal?.lever?.key?.element ?: Element.WATER
+
+@Composable
+private fun GoalHeader(goal: PracticalGoal, ov: PathOverview, onMenu: () -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().testTag(PATH_GOAL_TAG), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(goal.title, style = PathText.goalTitle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
+            val line = buildList {
+                add(PathCopy.deadline(goal.deadline))
+                if (ov.stagesTotal > 1) add(PathCopy.stage(goal.stage, ov.stagesTotal))
+                if (goal.status != GoalStatus.ACTIVE) add(PathCopy.statusWord(goal.status))
+            }.joinToString(" · ")
+            Text(line, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = onMenu, modifier = Modifier.size(48.dp).testTag(PATH_MENU_TAG)) {
+            Icon(painterResource(R.drawable.core_ui_ic_more), contentDescription = PathCopy.MENU, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
-/** One goal from data, taken in one tap (И8.3); «Другая» shows the next sphere (A42 §3.2). */
+/** «Путь ждёт цели. Опоры дня держу я.» (A56 §2.1). */
 @Composable
-private fun ProposalCard(
-    plan: GoalPlan,
-    more: Boolean,
-    replacing: Boolean,
-    onTake: (GoalPlan) -> Unit,
-    onOther: () -> Unit,
-    onKeep: () -> Unit,
-) {
-    val primary = MaterialTheme.colorScheme.primary
-    HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(PATH_PROPOSAL_TAG)) {
-        HotOverline(PathTexts.GOAL_OVERLINE)
-        Spacer(Modifier.height(14.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SphereIcon(plan.sphere, size = 34.dp, color = primary)
-            Spacer(Modifier.width(14.dp))
-            Text(PathTexts.goal(plan), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(PathTexts.now(plan), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(14.dp))
-        StageRow(plan)
-        Spacer(Modifier.height(20.dp))
-        HotPrimaryButton(PathTexts.TAKE, onClick = { onTake(plan) }, modifier = Modifier.fillMaxWidth().testTag(PATH_TAKE_TAG))
-        if (more || replacing) {
+private fun EmptyCard(actions: PathActions) {
+    HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(PATH_EMPTY_TAG)) {
+        Text(PathCopy.EMPTY_TITLE, style = PathText.cardTitle.copy(fontSize = 19.sp), color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(4.dp))
+        Text(PathCopy.EMPTY_LINE, style = PathText.body, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(18.dp))
+        HotPrimaryButton(PathCopy.NAME_GOAL, onClick = actions.onNameGoal, modifier = Modifier.fillMaxWidth().testTag(PATH_NAME_GOAL_TAG))
+        HotTextButton(PathCopy.FROM_CARRYING, onClick = actions.onFromCarrying)
+    }
+}
+
+/** The label of balance and the one step (A55 §1 п. 5): a word, never a number. */
+@Composable
+private fun BalanceCard(ov: PathOverview, onStep: () -> Unit) {
+    val c = PathColors.current
+    val b = ov.balance
+    val color = when (b.kind) {
+        BalanceKind.LEVER -> c.lever
+        BalanceKind.EVEN -> c.earth
+        BalanceKind.HEAVY, BalanceKind.PAUSED, BalanceKind.HELD -> c.water
+        BalanceKind.NO_GOAL -> MaterialTheme.colorScheme.onSurface
+    }
+    HotCard(modifier = Modifier.fillMaxWidth().testTag(PATH_BALANCE_TAG)) {
+        Text(b.title, style = PathText.cardTitle, color = color)
+        Spacer(Modifier.height(4.dp))
+        Text(b.sub, style = PathText.body, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (b.kind == BalanceKind.LEVER && b.lever?.markable == true) {
             Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                if (more) HotTextButton(PathTexts.OTHER, onClick = onOther, modifier = Modifier.testTag(PATH_OTHER_TAG))
-                if (replacing) HotTextButton(PathTexts.KEEP, onClick = onKeep)
-            }
+            HotTextButton(PathCopy.MARK_TAKEN_ACTION, onClick = onStep)
         }
-    }
-}
-
-/** Three stages of 4 weeks as three numbered steps: «4 → 5 → 5 из 7». */
-@Composable
-private fun StageRow(plan: GoalPlan) {
-    val tokens = HotThemeTokens.colors
-    Row(
-        Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "Этапы: " + PathTexts.stages(plan) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        plan.stages.forEachIndexed { i, days ->
-            if (i > 0) {
-                Box(Modifier.weight(1f).height(1.dp).background(tokens.rule))
-            }
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(40.dp).clip(CircleShape).border(1.dp, if (i == 0) MaterialTheme.colorScheme.primary else tokens.rule, CircleShape),
-            ) {
-                Text("$days", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        HotOverline("из 7")
     }
 }
 
 /**
- * «Твой Титан» (A37 §8): six spheres as light. In light at 70 % of the week's days (50 % in
- * «Бережно»); below it a sphere is a contour, never black; a sphere HoT cannot see yet is a
- * faint contour (no data is not a failure).
+ * The trail of the stage (§5.1 block 6): 12 stones by the calendar — no «missed» weeks; milestones
+ * r 7, the current stone r 6, passed r 3.5, future r 3.5 outlined; ‖ on pause.
  */
 @Composable
-private fun YourTitan(spheres: List<SphereLight>, lit: Int) {
+private fun StageTrail(ov: PathOverview) {
+    val c = PathColors.current
     val tokens = HotThemeTokens.colors
-    val primary = MaterialTheme.colorScheme.primary
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(PATH_TITAN_TAG)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            HotOverline(PathTexts.TITAN)
+    val h = ov.horizon
+    Column(Modifier.fillMaxWidth().testTag(PATH_TRAIL_TAG)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HotOverline(PathCopy.STAGE_OVERLINE)
             Spacer(Modifier.weight(1f))
-            Text(PathTexts.inLight(lit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val right = buildList {
+                add(PathCopy.week(ov.week))
+                ov.nextMilestone?.let { (_, days) -> add(PathCopy.toMilestone(days)) }
+            }.joinToString(" · ")
+            Text(right, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
         }
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            spheres.forEach { light ->
-                val color = when {
-                    light.lit -> primary
-                    light.share != null -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else -> tokens.textTertiary.copy(alpha = 0.6f)
+        Spacer(Modifier.height(8.dp))
+        val desc = PathCopy.week(ov.week) + (ov.nextMilestone?.let { ". " + PathCopy.toMilestone(it.second) } ?: "")
+        Canvas(Modifier.fillMaxWidth().height(34.dp).semantics { contentDescription = desc }) {
+            val n = StageRules.WEEKS
+            val pad = 8.dp.toPx()
+            val step = (size.width - 2 * pad) / (n - 1)
+            val y = size.height / 2
+            drawLine(tokens.rule, Offset(pad, y), Offset(size.width - pad, y), strokeWidth = 1.dp.toPx())
+            for (i in 1..n) {
+                val x = pad + (i - 1) * step
+                val milestone = i in StageRules.MILESTONES
+                when {
+                    i == ov.week -> drawCircle(c.goalTick, 6.dp.toPx(), Offset(x, y))
+                    i < ov.week -> drawCircle(c.earth, 3.5.dp.toPx(), Offset(x, y))
+                    else -> drawCircle(tokens.rule, 3.5.dp.toPx(), Offset(x, y), style = Stroke(1.dp.toPx()))
                 }
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(if (light.lit) primary.copy(alpha = 0.16f) else androidx.compose.ui.graphics.Color.Transparent)
-                        .border(1.dp, if (light.lit) primary else if (light.share != null) tokens.rule else tokens.ruleSoft, CircleShape),
-                ) {
-                    SphereIcon(light.sphere, size = 22.dp, color = color)
+                if (milestone) drawCircle(c.earth.copy(alpha = 0.7f), 7.dp.toPx(), Offset(x, y), style = Stroke(1.dp.toPx()))
+                if (ov.paused && i == ov.week) {
+                    val dx = 2.dp.toPx()
+                    val top = y - 16.dp.toPx()
+                    drawLine(tokens.textTertiary, Offset(x - dx, top), Offset(x - dx, top + 7.dp.toPx()), strokeWidth = 1.5.dp.toPx())
+                    drawLine(tokens.textTertiary, Offset(x + dx, top), Offset(x + dx, top + 7.dp.toPx()), strokeWidth = 1.5.dp.toPx())
                 }
             }
+        }
+        if (h != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (h.seated) PathCopy.HORIZON_SEATED else PathCopy.horizonLine(h.step),
+                style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
-/** Earlier goals keep their weeks: changing a goal never erases the path (A42 §3.2 п. 4). */
+/** One element (§5.1 block 7): the row 56 dp, unfolded — its Titan 72 dp and the parts of the goal. */
 @Composable
-private fun PastGoals(past: List<GoalProgress>) {
-    HotCard(modifier = Modifier.fillMaxWidth()) {
-        HotOverline(PathTexts.PAST)
-        past.forEach { p ->
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SphereIcon(p.goal.plan.sphere, size = 22.dp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(PathTexts.goal(p.goal.plan), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Text(PathTexts.litWeeks(p.litWeeks), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun ElementCard(ev: ElementView, expanded: Boolean, onToggle: () -> Unit, onPart: (ComponentKey) -> Unit, still: Boolean) {
+    val material = materialOf(ev.element)
+    HotCard(
+        modifier = Modifier.fillMaxWidth().testTag(elementTag(ev.element)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onToggle),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(material))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(PathLexicon.element(ev.element), style = PathText.cardTitle, color = MaterialTheme.colorScheme.onSurface)
+                Text(PathLexicon.motto(ev.element), style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(ev.status, style = PathText.caption, color = material)
+        }
+        if (expanded) {
+            Row(verticalAlignment = Alignment.Top) {
+                PathTitan(PathArt.header(ev.element), Modifier.size(72.dp), still = still)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    ev.parts.sortedBy { roleOrder(it.role) }.forEach { p ->
+                        Column(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onPart(p.key) }.padding(vertical = 6.dp),
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(PathLexicon.name(p.key), style = PathText.body.copy(fontWeight = PathText.cardTitle.fontWeight), color = MaterialTheme.colorScheme.onSurface)
+                                Spacer(Modifier.width(8.dp))
+                                p.roleWord()?.let { Text(it, style = PathText.caption, color = material) }
+                                if (p.lever) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(PathCopy.LEVER_BADGE, style = PathText.caption, color = PathColors.current.lever)
+                                }
+                            }
+                            val line = when (p.state) {
+                                PartState.MARKS -> PathCopy.markLine(p.mark.takeIf { it > 0 }, p.target)
+                                else -> PathCopy.PRACTICE
+                            } + (p.safeVersion?.let { " · $it" } ?: "")
+                            Text(line, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if (ev.outside > 0) {
+                        Text(
+                            PathCopy.more(ev.outside, PathLexicon.element(ev.element)),
+                            style = PathText.caption, color = HotThemeTokens.colors.textTertiary,
+                            modifier = Modifier.padding(vertical = 8.dp),
+                        )
+                    }
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/** Milestones of the stage and the measurement (§5.1 block 8). */
+@Composable
+private fun Milestones(goal: PracticalGoal, today: LocalDate) {
+    Column(Modifier.fillMaxWidth()) {
+        HotOverline(PathCopy.MILESTONES)
+        Spacer(Modifier.height(8.dp))
+        StageRules.MILESTONES.forEach { w ->
+            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(PathCopy.milestone(w, StageRules.milestone(goal, w, today)), style = PathText.body, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.weight(1f))
+                if (w < StageRules.WEEKS) Text(PathCopy.MEASURE, style = PathText.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

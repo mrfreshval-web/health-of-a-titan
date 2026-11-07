@@ -98,6 +98,57 @@ object PathCopy {
     const val FIRE_ON_HORIZON = "огонь на горизонте"
     const val FIRE_SHARED = "уже с тобой"
 
+    // TalkBack of «Срез мира» (A58-VP §1.6). Черновик, ревью 10. A colour is never named.
+    const val A11Y_OPEN = "Открыть составляющую"
+    const val A11Y_OUTSIDE = "Вне этой цели."
+    const val A11Y_PRACTICE = "Практика без шкалы."
+    const val A11Y_PAUSED = "Цель на паузе. Взятое при тебе."
+    const val A11Y_EXCLUDED = "Под защитой «Дано»."
+    const val A11Y_WHY_EMPTY = "Зачем — не задано."
+
+    fun a11yPart(part: SlicePart, leverDetail: String?, paused: Boolean): String = buildString {
+        append(PathLexicon.name(part.key)).append(". ").append(PathLexicon.element(part.key.element)).append(". ")
+        when (part.state) {
+            PartState.OFF -> append(A11Y_OUTSIDE)
+            PartState.EXCLUDED -> append(A11Y_EXCLUDED)
+            PartState.PRACTICE -> append(cap(PathLexicon.role(part.role ?: Role.GUARD))).append(". ").append(A11Y_PRACTICE)
+            PartState.MARKS -> {
+                append(cap(PathLexicon.role(part.role ?: Role.GUARD))).append(". ")
+                append("Рубеж «").append(PathLexicon.mark(part.mark)).append("»")
+                part.target?.let { append(", цель — «").append(PathLexicon.mark(it)).append("»") }
+                append(".")
+            }
+        }
+        if (part.lever) append(" Рычаг сейчас").append(leverDetail?.let { ": $it" } ?: "").append(".")
+        part.safeVersion?.let { append(" Безопасная версия: ").append(it).append(".") }
+        if (paused && part.role != null) append(" ").append(A11Y_PAUSED)
+    }
+
+    fun a11yWhy(why: String?): String = why?.trim()?.takeIf { it.isNotEmpty() }?.let { "${PathLexicon.WHY}: $it" } ?: A11Y_WHY_EMPTY
+
+    fun a11yGiven(lines: List<String>): String =
+        if (lines.isEmpty()) GIVEN_EMPTY else "${PathLexicon.GIVEN}: ${lines.joinToString(", ")}."
+
+    fun a11yHorizon(h: HorizonTitan, lightOnly: Boolean): String = buildString {
+        append(if (lightOnly) "Свет горизонта" else PathLexicon.HORIZON_TITAN).append(", «").append(h.name).append("». ")
+        append("Шаг ${h.step} из ${HorizonRules.STEPS}.")
+        if (h.seated) append(" Ждёт на камне.")
+        if (!lightOnly) {
+            val on = h.fires.filter { it.light == HorizonLight.ON_HORIZON }.map { PathLexicon.name(it.key) }
+            val with = h.fires.filter { it.light != HorizonLight.ON_HORIZON }.map { PathLexicon.name(it.key) }
+            if (on.isNotEmpty()) append(" Его огни: ").append(on.joinToString(", ")).append(".")
+            if (with.isNotEmpty()) append(" Уже с тобой: ").append(with.joinToString(", ")).append(".")
+        }
+    }
+
+    fun a11ySlice(title: String?, balance: Balance): String =
+        "Срез мира." + (title?.let { " Цель «$it»." } ?: "") + " Равновесие: ${balance.title}."
+
+    fun a11yFireMoved(mark: Int, key: ComponentKey): String =
+        "Рубеж «${PathLexicon.mark(mark)}» взят. Огонь: ${PathLexicon.name(key).lowercase()} — теперь у тебя."
+
+    private fun cap(s: String) = s.replaceFirstChar { it.uppercase() }
+
     // Ritual «Назови цель» (A56 §2, 7 screens).
     const val SKIP = "Пропустить"
     const val HELP = "Помощь"
@@ -227,6 +278,64 @@ object PathCopy {
     const val EFFECT_EXPERIMENT_SAME = "Эксперимент недели остаётся до воскресенья."
     const val UPDATED_TODAY = "обновлено под новый срок"
 
+    const val CHANGE_OVERLINE = "Изменение"
+    const val WHAT_CHANGES = "Что поменяется"
+    const val LOOK_SUNDAY = "Посмотрим в воскресенье"
+    const val DIFF_TITLE = "Название"
+    const val DIFF_WHY = "Зачем"
+    const val DIFF_BE = "Кем буду"
+    const val DIFF_DEADLINE = "Срок"
+    const val DIFF_MODE = "Как держим"
+    const val DIFF_STATUS = "Состояние"
+    const val DIFF_PARTS = "Детали"
+    const val DIFF_LEVER = "Рычаг"
+    const val DIFF_CRITERIA = "Правда к сроку"
+    const val DIFF_START = "Начало этапа"
+    const val DIFF_NONE = "—"
+
+    fun statusWord(s: GoalStatus): String = when (s) {
+        GoalStatus.DRAFT -> "черновик"
+        GoalStatus.ACTIVE -> "в пути"
+        GoalStatus.PAUSED -> "пауза"
+        GoalStatus.HELD -> "стоит"
+        GoalStatus.REVIEW -> "встреча"
+        GoalStatus.TAKEN -> "взята"
+        GoalStatus.RELEASED -> "отпущена"
+        GoalStatus.QUEUED -> "в «Несу»"
+    }
+
+    fun criterion(c: Criterion): String = "${c.label}: ${num(c.low)}…${num(c.high)}${if (c.unit.isBlank()) "" else " " + c.unit}"
+
+    fun part(c: GoalComponent): String = PathLexicon.name(c.key) + " · " + PathLexicon.role(c.role) +
+        (c.targetMark?.let { " · «${PathLexicon.mark(it)}»" } ?: "")
+
+    fun changeTitle(change: GoalChange): String = when (change) {
+        is GoalChange.MoveDeadline -> "Сдвинуть срок на ${date(change.deadline)}"
+        is GoalChange.SetMode -> "Держим ${PathLexicon.mode(change.mode)}"
+        is GoalChange.Pause -> PAUSE
+        GoalChange.Resume -> RESUME
+        is GoalChange.Release -> RELEASE_TITLE
+        is GoalChange.Crossroads -> crossroads(change.option)
+        is GoalChange.SetLever -> lever(PathLexicon.name(change.key))
+        else -> "Пересобрать цель"
+    }
+
+    private fun num(d: Double): String = if (d == kotlin.math.floor(d)) d.toLong().toString() else d.toString().replace('.', ',')
+
+    // Milestones (A55 §1 block 8).
+    const val MEASURE = "Замер · 10 мин"
+
+    fun milestone(week: Int, d: LocalDate): String =
+        if (week >= StageRules.WEEKS) "Встреча · ${date(d)}" else "Веха $week · ${date(d)}"
+
+    const val CHOOSE = "Выбрать"
+    const val MORE = "Ещё"
+    const val TALK_SUNDAY = "Поговорим в воскресенье"
+    const val PAUSE_ON = "Поставить на паузу"
+    const val RELEASE_ON = "Отпустить цель"
+    const val DONE = "Готово"
+    const val CRISIS_LINE = "Если сейчас тяжело — помощь рядом, в два касания."
+
     // Pause (A56 §3). Черновик, ревью 10.
     const val PAUSE_TITLE = "Что происходит?"
     const val PAUSE_TERM = "Надолго?"
@@ -285,8 +394,19 @@ object PathCopy {
         WAS, WILL, APPLY, KEEP, UNDO, SOFT_LIMIT, SOFT_OVERRIDE, TALK, WEEK_NOW, EFFECT_TODAY_SAME, EFFECT_TODAY_SAFETY,
         EFFECT_TODAY_PAUSE, EFFECT_WEEK_NEXT, EFFECT_WEEK_NOW, EFFECT_WEEK_NONE, EFFECT_EXPERIMENT_SAME, UPDATED_TODAY,
         PAUSE_TITLE, PAUSE_TERM, PAUSE_NO_TERM, RETURN_TITLE, PUSH_RETURN, CROSSROADS, CROSSROADS_LAG, CROSSROADS_RETURN,
-        CROSSROADS_UNDO, RELEASE_TITLE, RELEASE_KEEP, RELEASE_TO_QUEUE, RELEASE_UNDO,
+        CROSSROADS_UNDO, RELEASE_TITLE, RELEASE_KEEP, RELEASE_TO_QUEUE, RELEASE_UNDO, A11Y_OPEN, A11Y_OUTSIDE,
+        A11Y_PRACTICE, A11Y_PAUSED, A11Y_EXCLUDED, A11Y_WHY_EMPTY, a11yWhy("силы на лето"), a11yGiven(listOf("колено")),
+        a11yFireMoved(3, ComponentKey.STRENGTH), CHANGE_OVERLINE, WHAT_CHANGES, LOOK_SUNDAY, DIFF_TITLE, DIFF_WHY, DIFF_BE,
+        DIFF_DEADLINE, DIFF_MODE, DIFF_STATUS, DIFF_PARTS, DIFF_LEVER, DIFF_CRITERIA, DIFF_START, MEASURE, CHOOSE, TALK_SUNDAY,
+        PAUSE_ON, RELEASE_ON, DONE, MORE, CRISIS_LINE, milestone(4, LocalDate.of(2026, 12, 5)), milestone(12, LocalDate.of(2027, 1, 30)),
+        criterion(Criterion("ночи от 7 ч", 4.0, 5.5, "из 7")), part(GoalComponent(ComponentKey.SLEEP, Role.LEAD, 3)),
+        changeTitle(GoalChange.MoveDeadline(LocalDate.of(2027, 2, 28))),
+        a11yPart(SlicePart(ComponentKey.STRENGTH, PartState.MARKS, Role.LEAD, 2, 3, lever = true, safeVersion = "без прыжков"), "6,1 ч из 7", true),
+        a11yPart(SlicePart(ComponentKey.FUEL, PartState.PRACTICE, Role.PROP), null, false),
+        a11yPart(SlicePart(ComponentKey.OUTLOOK, PartState.OFF), null, false),
+        a11yHorizon(HorizonTitan(1, "Ты к 31.12", listOf(HorizonFire(ComponentKey.SLEEP, HorizonLight.ON_HORIZON), HorizonFire(ComponentKey.FEELINGS, HorizonLight.SHARED)), 5, true), false),
+        a11ySlice("Силы на вечер", Balance(BalanceKind.EVEN, BALANCE_EVEN, BALANCE_EVEN_SUB, null)),
     ) + CTA + E2_DEADLINES + PAUSE_TERMS + RETURN_CARD + RETURN_PACE + PauseReason.entries.map(::pauseReason) +
-        CrossroadsOption.entries.map(::crossroads) + Violation.entries.map(::violation) + PathTemplates.ALL.map { it.title } +
+        CrossroadsOption.entries.map(::crossroads) + GoalStatus.entries.map(::statusWord) + Violation.entries.map(::violation) + PathTemplates.ALL.map { it.title } +
         PathTemplates.ALL.map { it.obstacleHint } + PathTemplates.ALL.flatMap { t -> t.criteria.map { it.label } } + PathLexicon.all()
 }

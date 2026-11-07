@@ -84,6 +84,38 @@ data class LottieEntry(
     }
 }
 
+/**
+ * A section of a Lottie file between two markers (the Path, A58-VP §3.2): a loop (`hold_loop_*`,
+ * `one_hand_loop_*`) or a single move (`look_sky`, 400 ms) played once and held on its last frame;
+ * [reverse] plays the move back (the way back from a look). Without animation the still is the
+ * loop's first frame or the move's end.
+ */
+data class LottieSection(val from: Int, val to: Int, val loop: Boolean, val reverse: Boolean = false) {
+    fun progress(ms: Long?, frames: Int): Float {
+        val n = frames.coerceAtLeast(1).toFloat()
+        val span = (to - from).coerceAtLeast(1)
+        val f = when {
+            ms == null && loop -> from.toFloat()
+            ms == null -> if (reverse) from.toFloat() else to.toFloat()
+            loop -> from + ((ms * LottieEntry.FPS / 1000.0) % span).toFloat()
+            else -> {
+                val d = (ms * LottieEntry.FPS / 1000.0).coerceAtMost(span.toDouble()).toFloat()
+                if (reverse) to - d else from + d
+            }
+        }
+        return (f / n).coerceIn(0f, 1f)
+    }
+
+    companion object {
+        /** The section from marker [start] to marker [end] (or the next marker after [start]). */
+        fun of(entry: LottieEntry, start: String, end: String? = null, loop: Boolean = false, reverse: Boolean = false): LottieSection? {
+            val from = entry.markers[start] ?: return null
+            val to = end?.let { entry.markers[it] } ?: entry.markers.values.filter { it > from }.minOrNull() ?: entry.frames
+            return LottieSection(from, to, loop, reverse)
+        }
+    }
+}
+
 object TitanLottie {
     const val MANIFEST = "lottie/manifest.json"
 
@@ -149,18 +181,24 @@ fun TitanLottieFigure(
     animate: Boolean = true,
     mirrored: Boolean = false,
     description: String? = null,
+    section: LottieSection? = null,
 ) {
     val tokens = HotThemeTokens.colors
     val composition by rememberLottieComposition(LottieCompositionSpec.Asset(entry.file))
     val dynamic = rememberTitanColors(light, accent)
-    val ms by produceState<Long?>(null, entry.id, animate) {
+    val ms by produceState<Long?>(null, entry.id, animate, section) {
         value = null
         if (!animate) return@produceState
         val start = withFrameMillis { it }
         while (true) value = withFrameMillis { it } - start
     }
     val withGlow = glow?.takeIf { tokens.glow }
-    val progress = { ms?.let { entry.progress(it, cycleMs) } ?: entry.poster }
+    val progress = {
+        when {
+            section != null -> section.progress(ms, entry.frames)
+            else -> ms?.let { entry.progress(it, cycleMs) } ?: entry.poster
+        }
+    }
     Box(modifier.semantics { if (description != null) contentDescription = description }) {
         if (withGlow != null) {
             Canvas(Modifier.fillMaxSize()) {

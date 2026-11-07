@@ -9,8 +9,11 @@ object HotRoute {
     const val MENTOR = "mentor"
     const val WEEK = "week"
 
-    /** Tab «Путь» (D-033, A42 §3.1): the Titan, the 12-week goal, its stages and «Твой Титан». */
+    /** Tab «Путь» (D-046…D-048, A55 §1): the goal, «Срез мира», the Titan of the horizon. */
     const val PATH = "path"
+
+    /** «Назови цель» (A56 §2): the ritual of 7 screens, full screen outside the tabs. */
+    const val PATH_RITUAL = "path_ritual"
 
     /**
      * «Настройки» under the avatar in the corner of every header (D-033): help, the mentor and the

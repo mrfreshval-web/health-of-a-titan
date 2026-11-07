@@ -1,5 +1,7 @@
 package com.healthofatitan.app.domain.today.week
 
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -46,8 +48,54 @@ data class FitnessGate(
     val betaBlockers: Boolean = false,
     val edCare: Boolean = false,
     val stormNet: Boolean = false,
+    /** A53 §3.3: only by the person's choice, after the screen «что это и чего не значит». */
+    val optedIn: Boolean = false,
+    /** The flag of health anxiety (A41): hidden by default. */
+    val healthAnxiety: Boolean = false,
+    /** Weeks with data so far; the first milestone comes after 4. */
+    val weeksOfData: Int = 0,
 ) {
-    val open: Boolean get() = flagOn && !sick && !pregnancy && !betaBlockers && !edCare && !stormNet
+    /** Nothing closes it: the opt-in may be offered. */
+    val offerable: Boolean get() = flagOn && !sick && !pregnancy && !betaBlockers && !edCare && !stormNet && !healthAnxiety
+    val open: Boolean get() = offerable && optedIn && weeksOfData >= FitnessMilestones.EVERY
+}
+
+/** What a milestone keeps to tell the lever 4 weeks later (HoT-derived: the estimate and the PA index; the waist is typed). */
+data class MilestoneInputs(val vo2: Double, val pa: Double, val waistCm: Double)
+
+/**
+ * A53 §3.3, D-050 (changes D-045 п. 2): the fitness age is not the number of the week — it is
+ * updated at milestones every 4 weeks (where the waist is measured) and shown in «Тело за неделю»;
+ * never in the push, the card or the first frame of the ritual. The main thing is the pace and the lever.
+ */
+object FitnessMilestones {
+    const val EVERY = 4
+
+    /** The milestone this week closes (1, 2, …) — the 4th, 8th… week since the first plan — or null. */
+    fun number(firstWeek: LocalDate?, weekStart: LocalDate): Int? {
+        firstWeek ?: return null
+        val weeks = ChronoUnit.WEEKS.between(firstWeek, weekStart).toInt() + 1
+        return if (weeks >= EVERY && weeks % EVERY == 0) weeks / EVERY else null
+    }
+
+    /**
+     * «помогли: пульс покоя» — the input whose change raised the estimate most since the last
+     * milestone: activity (PA index), waist, and the rest is the resting pulse. Null when nothing helped.
+     */
+    fun lever(sex: Sex, before: MilestoneInputs, now: MilestoneInputs): String? {
+        val (paK, waistK) = when (sex) {
+            Sex.MALE -> 0.226 to 0.369
+            Sex.FEMALE -> 0.198 to 0.259
+        }
+        val activity = paK * (now.pa - before.pa)
+        val waist = -waistK * (now.waistCm - before.waistCm)
+        val pulse = (now.vo2 - before.vo2) - activity - waist
+        val best = listOf(WeekCopy.FIT_LEVER_ACTIVITY to activity, WeekCopy.FIT_LEVER_WAIST to waist, WeekCopy.FIT_LEVER_RHR to pulse)
+            .maxBy { it.second }
+        return if (best.second > LEVER_MIN_VO2) WeekCopy.fitLever(best.first) else null
+    }
+
+    const val LEVER_MIN_VO2 = 0.2
 }
 
 data class FitnessView(
@@ -62,6 +110,12 @@ data class FitnessView(
     /** What is missing for an estimate. */
     val missing: String?,
     val waistDue: Boolean,
+    /** «39–43»: the model gives no more than ±2 years. */
+    val range: String? = null,
+    /** «помогли: пульс покоя». */
+    val lever: String? = null,
+    /** «веха 2». */
+    val milestone: String? = null,
 )
 
 object FitnessAge {
@@ -141,9 +195,18 @@ object FitnessAge {
      * The view of the week: null when the gate is closed. The number is a whole year (the model
      * gives no more precision than that); the pace is the difference to the estimate 4 weeks back.
      */
-    fun view(gate: FitnessGate, input: FitnessInput, fourWeeksAgo: Double?, waistAgeDays: Int?): FitnessView? {
+    fun view(
+        gate: FitnessGate,
+        input: FitnessInput,
+        fourWeeksAgo: Double?,
+        waistAgeDays: Int?,
+        /** The estimate of the last milestone: between milestones the number does not move. */
+        atMilestone: Double? = null,
+        milestone: Int? = null,
+        lever: String? = null,
+    ): FitnessView? {
         if (!gate.open) return null
-        val now = estimate(input)
+        val now = atMilestone ?: estimate(input)
         val missing = if (input.ageYears == null || input.sex == null || input.waistCm == null) WeekCopy.FIT_NEED_INPUT else null
         val pace = if (now != null && fourWeeksAgo != null) now - fourWeeksAgo else null
         return FitnessView(
@@ -155,6 +218,9 @@ object FitnessAge {
             room = if (now != null && input.ageYears != null && now.roundToInt() > input.ageYears) WeekCopy.FIT_ROOM else null,
             missing = missing,
             waistDue = waistAgeDays == null || waistAgeDays >= WAIST_DAYS,
+            range = now?.roundToInt()?.let(WeekCopy::fitRange),
+            lever = lever,
+            milestone = milestone?.let(WeekCopy::fitMilestone),
         )
     }
 }

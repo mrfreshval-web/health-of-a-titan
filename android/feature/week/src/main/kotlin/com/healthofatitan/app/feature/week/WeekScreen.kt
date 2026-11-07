@@ -108,6 +108,10 @@ data class WeekActions(
     val onFinishRitual: (RitualAnswers) -> Unit = {},
     val onShare: (TitanWeekLook) -> Unit = {},
     val onHelp: () -> Unit = {},
+    /** «Сегодня сделал» on the scale of the experiment of the week (A53 §3.2). */
+    val onMarkExperiment: (Boolean) -> Unit = {},
+    /** The choice to see the fitness age at milestones (A53 §3.3). */
+    val onFitnessOptIn: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -126,6 +130,8 @@ private fun WeekRoute(onOpenHelp: () -> Unit, viewModel: WeekViewModel = hiltVie
             onFinishRitual = viewModel::finishRitual,
             onShare = { WeekShare.share(context, it) },
             onHelp = onOpenHelp,
+            onMarkExperiment = viewModel::markExperiment,
+            onFitnessOptIn = viewModel::setFitnessOptIn,
         ),
     )
 }
@@ -160,11 +166,15 @@ fun WeekScreen(state: WeekUiState, actions: WeekActions = WeekActions(), modifie
         HotOverline(WeekCopy.weekNumber(v.number))
         BlockGlance(week)
         if (v.ritualCard) RitualCard(onOpen = { ritual = true })
+        v.experiment?.let { BlockExperiment(it, actions.onMarkExperiment) }
+        v.experimentNote?.let { HotOverline(it) }
         BlockGoals(week, actions)
         BlockSupports(week)
         BlockBody(week, actions.onHelp)
         BlockPatterns(v.patterns, v.patternsEmpty, state.tried, actions.onTry)
-        v.fitness?.let { BlockFitness(it, week.bodyInputs, actions.onSaveInputs) }
+        if (v.fitnessOffer) FitnessOffer { actions.onFitnessOptIn(true) }
+        v.fitness?.let { BlockFitness(it, week.bodyInputs, actions.onSaveInputs, onHide = { actions.onFitnessOptIn(false) }) }
+        if (v.fitness == null && week.fitnessOptedIn) HotOverline(WeekCopy.FIT_FIRST_AFTER)
         if (week.frames.size >= 2) Ribbon(week.frames)
         Spacer(Modifier.height(24.dp))
     }
@@ -190,7 +200,13 @@ private fun BlockGlance(week: WeekScreenState) {
     HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(WEEK_GLANCE_TAG)) {
         BlockTitle(WeekCopy.TITAN, if (v.titan.revealed) null else WeekCopy.TITAN_FORMING.lowercase())
         Spacer(Modifier.height(12.dp))
-        WeekTitanFigure(v.titan, Modifier.fillMaxWidth().aspectRatio(1.35f))
+        // D-050: the Week Seal is the MVP of the Sculpture of the week
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            WeekSeal(v.titan, Modifier.fillMaxWidth(0.78f))
+        }
+        week.poseCaption?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+        }
         Spacer(Modifier.height(14.dp))
         Columns(v.columns, picked) { d -> picked = if (picked == d) null else d }
         picked?.let { d -> week.dayDetails[d]?.let { DayCard(it, v.columns.first { c -> c.day == d }) } }
@@ -539,12 +555,14 @@ private fun BlockPatterns(patterns: List<PatternView>, empty: String?, tried: Li
 // ---------------------------------------------------------------- Фитнес-возраст (флаг)
 
 @Composable
-private fun BlockFitness(f: FitnessView, inputs: BodyInputs, onSave: (Int?, Sex?, Double?) -> Unit) {
+private fun BlockFitness(f: FitnessView, inputs: BodyInputs, onSave: (Int?, Sex?, Double?) -> Unit, onHide: () -> Unit) {
     var editing by remember { mutableStateOf(false) }
     HotCard(modifier = Modifier.fillMaxWidth().testTag(WEEK_FITNESS_TAG)) {
-        BlockTitle(WeekCopy.FIT_TITLE, WeekCopy.REVIEW)
+        BlockTitle(WeekCopy.FIT_TITLE, f.milestone ?: WeekCopy.REVIEW)
         Spacer(Modifier.height(8.dp))
         f.age?.let { Text(it.toString(), style = HotType.headline, color = MaterialTheme.colorScheme.onSurface) }
+        f.range?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        f.lever?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface) }
         f.pace?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface) }
         f.room?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Text(f.drivers, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -566,7 +584,10 @@ private fun BlockFitness(f: FitnessView, inputs: BodyInputs, onSave: (Int?, Sex?
                 editing = false
             })
         } else {
-            HotTextButton(WeekCopy.FIT_WAIST, onClick = { editing = true })
+            Row {
+                HotTextButton(WeekCopy.FIT_WAIST, onClick = { editing = true })
+                HotTextButton(WeekCopy.FIT_OPT_OUT, onClick = onHide)
+            }
         }
     }
 }
@@ -580,7 +601,7 @@ private fun Ribbon(frames: List<TitanWeekLook>) {
         Spacer(Modifier.height(8.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             frames.takeLast(52).forEach { f ->
-                WeekTitanFigure(f, Modifier.width(72.dp).height(96.dp))
+                WeekSeal(f, Modifier.width(72.dp))
             }
         }
     }

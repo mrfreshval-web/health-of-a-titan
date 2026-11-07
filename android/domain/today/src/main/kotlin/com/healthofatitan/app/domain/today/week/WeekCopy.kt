@@ -159,20 +159,30 @@ object WeekCopy {
 
     fun beforeAfter(before: Int, after: Int): String = "дни в опоре: было $before → стало $after"
 
-    // «Титан недели» (A52 §2.7, D-045).
-    const val TITAN = "Титан недели"
-    const val TITAN_FORMING = "Проявляется по мере недели"
-    const val TITAN_READY = "Твой Титан недели готов"
+    // «Скульптура недели» (A53 §3.1, D-050) — the hero; MVP: the Week Seal, then a static frame, then the reveal.
+    const val TITAN = "Скульптура недели"
+    const val TITAN_FORMING = "Высекается день за днём"
+    const val TITAN_READY = "Твоя неделя высечена"
     const val TITAN_REVEAL = "Раскрыть"
-    const val TITAN_YEAR = "Лента года"
+    const val TITAN_YEAR = "Фриз года"
     const val TITAN_SHARE = "Поделиться"
-    const val SHARE_TITLE = "Титан недели"
+    const val SEAL = "Печать недели"
+    const val SEAL_REVERSE = "опоры недели"
+    const val SHARE_TITLE = "Печать недели"
     const val SHARE_SLOGAN = "Держи своё небо"
-    const val PUSH_TITLE = "Твой Титан недели готов"
-    const val PUSH_TEXT = "Итог и сборка — четыре минуты, когда удобно."
+    const val PUSH_TITLE = "Твоя неделя высечена"
+    const val PUSH_TEXT = "Итог и сборка — пять минут, когда удобно."
     const val PUSH_CHANNEL = "Неделя"
-    const val PUSH_CHANNEL_DESCRIPTION = "Одно сообщение в воскресенье — Титан недели"
+    const val PUSH_CHANNEL_DESCRIPTION = "Одно сообщение в воскресенье — Скульптура недели"
     const val PUSH_PUBLIC = "HoT"
+    const val NEW_PAGE = "Новая страница — свежая глыба на Неделе"
+    const val TEXTURE_POLISHED = "полированный камень"
+    const val TEXTURE_MATTE = "матовый камень"
+
+    /** «Что значит эта поза» — under the figure on the first two Sundays (A53 §3.1). */
+    fun poseMeaning(pose: String): String = "Поза недели: $pose. Её выбирают дни в опоре; сколько высечено, зависит только от дня недели."
+
+    fun carvedSpoken(days: Int): String = "высечено $days из 7"
 
     // Poses (placeholder words until Agents 4 and 17).
     const val POSE_REST = "отдыхает у колонны"
@@ -188,7 +198,7 @@ object WeekCopy {
     const val DETAIL_FOCUS = "рекорд фокуса"
     const val DETAIL_MOVE = "неделя в движении"
 
-    // «Фитнес-возраст» (A52 §2.8, D-045): behind a flag until Agents 3 and 10.
+    // «Фитнес-возраст» (A53 §3.3, D-050): milestones every 4 weeks, by choice, behind a flag until Agents 3 and 10.
     const val FIT_TITLE = "Фитнес-возраст"
     // A52 §2.8 asks for «оценка, не диагноз»; the A39 dictionary bans «диагноз» — Agent 3 decides.
     const val FIT_NOTE = "оценка кардиофитнеса по модели HUNT, не медицинский вывод"
@@ -201,8 +211,53 @@ object WeekCopy {
     const val FIT_MALE = "мужской"
     const val FIT_FEMALE = "женский"
     const val FIT_WAIST_DUE = "Пора обновить обхват талии — раз в 4 недели."
+    const val FIT_OPT_IN = "Показывать фитнес-возраст на вехах"
+    const val FIT_OPT_OUT = "Скрыть"
+    const val FIT_WHAT = "Что это и чего не значит"
+    const val FIT_WHAT_TEXT = "Оценка выносливости сердца и лёгких по модели HUNT: пульс покоя, тренировки, талия, возраст и пол. " +
+        "Это ориентир для темпа, не оценка здоровья и не повод для тревоги. Обновляется раз в 4 недели, на вехе."
+    const val FIT_FIRST_AFTER = "Первая веха — после 4 недель данных."
+    const val FIT_LEVER_RHR = "пульс покоя"
+    const val FIT_LEVER_ACTIVITY = "тренировки"
+    const val FIT_LEVER_WAIST = "талия"
 
     fun fitPace(text: String): String = "за 4 недели $text"
+
+    fun fitRange(age: Int): String = "${age - 2}–${age + 2}"
+
+    fun fitLever(lever: String): String = "помогли: $lever"
+
+    fun fitMilestone(n: Int): String = "веха $n"
+
+    // «Эксперимент недели» (A53 §3.2, D-050).
+    const val EXP_TITLE = "Эксперимент недели"
+    const val EXP_LEARNED = "Узнали"
+    const val EXP_TOO_FEW = "Данных мало — повторим?"
+    const val EXP_NO_LINK = "Похоже, заметной связи нет — и это тоже знание о себе."
+    const val EXP_LINK = "связь, не причина"
+    const val EXP_TAKE = "Беру"
+    const val EXP_CHANGE = "Другой"
+    const val EXP_SKIP = "Не сейчас"
+    const val EXP_REPEAT = "Повторить"
+    const val EXP_DID_TODAY = "Сегодня сделал"
+    const val EXP_NONE = "Эксперимента на этой неделе нет — неделя для восстановления."
+    const val EXP_OFFER = "Проверим на себе одну вещь?"
+    const val EXP_RESULT = "Итог эксперимента"
+    const val EXP_M_SLEEP = "сон"
+    const val EXP_M_CHARGE = "Заряд"
+    const val EXP_M_PULSE = "пульс покоя"
+    const val EXP_U_MIN = "мин"
+    const val EXP_U_POINTS = "п."
+    const val EXP_U_BPM = "уд/мин"
+
+    fun expHypothesis(action: String, metric: ExperimentMetric): String =
+        "$action → ${metric.words} ${if (metric.higherIsBetter) "лучше" else "спокойнее"}?"
+
+    fun expBridge(done: Int, goal: Int): String = "Эксперимент · $done из $goal ›"
+
+    fun expYes(shift: String, days: Int, of: Int): String = "Похоже, да: $shift, $days дн. из $of."
+
+    fun expOpposite(metric: ExperimentMetric): String = "Похоже, у тебя это работает иначе: ${metric.words} не лучше. Полезно знать."
 
     /** Every user-facing string above, for the stop-dictionary test. */
     fun all(): List<String> = listOf(
@@ -225,8 +280,12 @@ object WeekCopy {
         PUSH_CHANNEL, PUSH_CHANNEL_DESCRIPTION, PUSH_PUBLIC, POSE_REST, POSE_STAND, POSE_HOLD, POSE_RISE, SKY_CLEAR, SKY_HAZE,
         SKY_DUSK, DETAIL_PRIDE, DETAIL_GOALS, DETAIL_SLEEP, DETAIL_FOCUS, DETAIL_MOVE,
         FIT_TITLE, FIT_NOTE, FIT_DRIVERS, FIT_ROOM, FIT_NEED_INPUT, FIT_WAIST, FIT_AGE, FIT_SEX, FIT_MALE, FIT_FEMALE,
-        FIT_WAIST_DUE, fitPace("−0,6 года"),
-    ) + PatternTexts.all() + RitualRules.SKEW_TITLES.values
+        FIT_WAIST_DUE, fitPace("−0,6 года"), SEAL, SEAL_REVERSE, NEW_PAGE, TEXTURE_POLISHED, TEXTURE_MATTE, poseMeaning(POSE_HOLD),
+        carvedSpoken(4), FIT_OPT_IN, FIT_OPT_OUT, FIT_WHAT, FIT_WHAT_TEXT, FIT_FIRST_AFTER, FIT_LEVER_RHR, FIT_LEVER_ACTIVITY,
+        FIT_LEVER_WAIST, fitRange(41), fitLever(FIT_LEVER_RHR), fitMilestone(2),
+        EXP_TITLE, EXP_LEARNED, EXP_TOO_FEW, EXP_NO_LINK, EXP_LINK, EXP_TAKE, EXP_CHANGE, EXP_SKIP, EXP_REPEAT, EXP_DID_TODAY, EXP_NONE,
+        EXP_OFFER, EXP_RESULT, expBridge(3, 5), expYes("+18 мин", 5, 6),
+    ) + ExperimentMetric.entries.flatMap { listOf(expHypothesis("Экран убран в 22:30", it), expOpposite(it)) } + PatternTexts.all() + RitualRules.SKEW_TITLES.values
 }
 
 /**

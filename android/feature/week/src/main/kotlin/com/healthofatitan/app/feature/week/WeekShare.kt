@@ -70,6 +70,19 @@ object WeekShare {
             d.setBounds(left, (base - side).toInt(), left + side, base.toInt())
             d.draw(c)
         }
+        // «Печать недели» (A53, D-050): the medallion rim with its seven notches, all carved
+        paint.style = Paint.Style.STROKE
+        paint.color = android.graphics.Color.rgb(0xB9, 0xB2, 0xA3)
+        paint.alpha = 220
+        paint.strokeWidth = 10f
+        val r = SIZE * 0.38f
+        c.drawCircle(SIZE / 2f, SIZE * 0.55f, r, paint)
+        paint.color = accent
+        paint.strokeWidth = 8f
+        paint.strokeCap = Paint.Cap.ROUND
+        val oval = RectF(SIZE / 2f - r, SIZE * 0.55f - r, SIZE / 2f + r, SIZE * 0.55f + r)
+        repeat(7) { i -> c.drawArc(oval, -90f + i * 360f / 7f - 15f, 30f, false, paint) }
+        paint.style = Paint.Style.FILL
         paint.alpha = 255
         paint.color = android.graphics.Color.WHITE
         paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)

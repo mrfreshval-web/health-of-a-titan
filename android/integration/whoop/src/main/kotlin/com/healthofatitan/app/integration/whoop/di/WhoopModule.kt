@@ -30,6 +30,7 @@ import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.NextAlarmSource
 import com.healthofatitan.app.integration.whoop.day.SystemZoneClock
 import com.healthofatitan.app.core.database.dao.WeekDao
+import com.healthofatitan.app.integration.whoop.week.WeekPathBridge
 import com.healthofatitan.app.integration.whoop.week.WeekRepository
 import com.healthofatitan.app.integration.whoop.week.WeekSignals
 import kotlinx.coroutines.flow.first
@@ -180,10 +181,12 @@ object WhoopModule {
         signals: WeekSignals,
         store: WhoopCredentialStore,
         dawn: DawnRepository,
+        path: java.util.Optional<WeekPathBridge>,
     ): WeekRepository = WeekRepository(
         weekDao, todayDao, dayDao, metricDao, checkinDao, plans, syncer.glance, signals, SystemZoneClock,
         whoopConnected = store.credentials.map { it != null },
         haiku = { day -> runCatching { dawn.shownHaiku(day).first() }.getOrNull() },
+        path = path.orElse(WeekPathBridge.None),
     )
 
     /** Tasks of the day come from the week (A52 §2.2): the real source replaces the legacy one. */
@@ -194,4 +197,12 @@ object WhoopModule {
     @Provides
     @Singleton
     fun provideTodayMorning(checkin: CheckinDao, dawn: DawnRepository): TodayMorning = TodayMorning(CheckinMorningSelf(checkin), dawn)
+}
+
+/** «Путь» (claude/path-v1) may bind a [WeekPathBridge]; until then the week runs without it (A57 §4.3). */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class WeekPathBridgeModule {
+    @dagger.BindsOptionalOf
+    abstract fun pathBridge(): WeekPathBridge
 }

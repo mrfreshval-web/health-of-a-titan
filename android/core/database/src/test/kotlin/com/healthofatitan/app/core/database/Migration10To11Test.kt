@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
 import com.healthofatitan.app.core.database.entity.WeekFrameEntity
 import com.healthofatitan.app.core.database.entity.WeekGoalEntity
 import com.healthofatitan.app.core.database.entity.WeekPlanEntity
@@ -121,6 +122,15 @@ class Migration10To11Test {
             dao.upsertInput(BodyInputEntity("local", BodyInputEntity.KIND_WAIST, "2026-11-09", 87.0, null, 8L))
             assertEquals(87.0, dao.latestInput("local", BodyInputEntity.KIND_WAIST)?.value)
             assertEquals(2, dao.observeInputs("local").first().size)
+            dao.upsertFrame(
+                WeekFrameEntity("local", "2026-11-30", "RISE", "ROVNO", 0.9f, "0.8,0.6,0.7,0.5,0.9", "CLEAR", null, 5, 43L, null, 41.0, 9L, 1, 44.2, 12.5, 87.0),
+            )
+            assertEquals(listOf(1), dao.lastMilestones("local").map { it.fitnessMilestone })
+            dao.upsertExperiment(
+                WeekExperimentEntity("local", "2026-11-16", "exp-screens_sleep", "Экран убран → сон лучше?", "Экран убран", "SLEEP", "PATTERN", false, "TAKEN", decidedAt = 10L),
+            )
+            dao.upsertExperiment(dao.experiment("local", "2026-11-16")!!.copy(outcome = "YES", resultText = "Похоже, да", points = 5))
+            assertEquals("YES", dao.experiment("local", "2026-11-16")?.outcome)
             dao.deleteGoal("local", "2026-11-09", "body-training")
             assertEquals(0, dao.goals("local", "2026-11-09").size)
         } finally {

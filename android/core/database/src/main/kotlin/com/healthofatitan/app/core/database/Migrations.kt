@@ -215,7 +215,7 @@ object Migrations {
     /**
      * «Неделя» (A52, D-044, D-045): the plan of a week and its goals, the score of each day counted
      * at 04:00 the next day, the frames of the Titan of the week and what the person enters for the
-     * fitness age. New tables only; nothing existing changes; no WHOOP values. If «Путь» takes 11
+     * fitness age; «Эксперимент недели» (A53 §3.2, D-050). New tables only; nothing existing changes; no WHOOP values. If «Путь» takes 11
      * too, whichever merges second renumbers.
      */
     val MIGRATION_10_11 = object : Migration(10, 11) {
@@ -239,7 +239,14 @@ object Migrations {
                 "CREATE TABLE IF NOT EXISTS `week_frame` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, `pose` TEXT NOT NULL, " +
                     "`mode` TEXT NOT NULL, `light_level` REAL NOT NULL, `columns` TEXT NOT NULL, `sky` TEXT NOT NULL, `detail` TEXT, " +
                     "`days_in_support` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `revealed_at` INTEGER, `fitness_age` REAL, " +
-                    "`computed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`))",
+                    "`computed_at` INTEGER NOT NULL, `fitness_milestone` INTEGER, `fitness_vo2` REAL, `fitness_pa` REAL, " +
+                    "`fitness_waist` REAL, PRIMARY KEY(`user_id`, `week_start`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `week_experiment` (`user_id` TEXT NOT NULL, `week_start` TEXT NOT NULL, " +
+                    "`experiment_id` TEXT NOT NULL, `hypothesis` TEXT NOT NULL, `action` TEXT NOT NULL, `metric` TEXT NOT NULL, " +
+                    "`source` TEXT NOT NULL, `food` INTEGER NOT NULL, `status` TEXT NOT NULL, `outcome` TEXT, `result_text` TEXT, " +
+                    "`points` INTEGER, `decided_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `week_start`))",
             )
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `body_input` (`user_id` TEXT NOT NULL, `kind` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +

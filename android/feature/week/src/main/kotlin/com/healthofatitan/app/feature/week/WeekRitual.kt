@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -68,6 +69,8 @@ fun WeekRitualScreen(
     var carryToGoal by remember { mutableStateOf(false) }
     var skew by remember { mutableStateOf(SkewChoice.AS_IS) }
     val targets = remember { mutableStateMapOf<String, Int>() }
+    // A53 §3.2: HoT proposes the first; the person takes it, picks another, or puts it aside
+    var experiment by remember { mutableStateOf(ritual.experimentOffers.firstOrNull()) }
     val step = steps[index]
     val look = week.view.titan
     Column(
@@ -88,10 +91,23 @@ fun WeekRitualScreen(
                 // the reveal of the hero moment (Agent 17 owns the final one): the last light comes on
                 val reveal = remember { Animatable(look.reveal) }
                 LaunchedEffect(Unit) { reveal.animateTo(1f, tween(1_500)) }
-                WeekTitanFigure(look, Modifier.fillMaxWidth().aspectRatio(1.1f), revealOverride = reveal.value)
+                // the last blow: the stone goes as mist, light lies on the figure (hero 1500 ms)
+                Box(Modifier.fillMaxWidth().aspectRatio(1.1f)) {
+                    WeekTitanFigure(look, Modifier.fillMaxSize(), revealOverride = reveal.value)
+                    StoneBlock(look, reveal.value, Modifier.padding(horizontal = 56.dp, vertical = 10.dp))
+                }
+                week.poseCaption?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(look.spoken, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${WeekCopy.DAYS_IN_SUPPORT} · ${WeekCopy.ofTotal(week.view.daysInSupport, 7)}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 ritual.beforeAfter?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            RitualStep.EXPERIMENT -> {
+                Title(WeekCopy.EXP_RESULT)
+                ritual.experimentResult?.let { r ->
+                    HotOverline(r.headline)
+                    Text(r.text, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface)
+                    HotOverline(WeekCopy.EXP_LINK)
+                }
             }
             RitualStep.WORKED -> {
                 Title(WeekCopy.R_WORKED)
@@ -118,6 +134,24 @@ fun WeekRitualScreen(
                 }
             }
             RitualStep.NEXT -> {
+                if (ritual.experimentOffers.isNotEmpty()) {
+                    Title(WeekCopy.EXP_TITLE)
+                    Text(WeekCopy.EXP_OFFER, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HotCard(modifier = Modifier.fillMaxWidth().testTag("week_next_experiment")) {
+                        Text(experiment?.hypothesis ?: WeekCopy.EXP_SKIP, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        HotOverline(WeekCopy.EXP_LINK)
+                        Row {
+                            HotTextButton((if (experiment != null) "● " else "○ ") + WeekCopy.EXP_TAKE, onClick = { experiment = experiment ?: ritual.experimentOffers.first() })
+                            if (ritual.experimentOffers.size > 1) {
+                                HotTextButton(WeekCopy.EXP_CHANGE, onClick = {
+                                    val offers = ritual.experimentOffers
+                                    experiment = offers[(offers.indexOf(experiment) + 1).mod(offers.size)]
+                                })
+                            }
+                            HotTextButton((if (experiment == null) "● " else "○ ") + WeekCopy.EXP_SKIP, onClick = { experiment = null })
+                        }
+                    }
+                }
                 Title(WeekCopy.R_NEXT)
                 ritual.proposal.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 (ritual.proposal.plan.goals + tried).filter { (targets[it.id] ?: it.target) != 0 }.forEach { g ->
@@ -153,6 +187,7 @@ fun WeekRitualScreen(
                             carryToGoal = carryToGoal,
                             skew = skew,
                             targets = targets.toMap(),
+                            experiment = experiment,
                         ),
                     )
                 },

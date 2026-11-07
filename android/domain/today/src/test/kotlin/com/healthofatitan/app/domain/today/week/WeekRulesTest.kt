@@ -291,9 +291,14 @@ class WeekRulesTest {
         assertEquals(1f, look(sunday, strong, ritualDone = true).reveal)
         // deterministic
         assertEquals(a, look(sunday, strong))
-        // Monday–Saturday: by the data, never more than the days passed
-        assertEquals(2f / 7f, look(monday.plusDays(2), listOf(fact(0), fact(1))).reveal)
-        assertEquals(0f, look(monday, emptyList()).reveal)
+        // A53 §3.1: carved by the day of the week only — Thursday is 4/7 with any data, or none
+        assertEquals(3f / 7f, look(monday.plusDays(2), listOf(fact(0), fact(1))).reveal)
+        assertEquals(1f / 7f, look(monday, emptyList()).reveal)
+        val thursday = monday.plusDays(3)
+        assertEquals(4f / 7f, look(thursday, emptyList()).reveal)
+        assertEquals(4f / 7f, look(thursday, (0..3).map { fact(it, fills = null, tasks = 0) }).reveal)
+        assertEquals(4f / 7f, look(thursday, (0..3).map { fact(it) }).reveal)
+        assertEquals(6f / 7f, look(monday.plusDays(5), emptyList()).reveal)
         // a week of recovery is another figure, lit no darker than a third
         val gentle = look(sunday, (0..6).map { fact(it, fills = half, tasks = 0, mode = DayMode.BEREZHNO) })
         assertEquals(WeekPose.REST, gentle.pose)
@@ -357,8 +362,11 @@ class WeekRulesTest {
         assertNull(FitnessAge.estimate(fit.copy(waistCm = null)))
 
         assertNull(FitnessAge.view(FitnessGate(), fit, null, 3), "the flag is off by default")
-        val on = FitnessGate(flagOn = true)
-        listOf(on.copy(sick = true), on.copy(pregnancy = true), on.copy(betaBlockers = true), on.copy(edCare = true), on.copy(stormNet = true))
+        val on = FitnessGate(flagOn = true, optedIn = true, weeksOfData = 4)
+        listOf(
+            on.copy(sick = true), on.copy(pregnancy = true), on.copy(betaBlockers = true), on.copy(edCare = true), on.copy(stormNet = true),
+            on.copy(healthAnxiety = true), on.copy(optedIn = false), on.copy(weeksOfData = 3),
+        )
             .forEach { assertNull(FitnessAge.view(it, fit, null, 3), "$it") }
         val now = FitnessAge.estimate(fit)!!
         val v = FitnessAge.view(on, fit, now + 0.6, 3)!!
@@ -411,5 +419,102 @@ class WeekRulesTest {
         val ritual = RitualRules.view(v, WeekGoalRules.propose(monday.plusDays(7), plan, LastWeek(0.6, 0, true), WeekKind.NORMAL))
         assertEquals(RitualStep.FRAME, ritual.steps.first())
         assertEquals(RitualStep.FORWARD, ritual.steps.last())
+    }
+
+    // ── D-050: Sculpture, Experiment, fitness at milestones ──────────────────────────────────────
+
+    @Test
+    fun `fitness age moves only at milestones every 4 weeks, by choice, with a range and a lever`() {
+        assertNull(FitnessMilestones.number(null, monday))
+        assertNull(FitnessMilestones.number(monday, monday.plusWeeks(2)))
+        assertEquals(1, FitnessMilestones.number(monday, monday.plusWeeks(3)))
+        assertNull(FitnessMilestones.number(monday, monday.plusWeeks(4)))
+        assertEquals(2, FitnessMilestones.number(monday, monday.plusWeeks(7)))
+        val before = MilestoneInputs(vo2 = 40.0, pa = 5.0, waistCm = 90.0)
+        assertEquals(WeekCopy.fitLever(WeekCopy.FIT_LEVER_ACTIVITY), FitnessMilestones.lever(Sex.MALE, before, MilestoneInputs(41.2, 10.0, 90.0)))
+        assertEquals(WeekCopy.fitLever(WeekCopy.FIT_LEVER_RHR), FitnessMilestones.lever(Sex.MALE, before, MilestoneInputs(41.0, 5.0, 90.0)))
+        assertNull(FitnessMilestones.lever(Sex.MALE, before, MilestoneInputs(39.5, 5.0, 91.0)))
+        val gate = FitnessGate(flagOn = true, optedIn = true, weeksOfData = 8)
+        val fit = FitnessInput(40, Sex.MALE, 84.0, 52.0, null)
+        val v = FitnessAge.view(gate, fit, 38.6, 3, atMilestone = 38.0, milestone = 2, lever = WeekCopy.fitLever(WeekCopy.FIT_LEVER_RHR))!!
+        assertEquals(38, v.age)
+        assertEquals("36–40", v.range)
+        assertEquals("веха 2", v.milestone)
+        assertEquals("за 4 недели −0,6 года", v.pace)
+        // the offer of the opt-in: flag on, nothing closes it, not chosen yet
+        val week = WeekBuilder.build(input(friday.atTime(10, 0), emptyList()).copy(fitnessGate = FitnessGate(flagOn = true)))
+        assertTrue(week.fitnessOffer)
+        assertFalse(WeekBuilder.build(input(friday.atTime(10, 0), emptyList())).fitnessOffer, "flag off by default")
+    }
+
+    private val sleepSeed = ExperimentSeed("exp-screens_sleep", "Экран убран в 22:30 → сон лучше?", "Экран убран в 22:30", ExperimentMetric.SLEEP)
+
+    @Test
+    fun `the experiment of the week comes from the patterns or the lever of the Path, one at a time, never in a gentle week`() {
+        val pats = listOf(
+            Pattern("SCREENS_SLEEP", "В дни без экранов сон длиннее", 8, 0.5, action = "Экран убран в 22:30"),
+            Pattern("SWEETS_SLEEP", "x", 9, 0.7, action = "Без сладкого вечером"),
+            Pattern("STACK_HEAD", "y", 9, 0.9, action = "Утро из двух практик"),
+        )
+        val offers = ExperimentRules.offers(pats, null, ExperimentGate())
+        assertEquals(listOf("exp-sweets_sleep", "exp-screens_sleep"), offers.map { it.id }, "only measurable seeds, strongest first")
+        assertEquals(listOf("exp-screens_sleep"), ExperimentRules.offers(pats, null, ExperimentGate(edCare = true)).map { it.id }, "no food with ed_care")
+        val lever = ExperimentSeed("path-lever", "Свет утром → Заряд лучше?", "Свет утром", ExperimentMetric.CHARGE, ExperimentSource.PATH)
+        assertEquals("path-lever", ExperimentRules.offers(pats, lever, ExperimentGate()).first().id, "the Path lever wins (A57 §4.3)")
+        assertTrue(ExperimentRules.offers(pats, lever, ExperimentGate(gentleWeek = true)).isEmpty())
+        assertTrue(ExperimentRules.offers(pats, lever, ExperimentGate(stormNet = true)).isEmpty())
+
+        val did = setOf(monday, monday.plusDays(1), monday.plusDays(3))
+        val scale = ExperimentRules.scale(monday, monday.plusDays(4), did)
+        assertEquals(3, scale.done)
+        assertEquals("Эксперимент · 3 из 5 ›", scale.bridge)
+        assertEquals(listOf(true, true, false, true, null, null), scale.days)
+
+        val exp = Experiment(monday, sleepSeed, ExperimentStatus.TAKEN)
+        val v = WeekBuilder.build(input(friday.atTime(10, 0), (0..3).map { fact(it) }).copy(experiment = exp, experimentDays = did + friday))
+        assertNotNull(v.experiment)
+        assertTrue(v.experiment!!.doneToday)
+        val gentle = WeekBuilder.build(input(friday.atTime(10, 0), (0..4).map { fact(it, mode = DayMode.BEREZHNO) }).copy(experiment = exp))
+        assertNull(gentle.experiment)
+        assertEquals(WeekCopy.EXP_NONE, gentle.experimentNote)
+    }
+
+    @Test
+    fun `every outcome of the experiment is something learned`() {
+        fun pts(did: List<Double?>, without: List<Double?>) =
+            did.mapIndexed { i, v -> ExperimentPoint(monday.plusDays(i.toLong()), true, v) } +
+                without.mapIndexed { i, v -> ExperimentPoint(monday.minusDays(i + 1L), false, v) }
+        val yes = ExperimentRules.result(sleepSeed, pts(listOf(440.0, 450.0, 430.0, 445.0, 460.0, 400.0), listOf(420.0, 425.0, 415.0)))
+        assertEquals(ExperimentOutcome.YES, yes.outcome)
+        assertEquals("Похоже, да: +18 мин, 5 дн. из 6.", yes.text)
+        val few = ExperimentRules.result(sleepSeed, pts(listOf(440.0, 450.0, null, null), listOf(420.0, 425.0)))
+        assertEquals(ExperimentOutcome.TOO_FEW, few.outcome)
+        assertEquals(WeekCopy.EXP_TOO_FEW, few.text)
+        val flat = ExperimentRules.result(sleepSeed, pts(listOf(420.0, 421.0, 419.0, 422.0, 420.0), listOf(420.0, 421.0)))
+        assertEquals(ExperimentOutcome.NO_LINK, flat.outcome)
+        val opposite = ExperimentRules.result(sleepSeed, pts(listOf(380.0, 390.0, 385.0, 380.0, 390.0), listOf(420.0, 421.0)))
+        assertEquals(ExperimentOutcome.OPPOSITE, opposite.outcome)
+        listOf(yes, few, flat, opposite).forEach {
+            assertEquals(WeekCopy.EXP_LEARNED, it.headline)
+            assertTrue(WeekStopWords.hits(it.text).isEmpty(), it.text)
+            assertFalse(it.text.contains("не получилось"))
+        }
+        // the ritual shows the answer as its own step after the Sculpture
+        val v = WeekBuilder.build(input(sunday.atTime(19, 0), (0..6).map { fact(it) }))
+        val r = RitualRules.view(v, WeekGoalRules.propose(monday.plusDays(7), null, null, WeekKind.NORMAL), yes, listOf(sleepSeed))
+        assertEquals(listOf(RitualStep.FRAME, RitualStep.EXPERIMENT), r.steps.take(2))
+    }
+
+    @Test
+    fun `the Sculpture of the week has a texture from sleep and a pose caption on the first two Sundays`() {
+        assertEquals(WeekTexture.POLISHED, TitanOfWeek.texture(0.5, 80.0))
+        assertEquals(WeekTexture.MATTE, TitanOfWeek.texture(3.0, 80.0))
+        assertEquals(WeekTexture.MATTE, TitanOfWeek.texture(null, null))
+        val open = look(sunday, (0..6).map { fact(it) }, ritualDone = true)
+        assertNotNull(TitanOfWeek.poseCaption(open, 0))
+        assertNotNull(TitanOfWeek.poseCaption(open, 1))
+        assertNull(TitanOfWeek.poseCaption(open, 2))
+        assertNull(TitanOfWeek.poseCaption(look(sunday, (0..6).map { fact(it) }), 0), "not before the reveal")
+        assertEquals(WeekCopy.TITAN_READY, WeekCopy.PUSH_TITLE)
     }
 }

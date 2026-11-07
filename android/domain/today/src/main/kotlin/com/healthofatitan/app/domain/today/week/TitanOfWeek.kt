@@ -6,7 +6,7 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 
 /**
- * «Титан недели» (A52 §2.7, D-045): the look of the Titan is assembled from the data of the week by
+ * «Скульптура недели» (A53 §3.1, D-050; was «Титан недели», A52 §2.7, D-045): the look of the figure is assembled from the data of the week by
  * deterministic rules (Agent 18) — no AI images. The pictures are a placeholder from TitanLottie
  * (poses and light) until the visual pack of Agents 4 and 17.
  *
@@ -28,6 +28,9 @@ enum class WeekPose(val words: String) {
 
 /** The sky of the week: sleep (debt and regularity). Never a storm (no shame). */
 enum class WeekSky(val words: String) { CLEAR(WeekCopy.SKY_CLEAR), HAZE(WeekCopy.SKY_HAZE), DUSK(WeekCopy.SKY_DUSK) }
+
+/** The stone of the Sculpture (A53 §3.1): sleep decides the finish. */
+enum class WeekTexture(val words: String) { POLISHED(WeekCopy.TEXTURE_POLISHED), MATTE(WeekCopy.TEXTURE_MATTE) }
 
 /** «Деталь недели» — the main win (A52 §2.7); the person's pride wins over data (A53 §3.1). */
 enum class WeekDetail(val words: String) {
@@ -74,9 +77,10 @@ data class TitanWeekLook(
     val revealed: Boolean,
     val daysInSupport: Int,
     val seed: Long,
+    val texture: WeekTexture = WeekTexture.MATTE,
 ) {
     /** The look in words, for TalkBack and the share card (no numbers of health). */
-    val spoken: String get() = listOfNotNull(WeekCopy.TITAN, pose.words, sky.words, detail?.words).joinToString(", ")
+    val spoken: String get() = listOfNotNull(WeekCopy.TITAN, pose.words, texture.words, sky.words, detail?.words).joinToString(", ")
 }
 
 object TitanOfWeek {
@@ -111,17 +115,32 @@ object TitanOfWeek {
     }
 
     /**
-     * Monday–Saturday the figure comes out by the data (an outline, then light): the share of days
-     * so far that have data, never more than the days that have passed. On Sunday it is held at
-     * 6/7 until the ritual reveals it. A day without data takes nothing away.
+     * «Скульптура недели» (A53 §3.1, D-050): how much is carved depends **only on the day of the
+     * week**, never on how the week goes — on Thursday it is 4/7 always (the rule against shame).
+     * Monday 1/7 … Saturday 6/7; Sunday holds 6/7 until the last blow of the ritual. The data decide
+     * only *what* comes out: the pose, the columns, the texture and the light.
      */
-    fun reveal(i: TitanWeekInput): Float {
-        if (i.ritualDone) return 1f
-        val sunday = i.today.dayOfWeek == DayOfWeek.SUNDAY
-        val withData = i.columns.count { !it.future && !it.noData }
-        val cap = if (sunday) 6 else i.columns.count { !it.future }
-        return (minOf(withData, cap).toFloat() / WeekScoring.DAYS).coerceIn(0f, 6f / 7f)
+    fun carved(today: LocalDate, weekStart: LocalDate, ritualDone: Boolean): Float {
+        if (ritualDone) return 1f
+        val day = java.time.temporal.ChronoUnit.DAYS.between(weekStart, today).toInt()
+        return when {
+            day < 0 -> 0f
+            day >= 6 -> 6f / 7f
+            else -> (day + 1) / 7f
+        }
     }
+
+    fun reveal(i: TitanWeekInput): Float = carved(i.today, i.weekStart, i.ritualDone)
+
+    /** Sleep makes the stone: polished after a week without debt and with a steady rhythm, matte otherwise (never cracked). */
+    fun texture(debt: Double?, regularity: Double?): WeekTexture =
+        if (debt != null && debt <= DEBT_CLEAR_H && (regularity ?: 0.0) >= REGULARITY_CLEAR) WeekTexture.POLISHED else WeekTexture.MATTE
+
+    /** The first two Sundays carry the caption «что значит эта поза» (A53 §3.1). */
+    const val POSE_CAPTION_WEEKS = 2
+
+    fun poseCaption(look: TitanWeekLook, framesBefore: Int): String? =
+        if (framesBefore < POSE_CAPTION_WEEKS && look.revealed) WeekCopy.poseMeaning(look.pose.words) else null
 
     fun look(i: TitanWeekInput): TitanWeekLook {
         val days = WeekScoring.daysInSupport(i.columns)
@@ -142,6 +161,7 @@ object TitanOfWeek {
             revealed = i.ritualDone,
             daysInSupport = days,
             seed = seed(i.weekStart, pose, sky, detail, columns),
+            texture = texture(i.sleepDebtHours, i.regularityPct),
         )
     }
 
@@ -176,7 +196,7 @@ data class ShareCard(val title: String, val slogan: String, val spoken: String, 
     }
 }
 
-/** A52 §2.7: one push a week, on Sunday — «Твой Титан недели готов» — the only push of the module. */
+/** A52 §2.7, A53 §3.4: one push a week, on Sunday — «Твоя неделя высечена» — the only push of the module. */
 object WeekPush {
     const val FROM_HOUR = 18
     const val UNTIL_HOUR = 21

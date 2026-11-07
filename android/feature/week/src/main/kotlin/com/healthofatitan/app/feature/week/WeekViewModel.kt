@@ -48,6 +48,10 @@ class WeekViewModel @Inject constructor(private val repo: WeekRepository) : View
         if (tried.value.none { it.id == goal.id }) tried.value = tried.value + goal
     }
 
+    fun markExperiment(did: Boolean) = launch { repo.markExperiment(java.time.LocalDate.now(), did) }
+
+    fun setFitnessOptIn(on: Boolean) = launch { repo.setFitnessOptIn(on) }
+
     fun saveInputs(age: Int?, sex: Sex?, waist: Double?) = launch { repo.saveBodyInputs(age, sex, waist) }
 
     fun finishRitual(answers: RitualAnswers) {

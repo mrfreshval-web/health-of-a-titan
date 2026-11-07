@@ -33,6 +33,14 @@ data class WeekInput(
     val fitnessGate: FitnessGate = FitnessGate(),
     val fitness: FitnessInput? = null,
     val fitnessFourWeeksAgo: Double? = null,
+    /** The estimate of the last milestone (A53 §3.3): the number moves only every 4 weeks. */
+    val fitnessAtMilestone: Double? = null,
+    val fitnessMilestone: Int? = null,
+    val fitnessLever: String? = null,
+    /** «Эксперимент недели» running this week (A53 §3.2) and the days its action was done. */
+    val experiment: Experiment? = null,
+    val experimentDays: Set<LocalDate> = emptySet(),
+    val edCare: Boolean = false,
     val waistAgeDays: Int? = null,
     val ritual: RitualState = RitualState(),
     /** «Дни в опоре» of the previous week, for «было → стало». */
@@ -68,7 +76,16 @@ data class WeekView(
     val fitness: FitnessView?,
     val weekInSupport: Boolean,
     val returnedToday: Int,
+    /** The experiment of the week with its scale, or null. */
+    val experiment: ExperimentWeek? = null,
+    /** «Эксперимента на этой неделе нет — неделя для восстановления» (Бережно, StormNet). */
+    val experimentNote: String? = null,
+    /** The opt-in card for the fitness age may be offered (flag on, nothing closes it, not chosen yet). */
+    val fitnessOffer: Boolean = false,
 )
+
+/** The experiment as «Неделя» draws it. */
+data class ExperimentWeek(val seed: ExperimentSeed, val scale: ExperimentScale, val doneToday: Boolean)
 
 object WeekBuilder {
 
@@ -92,6 +109,7 @@ object WeekBuilder {
         }
         val patterns = PatternRules.select(i.patterns)
         val ritualOpen = WeekGoalRules.ritualFor(i.now) != null
+        val expGate = ExperimentGate(gentleWeek = gentle, stormNet = i.stormNetWithin7Days, edCare = i.edCare, crisis = i.crisis)
         val sunday = today.dayOfWeek == java.time.DayOfWeek.SUNDAY
         val titan = TitanOfWeek.look(
             TitanWeekInput(
@@ -126,9 +144,16 @@ object WeekBuilder {
             ritualCard = ritualOpen && ((sunday && i.ritual.doneAt == null) || (!sunday && i.ritual.pastWeekOpen)),
             ritualDone = sunday && i.ritual.doneAt != null,
             titan = titan,
-            fitness = i.fitness?.let { FitnessAge.view(i.fitnessGate, it, i.fitnessFourWeeksAgo, i.waistAgeDays) },
+            fitness = i.fitness?.let {
+                FitnessAge.view(i.fitnessGate, it, i.fitnessFourWeeksAgo, i.waistAgeDays, i.fitnessAtMilestone, i.fitnessMilestone, i.fitnessLever)
+            },
             weekInSupport = WeekScoring.weekInSupport(days, i.pathSteps),
             returnedToday = i.returnedToday,
+            experiment = i.experiment?.takeIf { it.status == ExperimentStatus.TAKEN && expGate.open && !(i.edCare && it.seed.food) }?.let {
+                ExperimentWeek(it.seed, ExperimentRules.scale(monday, today, i.experimentDays), today in i.experimentDays)
+            },
+            experimentNote = if (!expGate.open && i.experiment?.status == ExperimentStatus.TAKEN) WeekCopy.EXP_NONE else null,
+            fitnessOffer = i.fitnessGate.offerable && !i.fitnessGate.optedIn,
         )
     }
 }

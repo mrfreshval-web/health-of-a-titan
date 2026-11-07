@@ -8,7 +8,8 @@ import com.healthofatitan.app.domain.today.WeekGoal
 import com.healthofatitan.app.domain.today.WeekPlan
 
 /** The six steps of «Итог и сборка» (A52 §2.6), 3–5 minutes. */
-enum class RitualStep { FRAME, WORKED, WORK, SKEW, NEXT, FORWARD }
+/** A53 §3.4: the Sculpture, the answer of the experiment, work, one skew, the next week (a new experiment and goals), forward. */
+enum class RitualStep { FRAME, EXPERIMENT, WORKED, WORK, SKEW, NEXT, FORWARD }
 
 /** «Беру · Как есть · Полегче» on the one skew of the week (A52 §2.6 п. 4). */
 enum class SkewChoice { TAKE, AS_IS, EASIER }
@@ -20,6 +21,10 @@ data class RitualView(
     val worked: String,
     val skew: Skew?,
     val proposal: Proposal,
+    /** The answer of the experiment of the closing week («узнали»), or null when there was none. */
+    val experimentResult: ExperimentResult? = null,
+    /** At most 3 experiments for the next week; the first is the one HoT proposes. */
+    val experimentOffers: List<ExperimentSeed> = emptyList(),
 )
 
 /** What the person answered. */
@@ -32,6 +37,8 @@ data class RitualAnswers(
     val targets: Map<String, Int> = emptyMap(),
     /** Patterns taken as «Попробовать на неделе». */
     val tried: List<WeekGoal> = emptyList(),
+    /** The experiment of the next week; null — «не сейчас». */
+    val experiment: ExperimentSeed? = null,
 )
 
 object RitualRules {
@@ -47,18 +54,20 @@ object RitualRules {
         SupportWeekId.NUTRITION to "Белок к завтраку",
     )
 
-    fun view(week: WeekView, proposal: Proposal): RitualView {
+    fun view(week: WeekView, proposal: Proposal, result: ExperimentResult? = null, offers: List<ExperimentSeed> = emptyList()): RitualView {
         val skew = week.supports.firstNotNullOfOrNull { it.skew }
         val worked = week.patterns.firstOrNull()?.pattern?.text
             ?: week.titan.detail?.words?.replaceFirstChar { it.uppercase() }
             ?: WeekCopy.R_WORKED_NONE
-        val steps = RitualStep.entries.filter { it != RitualStep.SKEW || skew != null }
+        val steps = RitualStep.entries.filter { (it != RitualStep.SKEW || skew != null) && (it != RitualStep.EXPERIMENT || result != null) }
         return RitualView(
             steps = steps,
             beforeAfter = null,
             worked = worked,
             skew = skew,
             proposal = proposal,
+            experimentResult = result,
+            experimentOffers = offers,
         )
     }
 

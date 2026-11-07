@@ -6,6 +6,7 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
 import com.healthofatitan.app.core.database.entity.WeekFrameEntity
 import com.healthofatitan.app.core.database.entity.WeekGoalEntity
 import com.healthofatitan.app.core.database.entity.WeekPlanEntity
@@ -64,6 +65,15 @@ abstract class WeekDao {
 
     @Upsert
     abstract suspend fun upsertFrame(frame: WeekFrameEntity)
+
+    @Query("SELECT * FROM week_experiment WHERE user_id = :userId AND week_start = :weekStart")
+    abstract suspend fun experiment(userId: String, weekStart: String): WeekExperimentEntity?
+
+    @Upsert
+    abstract suspend fun upsertExperiment(row: WeekExperimentEntity)
+
+    @Query("SELECT * FROM week_frame WHERE user_id = :userId AND fitness_milestone IS NOT NULL ORDER BY week_start DESC LIMIT 2")
+    abstract suspend fun lastMilestones(userId: String): List<WeekFrameEntity>
 
     @Query("SELECT * FROM body_input WHERE user_id = :userId AND kind = :kind ORDER BY day_key DESC LIMIT 1")
     abstract suspend fun latestInput(userId: String, kind: String): BodyInputEntity?

@@ -9,7 +9,11 @@ import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.domain.today.DayMode
 import com.healthofatitan.app.domain.today.Scenario
 import com.healthofatitan.app.domain.today.TaskRules
+import com.healthofatitan.app.domain.today.week.ExperimentMetric
+import com.healthofatitan.app.domain.today.week.ExperimentOutcome
+import com.healthofatitan.app.domain.today.week.ExperimentSeed
 import com.healthofatitan.app.domain.today.week.PlanStatus
+import com.healthofatitan.app.domain.today.week.RitualStep
 import com.healthofatitan.app.domain.today.week.RitualAnswers
 import com.healthofatitan.app.domain.today.week.WeekCopy
 import com.healthofatitan.app.domain.today.week.WeekGoalRules
@@ -145,6 +149,51 @@ class WeekRepositoryTest {
         assertFalse(after.view.ritualCard)
         assertEquals(1f, after.view.titan.reveal)
         assertNotNull(db.weekDao().frame("local", monday.toString())!!.revealedAt)
+    }
+
+    @Test
+    fun `D-050 the ritual takes an experiment, the days fill its scale, Sunday answers and tells the Path`() = runTest {
+        repo.ensurePlan(monday)
+        clock.now = monday.plusDays(6).atTime(19, 0)
+        val ritual = assertNotNull(repo.load(clock.now, null).ritual)
+        val seed = ExperimentSeed("exp-screens_sleep", "Экран убран в 22:30 → сон лучше?", "Экран убран в 22:30", ExperimentMetric.SLEEP)
+        repo.finishRitual(ritual, ritual.skew, RitualAnswers(experiment = seed))
+        val event = repo.revealed.first()
+        assertEquals(monday, event.weekStart)
+        val next = monday.plusDays(7)
+        assertEquals("TAKEN", db.weekDao().experiment("local", next.toString())!!.status)
+
+        // the week runs: two days with the action
+        clock.now = next.atTime(21, 0)
+        repo.markExperiment(next, true)
+        clock.now = next.plusDays(1).atTime(21, 0)
+        repo.markExperiment(next.plusDays(1), true)
+        val tuesday = repo.load(clock.now, null).view
+        val e = assertNotNull(tuesday.experiment)
+        assertEquals(2, e.scale.done)
+        assertTrue(e.doneToday)
+        assertEquals("Эксперимент · 2 из 5 ›", repo.experimentBridge(next.plusDays(1)).first())
+
+        // next Sunday without WHOOP memory: too few points, and that is still «узнали»
+        clock.now = next.plusDays(6).atTime(19, 0)
+        val sunday = assertNotNull(repo.load(clock.now, null).ritual)
+        val result = assertNotNull(sunday.experimentResult)
+        assertEquals(ExperimentOutcome.TOO_FEW, result.outcome)
+        assertEquals(WeekCopy.EXP_LEARNED, result.headline)
+        assertEquals(RitualStep.EXPERIMENT, sunday.steps[1])
+        repo.finishRitual(sunday, sunday.skew, RitualAnswers())
+        assertEquals(ExperimentOutcome.TOO_FEW.name, db.weekDao().experiment("local", next.toString())!!.outcome)
+    }
+
+    @Test
+    fun `D-050 the fitness age waits for the choice of the person`() = runTest {
+        repo.ensurePlan(monday)
+        repo.setFitnessOptIn(true)
+        val state = repo.load(clock.now, null)
+        assertTrue(state.fitnessOptedIn)
+        assertNull(state.view.fitness, "the flag is off by default and the first milestone comes after 4 weeks")
+        repo.setFitnessOptIn(false)
+        assertFalse(repo.load(clock.now, null).fitnessOptedIn)
     }
 
     @Test

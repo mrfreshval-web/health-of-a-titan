@@ -22,6 +22,12 @@ import com.healthofatitan.app.domain.today.DayMode
 import com.healthofatitan.app.domain.today.WeekPlan
 import com.healthofatitan.app.domain.today.week.BodySeries
 import com.healthofatitan.app.domain.today.week.DayFact
+import com.healthofatitan.app.domain.today.week.Experiment
+import com.healthofatitan.app.domain.today.week.ExperimentMetric
+import com.healthofatitan.app.domain.today.week.ExperimentPoint
+import com.healthofatitan.app.domain.today.week.ExperimentRules
+import com.healthofatitan.app.domain.today.week.ExperimentSeed
+import com.healthofatitan.app.domain.today.week.ExperimentStatus
 import com.healthofatitan.app.domain.today.week.LastWeek
 import com.healthofatitan.app.domain.today.week.Pattern
 import com.healthofatitan.app.domain.today.week.PlanStatus
@@ -36,6 +42,7 @@ import com.healthofatitan.app.domain.today.week.WeekInput
 import com.healthofatitan.app.domain.today.week.WeekKind
 import com.healthofatitan.app.feature.week.WeekRitualScreen
 import com.healthofatitan.app.feature.week.WeekScreen
+import com.healthofatitan.app.feature.week.WeekSeal
 import com.healthofatitan.app.feature.week.WeekTitanFigure
 import com.healthofatitan.app.feature.week.WeekUiState
 import com.healthofatitan.app.integration.whoop.week.WeekScreenState
@@ -127,6 +134,17 @@ class WeekV1Screenshots {
         patterns = patterns,
         previousDaysInSupport = 3,
         pathSteps = 1,
+        experiment = Experiment(monday, seed, ExperimentStatus.TAKEN),
+        experimentDays = setOf(monday, monday.plusDays(1), monday.plusDays(3), monday.plusDays(4)),
+    )
+
+    private val seed = ExperimentSeed("exp-screens_sleep", "Экран убран в 22:30 → сон лучше?", "Экран убран в 22:30", ExperimentMetric.SLEEP)
+    private val nextSeed = ExperimentSeed("exp-light_charge", "Свет в первые 30 минут → Заряд лучше?", "Свет в первые 30 минут", ExperimentMetric.CHARGE)
+
+    private val answer = ExperimentRules.result(
+        seed,
+        listOf(440.0, 450.0, 430.0, 445.0, 460.0, 400.0).mapIndexed { i, v -> ExperimentPoint(monday.plusDays(i.toLong()), true, v) } +
+            listOf(420.0, 425.0, 415.0).mapIndexed { i, v -> ExperimentPoint(monday.minusDays(i + 1L), false, v) },
     )
 
     private fun state(input: WeekInput, withRitual: Boolean = false): WeekScreenState {
@@ -134,7 +152,7 @@ class WeekV1Screenshots {
         val frames = (1..5).map { view.titan.copy(weekStart = monday.minusWeeks(it.toLong()), reveal = 1f) }.reversed() + view.titan
         val ritual = if (withRitual) {
             val proposal = WeekGoalRules.propose(monday.plusDays(7), input.plan, LastWeek(0.8, 0, chargeInNorm = true), WeekKind.NORMAL)
-            RitualRules.withBeforeAfter(RitualRules.view(view, proposal), input.previousDaysInSupport, view.daysInSupport)
+            RitualRules.withBeforeAfter(RitualRules.view(view, proposal, answer, listOf(nextSeed, seed)), input.previousDaysInSupport, view.daysInSupport)
         } else {
             null
         }
@@ -184,6 +202,19 @@ class WeekV1Screenshots {
     @Test
     fun weekRitualNext() = shoot("week_v1_ritual_next") {
         WeekRitualScreen(state(normalInput(sunday), withRitual = true), emptyList(), onDone = {}, onClose = {}, onShare = {}, startAt = RitualStep.NEXT)
+    }
+
+    @Test
+    fun weekRitualExperiment() = shoot("week_v1_ritual_experiment") {
+        WeekRitualScreen(state(normalInput(sunday), withRitual = true), emptyList(), onDone = {}, onClose = {}, onShare = {}, startAt = RitualStep.EXPERIMENT)
+    }
+
+    @Test
+    fun weekSeal() = shoot("week_v1_seal_thursday") {
+        val look = WeekBuilder.build(normalInput(monday.plusDays(3).atTime(9, 0))).titan
+        Box(Modifier.fillMaxSize().padding(32.dp)) {
+            WeekSeal(look, Modifier.fillMaxWidth())
+        }
     }
 
     @Test

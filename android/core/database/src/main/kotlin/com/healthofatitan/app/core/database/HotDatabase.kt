@@ -39,6 +39,7 @@ import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.core.database.dao.WeekDao
 import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
 import com.healthofatitan.app.core.database.entity.WeekFrameEntity
 import com.healthofatitan.app.core.database.entity.WeekGoalEntity
 import com.healthofatitan.app.core.database.entity.WeekPlanEntity
@@ -80,6 +81,7 @@ import kotlin.reflect.KClass
         WeekDayScoreEntity::class,
         WeekFrameEntity::class,
         BodyInputEntity::class,
+        WeekExperimentEntity::class,
     ],
     version = 11,
     exportSchema = true,
@@ -143,6 +145,7 @@ abstract class HotDatabase : RoomDatabase() {
             WeekDayScoreEntity::class,
             WeekFrameEntity::class,
             BodyInputEntity::class,
+            WeekExperimentEntity::class,
         )
     }
 }

@@ -10,6 +10,7 @@ import com.healthofatitan.app.core.database.entity.BodyInputEntity
 import com.healthofatitan.app.core.database.entity.DayPlanEntity
 import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.core.database.entity.WeekDayScoreEntity
+import com.healthofatitan.app.core.database.entity.WeekExperimentEntity
 import com.healthofatitan.app.core.database.entity.WeekFrameEntity
 import com.healthofatitan.app.core.database.entity.WeekGoalEntity
 import com.healthofatitan.app.core.database.entity.WeekPlanEntity
@@ -38,6 +39,20 @@ import com.healthofatitan.app.domain.today.WeekPlan
 import com.healthofatitan.app.domain.today.week.Activity
 import com.healthofatitan.app.domain.today.week.BodySeries
 import com.healthofatitan.app.domain.today.week.DayFact
+import com.healthofatitan.app.domain.today.week.Experiment
+import com.healthofatitan.app.domain.today.week.ExperimentGate
+import com.healthofatitan.app.domain.today.week.ExperimentMetric
+import com.healthofatitan.app.domain.today.week.ExperimentOutcome
+import com.healthofatitan.app.domain.today.week.ExperimentPoint
+import com.healthofatitan.app.domain.today.week.ExperimentResult
+import com.healthofatitan.app.domain.today.week.ExperimentRules
+import com.healthofatitan.app.domain.today.week.ExperimentSeed
+import com.healthofatitan.app.domain.today.week.ExperimentSource
+import com.healthofatitan.app.domain.today.week.ExperimentStatus
+import com.healthofatitan.app.domain.today.week.FitnessMilestones
+import com.healthofatitan.app.domain.today.week.MilestoneInputs
+import com.healthofatitan.app.domain.today.week.SculptureRevealed
+import com.healthofatitan.app.domain.today.week.TitanOfWeek
 import com.healthofatitan.app.domain.today.week.FitnessGate
 import com.healthofatitan.app.domain.today.week.FitnessInput
 import com.healthofatitan.app.domain.today.week.LastWeek
@@ -73,7 +88,10 @@ import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -109,7 +127,21 @@ interface WeekSignals {
     }
 }
 
-data class WeekProfile(val edCare: Boolean = false, val pregnancy: Boolean = false, val betaBlockers: Boolean = false)
+data class WeekProfile(val edCare: Boolean = false, val pregnancy: Boolean = false, val betaBlockers: Boolean = false, val healthAnxiety: Boolean = false)
+
+/**
+ * The seam to «Путь» (A57 §4.3, D-050), built in claude/path-v1: the lever of the active goal
+ * becomes the experiment of the week; on Sunday «Путь» listens to [WeekRepository.revealed] (the
+ * Sculpture's lights fly to the details of «Срез», the Titan of the horizon takes a step).
+ */
+interface WeekPathBridge {
+    /** The lever of the Path goal as an experiment, or null when there is no goal. */
+    suspend fun lever(): ExperimentSeed? = null
+
+    companion object {
+        val None: WeekPathBridge = object : WeekPathBridge {}
+    }
+}
 
 /** The Sunday push «Твой Титан недели готов» (A52 §2.7), shown by :app. */
 fun interface WeekNotifier {
@@ -126,6 +158,9 @@ data class WeekScreenState(
     val whoopConnected: Boolean = true,
     val dayDetails: Map<LocalDate, DayDetail> = emptyMap(),
     val bodyInputs: BodyInputs = BodyInputs(),
+    /** «Что значит эта поза» on the first two Sundays (A53 §3.1). */
+    val poseCaption: String? = null,
+    val fitnessOptedIn: Boolean = false,
 )
 
 /** A day of the week for the read-only tap on its column (A52 §2.1). */
@@ -155,9 +190,14 @@ class WeekRepository(
     private val whoopConnected: Flow<Boolean> = flowOf(true),
     /** The haiku shown at «Рассвет» that day, for the read-only day (A52 §2.1 «Тап по колонне»). */
     private val haiku: suspend (LocalDate) -> List<String>? = { null },
+    private val path: WeekPathBridge = WeekPathBridge.None,
 ) : WeekPlanSource {
     private val user = HotDatabase.LOCAL_USER
     private val changes = MutableStateFlow(0)
+    private val revealedEvents = MutableSharedFlow<SculptureRevealed>(replay = 1, extraBufferCapacity = 4)
+
+    /** Sunday: the Sculpture was revealed in the ritual (A57 §4.3) — for «Путь». */
+    val revealed: SharedFlow<SculptureRevealed> = revealedEvents.asSharedFlow()
     private val mutex = Mutex()
 
     private fun now(): LocalDateTime = LocalDateTime.now(clock)
@@ -456,9 +496,25 @@ class WeekRepository(
         val inputs = bodyInputs()
         val todayPlan = runCatching { dayDao.plan(user, today.toString()) }.getOrNull()
         val sickNow = todayPlan?.sick() == true
-        val fitnessGate = FitnessGate(sick = sickNow, pregnancy = profile.pregnancy, betaBlockers = profile.betaBlockers, edCare = profile.edCare, stormNet = storm)
-        val fourWeeksAgo = weekDao.frame(user, monday.minusWeeks(4).toString())?.fitnessAge
+        val firstWeek = weekDao.firstPlan(user)?.weekStart?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val weeksOfData = firstWeek?.let { ChronoUnit.WEEKS.between(it, monday).toInt() + 1 } ?: 0
+        val optedIn = weekDao.latestInput(user, BodyInputEntity.KIND_FITNESS_OPT_IN)?.value == 1.0
+        val fitnessGate = FitnessGate(
+            sick = sickNow, pregnancy = profile.pregnancy, betaBlockers = profile.betaBlockers, edCare = profile.edCare, stormNet = storm,
+            optedIn = optedIn, healthAnxiety = profile.healthAnxiety, weeksOfData = weeksOfData,
+        )
         val fitnessInput = FitnessInput(inputs.ageYears, inputs.sex, inputs.waistCm, g?.corridors?.restingHr7, activity(g, today))
+        val milestones = weekDao.lastMilestones(user).filter { it.weekStart != monday.toString() }
+        val milestoneHere = FitnessMilestones.number(firstWeek, monday) ?: if (milestones.isEmpty()) weeksOfData / FitnessMilestones.EVERY else null
+        val fitnessNow = if (fitnessGate.open && milestoneHere != null) milestoneOf(fitnessInput, milestoneHere) else null
+        val storedFrame = weekDao.frame(user, monday.toString())?.takeIf { it.fitnessMilestone != null }
+        val latest = fitnessNow?.let { FrameFitness(it.age, it.milestone, it.vo2, it.pa, it.waist) }
+            ?: storedFrame?.let { FrameFitness(it.fitnessAge, it.fitnessMilestone, it.fitnessVo2, it.fitnessPa, it.fitnessWaist) }
+            ?: milestones.firstOrNull()?.let { FrameFitness(it.fitnessAge, it.fitnessMilestone, it.fitnessVo2, it.fitnessPa, it.fitnessWaist) }
+        val before = milestones.firstOrNull { it.fitnessMilestone != latest?.milestone }
+        val lever = if (latest != null && before != null && inputs.sex != null) leverOf(inputs.sex, before, latest) else null
+        val experiment = experimentOf(monday)
+        val experimentDays = experiment?.let { e -> experimentDays(e.seed.id, monday, today) }.orEmpty()
         val input = WeekInput(
             now = now,
             facts = facts,
@@ -475,7 +531,13 @@ class WeekRepository(
             weight = WeightInput(edCare = profile.edCare),
             fitnessGate = fitnessGate,
             fitness = fitnessInput,
-            fitnessFourWeeksAgo = fourWeeksAgo,
+            fitnessFourWeeksAgo = before?.fitnessAge,
+            fitnessAtMilestone = latest?.age,
+            fitnessMilestone = latest?.milestone,
+            fitnessLever = lever,
+            experiment = experiment,
+            experimentDays = experimentDays,
+            edCare = profile.edCare,
             waistAgeDays = inputs.waistDay?.let { ChronoUnit.DAYS.between(it, today).toInt() },
             ritual = ritual,
             previousDaysInSupport = prevScores.takeIf { it.isNotEmpty() }?.count { it.inSupport },
@@ -484,7 +546,7 @@ class WeekRepository(
             sickNow = sickNow,
         )
         val view = WeekBuilder.build(input)
-        saveFrame(view, FitnessAge.estimate(fitnessInput).takeIf { fitnessGate.open })
+        saveFrame(view, fitnessNow)
         val ritualFor = WeekGoalRules.ritualFor(now)
         val ritualView = if (ritualFor != null) {
             val proposal = if (ritualFor == monday) {
@@ -493,7 +555,17 @@ class WeekRepository(
             } else {
                 propose(ritualFor, g)
             }
-            RitualRules.withBeforeAfter(RitualRules.view(view, proposal), input.previousDaysInSupport, view.daysInSupport)
+            val closing = ritualFor.minusDays(7)
+            val result = experimentResult(closing, g)
+            val gate = ExperimentGate(
+                gentleWeek = WeekScoring.gentleWeek(view.columns) && closing == monday,
+                stormNet = storm,
+                edCare = profile.edCare,
+                crisis = input.crisis,
+            )
+            val offers = runCatching { ExperimentRules.offers(input.patterns, runCatching { path.lever() }.getOrNull(), gate, experimentOf(closing)?.seed) }
+                .getOrDefault(emptyList())
+            RitualRules.withBeforeAfter(RitualRules.view(view, proposal, result, offers), input.previousDaysInSupport, view.daysInSupport)
         } else {
             null
         }
@@ -505,7 +577,95 @@ class WeekRepository(
             whoopConnected = whoopConnected,
             dayDetails = days.associate { it.fact.day to it.detail },
             bodyInputs = inputs,
+            poseCaption = TitanOfWeek.poseCaption(view.titan, frames.count { it.revealedAt != null && it.weekStart < monday.toString() }),
+            fitnessOptedIn = optedIn,
         )
+    }
+
+    // ── «Эксперимент недели» (A53 §3.2, D-050) ───────────────────────────────────────────────────
+
+    private suspend fun experimentOf(monday: LocalDate): Experiment? = runCatching { weekDao.experiment(user, monday.toString()) }.getOrNull()?.let { r ->
+        runCatching {
+            Experiment(
+                monday,
+                ExperimentSeed(r.experimentId, r.hypothesis, r.action, ExperimentMetric.valueOf(r.metric), ExperimentSource.valueOf(r.source), r.food),
+                ExperimentStatus.valueOf(r.status),
+            )
+        }.getOrNull()
+    }
+
+    private suspend fun experimentDays(id: String, monday: LocalDate, until: LocalDate): Set<LocalDate> =
+        runCatching { todayDao.since(user, monday.toString(), TodayMarkEntity.KIND_EXPERIMENT) }.getOrDefault(emptyList())
+            .filter { it.ref == id && it.count > 0 }
+            .mapNotNull { runCatching { LocalDate.parse(it.dayKey) }.getOrNull() }
+            .filter { !it.isAfter(until) && it.isBefore(monday.plusDays(7)) }
+            .toSet()
+
+    /** The measure of a day: sleep and pulse from WHOOP memory, Заряд from the stored HoT metric. */
+    private suspend fun valuesOf(metric: ExperimentMetric, from: LocalDate, to: LocalDate, g: WhoopGlance?): Map<LocalDate, Double> = when (metric) {
+        ExperimentMetric.SLEEP -> g?.days.orEmpty().filter { it.sleepHours != null }.associate { it.day to it.sleepHours!! * 60 }
+        ExperimentMetric.PULSE -> g?.days.orEmpty().filter { it.restingHr != null }.associate { it.day to it.restingHr!! }
+        ExperimentMetric.CHARGE -> runCatching { metricDao.series(user, Metrics.ECAP.id, Metrics.ECAP.version, from.toString()) }.getOrDefault(emptyList())
+            .filter { it.value != null }.mapNotNull { r -> runCatching { LocalDate.parse(r.dayKey) to r.value!! }.getOrNull() }.toMap()
+    }.filterKeys { !it.isBefore(from) && !it.isAfter(to) }
+
+    /** The answer of the experiment of the week [monday] — stored once given, else counted now. */
+    private suspend fun experimentResult(monday: LocalDate, g: WhoopGlance?): ExperimentResult? {
+        val row = runCatching { weekDao.experiment(user, monday.toString()) }.getOrNull() ?: return null
+        if (row.status != ExperimentStatus.TAKEN.name) return null
+        if (row.outcome != null && row.resultText != null) {
+            return ExperimentResult(runCatching { ExperimentOutcome.valueOf(row.outcome) }.getOrDefault(ExperimentOutcome.TOO_FEW), WeekCopy.EXP_LEARNED, row.resultText, row.points ?: 0)
+        }
+        val e = experimentOf(monday) ?: return null
+        val end = monday.plusDays(ExperimentRules.DAYS.toLong() - 1)
+        val did = experimentDays(e.seed.id, monday, end)
+        val values = valuesOf(e.seed.metric, monday.minusDays(7), end, g)
+        val points = values.map { (d, v) -> ExperimentPoint(d, d in did, v) }
+        return ExperimentRules.result(e.seed, points)
+    }
+
+    /** «Сегодня сделал» on the scale of the experiment. */
+    suspend fun markExperiment(day: LocalDate, did: Boolean) {
+        val e = experimentOf(CalendarWeek.start(day))?.takeIf { it.status == ExperimentStatus.TAKEN } ?: return
+        if (did) {
+            todayDao.upsert(TodayMarkEntity(user, day.toString(), TodayMarkEntity.KIND_EXPERIMENT, e.seed.id, 1, null, clock.millis()))
+        } else {
+            todayDao.delete(user, day.toString(), TodayMarkEntity.KIND_EXPERIMENT, e.seed.id)
+        }
+        bump()
+    }
+
+    /** The quiet bridge on «Сегодня»: «Эксперимент · 3 из 5 ›», or null when no experiment runs. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun experimentBridge(day: LocalDate): Flow<String?> =
+        combine(changes, todayDao.observeDay(user, day.toString())) { _, _ -> Unit }.mapLatest {
+            val monday = CalendarWeek.start(day)
+            experimentOf(monday)?.takeIf { it.status == ExperimentStatus.TAKEN }?.let { e ->
+                ExperimentRules.scale(monday, day, experimentDays(e.seed.id, monday, day)).bridge
+            }
+        }
+
+    // ── Fitness age at milestones (A53 §3.3, D-050) ──────────────────────────────────────────────
+
+    private data class FrameFitness(val age: Double?, val milestone: Int?, val vo2: Double?, val pa: Double?, val waist: Double?)
+
+    private fun milestoneOf(i: FitnessInput, number: Int): FrameFitness? {
+        val age = FitnessAge.estimate(i) ?: return null
+        val pa = FitnessAge.paIndex(i.activity)
+        val vo2 = FitnessAge.vo2(i.sex!!, i.ageYears!!, i.waistCm!!, i.restingHr!!, pa)
+        return FrameFitness(age, number.coerceAtLeast(1), vo2, pa, i.waistCm)
+    }
+
+    private fun leverOf(sex: Sex, before: WeekFrameEntity, now: FrameFitness): String? {
+        val b = MilestoneInputs(before.fitnessVo2 ?: return null, before.fitnessPa ?: return null, before.fitnessWaist ?: return null)
+        val n = MilestoneInputs(now.vo2 ?: return null, now.pa ?: return null, now.waist ?: return null)
+        return FitnessMilestones.lever(sex, b, n)
+    }
+
+    /** The choice «показывать фитнес-возраст на вехах» (A53 §3.3). */
+    suspend fun setFitnessOptIn(on: Boolean) {
+        weekDao.upsertInput(BodyInputEntity(user, BodyInputEntity.KIND_FITNESS_OPT_IN, now().toLocalDate().toString(), if (on) 1.0 else 0.0, null, clock.millis()))
+        bump()
     }
 
     private fun supportsWeek(days: List<DayData>, weekDays: List<WhoopDay>): SupportsWeekInput {
@@ -581,13 +741,17 @@ class WeekRepository(
             )
         }
 
-    private suspend fun saveFrame(view: WeekView, fitnessAge: Double?) {
+    private suspend fun saveFrame(view: WeekView, fitness: FrameFitness?) {
         val t = view.titan
         val prev = weekDao.frame(user, view.weekStart.toString())
         val row = WeekFrameEntity(
             user, view.weekStart.toString(), t.pose.name, t.mode.name, t.light, t.columns.joinToString(",") { String.format(java.util.Locale.ROOT, "%.2f", it) },
             t.sky.name, t.detail?.name, t.daysInSupport, t.seed, prev?.revealedAt ?: if (t.revealed) clock.millis() else null,
-            fitnessAge ?: prev?.fitnessAge, clock.millis(),
+            fitness?.age ?: prev?.fitnessAge, clock.millis(),
+            fitnessMilestone = fitness?.milestone ?: prev?.fitnessMilestone,
+            fitnessVo2 = fitness?.vo2 ?: prev?.fitnessVo2,
+            fitnessPa = fitness?.pa ?: prev?.fitnessPa,
+            fitnessWaist = fitness?.waist ?: prev?.fitnessWaist,
         )
         if (prev == null || prev.copy(computedAt = 0) != row.copy(computedAt = 0)) runCatching { weekDao.upsertFrame(row) }
     }
@@ -608,6 +772,10 @@ class WeekRepository(
             seed = seed,
         )
     }.getOrNull()
+
+    private fun ExperimentSeed.toRow(monday: LocalDate, status: ExperimentStatus) = WeekExperimentEntity(
+        user, monday.toString(), id, hypothesis.take(MAX_TEXT), action.take(MAX_TEXT), metric.name, source.name, food, status.name, decidedAt = clock.millis(),
+    )
 
     // ── Body inputs (fitness age) ────────────────────────────────────────────────────────────────
 
@@ -679,7 +847,20 @@ class WeekRepository(
         )
         val closingRow = weekDao.plan(user, closing.toString()) ?: WeekPlanEntity(user, closing.toString(), PlanStatus.AUTO.name, assembledAt = clock.millis())
         weekDao.upsertPlan(closingRow.copy(ritualDoneAt = clock.millis(), pride = answers.pride?.trim()?.take(MAX_TEXT), carry = answers.carry?.trim()?.take(MAX_TEXT)))
-        weekDao.frame(user, closing.toString())?.let { weekDao.upsertFrame(it.copy(revealedAt = it.revealedAt ?: clock.millis())) }
+        val frame = weekDao.frame(user, closing.toString())
+        frame?.let { weekDao.upsertFrame(it.copy(revealedAt = it.revealedAt ?: clock.millis())) }
+        // the answer of the closing week's experiment is kept as words; the next one is taken or put aside
+        val result = ritual.experimentResult
+        weekDao.experiment(user, closing.toString())?.let { row ->
+            if (result != null && row.outcome == null) weekDao.upsertExperiment(row.copy(outcome = result.outcome.name, resultText = result.text, points = result.points))
+        }
+        val next = answers.experiment
+        when {
+            next != null -> weekDao.upsertExperiment(next.toRow(target, ExperimentStatus.TAKEN))
+            ritual.experimentOffers.isNotEmpty() -> weekDao.upsertExperiment(ritual.experimentOffers.first().toRow(target, ExperimentStatus.SKIPPED))
+        }
+        val days = frame?.daysInSupport ?: 0
+        revealedEvents.tryEmit(SculptureRevealed(closing, days, lights = days, experiment = result))
         bump()
     }
 

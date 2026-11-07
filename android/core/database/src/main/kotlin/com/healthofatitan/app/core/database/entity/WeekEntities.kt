@@ -81,6 +81,37 @@ data class WeekFrameEntity(
     @ColumnInfo(name = "revealed_at") val revealedAt: Long?,
     @ColumnInfo(name = "fitness_age") val fitnessAge: Double?,
     @ColumnInfo(name = "computed_at") val computedAt: Long,
+    /** A53 §3.3: the milestone (every 4 weeks) this frame closes, with what it needs for the lever 4 weeks later. */
+    @ColumnInfo(name = "fitness_milestone") val fitnessMilestone: Int? = null,
+    /** The HUNT estimate (ml/kg/min) and PA index of the milestone: HoT-derived, not WHOOP values. */
+    @ColumnInfo(name = "fitness_vo2") val fitnessVo2: Double? = null,
+    @ColumnInfo(name = "fitness_pa") val fitnessPa: Double? = null,
+    @ColumnInfo(name = "fitness_waist") val fitnessWaist: Double? = null,
+)
+
+/**
+ * «Эксперимент недели» (A53 §3.2, D-050) of the week that starts on [weekStart]: one hypothesis,
+ * taken or put aside in the Sunday ritual; its answer («узнали») is kept as words once the week
+ * closes. The days of the action are marks of the day (`today_mark`, kind `experiment`).
+ *
+ * @property metric `SLEEP | CHARGE | PULSE`; @property source `PATTERN | PATH`; @property status `TAKEN | SKIPPED`
+ * @property outcome `YES | OPPOSITE | NO_LINK | TOO_FEW` once answered
+ */
+@Entity(tableName = "week_experiment", primaryKeys = ["user_id", "week_start"])
+data class WeekExperimentEntity(
+    @ColumnInfo(name = "user_id") val userId: String,
+    @ColumnInfo(name = "week_start") val weekStart: String,
+    @ColumnInfo(name = "experiment_id") val experimentId: String,
+    val hypothesis: String,
+    val action: String,
+    val metric: String,
+    val source: String,
+    val food: Boolean,
+    val status: String,
+    val outcome: String? = null,
+    @ColumnInfo(name = "result_text") val resultText: String? = null,
+    val points: Int? = null,
+    @ColumnInfo(name = "decided_at") val decidedAt: Long,
 )
 
 /**
@@ -102,5 +133,8 @@ data class BodyInputEntity(
         const val KIND_WAIST = "waist_cm"
         const val KIND_AGE = "age_years"
         const val KIND_SEX = "sex"
+
+        /** A53 §3.3: the person chose to see the fitness age at milestones (value 1) or not (0). */
+        const val KIND_FITNESS_OPT_IN = "fitness_opt_in"
     }
 }

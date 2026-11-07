@@ -34,6 +34,8 @@ const val TRAINING_SCREEN_TAG = "screen_training"
 const val TRAINING_START_TAG = "training_start"
 const val PLAYER_SCREEN_TAG = "screen_training_player"
 const val PLAYER_FEEL_BAD_TAG = "training_feel_bad"
+const val PLAYER_PAUSED_TAG = "training_paused"
+const val PLAYER_FEEL_BAD_HELP_TAG = "training_feel_bad_help"
 const val PLAYER_DONE_TAG = "training_done"
 
 /** The line of light of the Titan in the day's mode (A37 §3: Солнце, Лёд, Ирис); ink in «Фарфор». */

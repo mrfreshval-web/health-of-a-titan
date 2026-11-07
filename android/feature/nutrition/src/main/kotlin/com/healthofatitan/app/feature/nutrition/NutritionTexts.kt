@@ -69,10 +69,11 @@ object NutritionTexts {
     // Consent (A41 §6.5, Agent 7): separate, explicit, one screen, before the first field.
     const val CONSENT_TITLE = "Данные о здоровье"
     const val CONSENT_TEXT =
-        "Аллергии, тип питания и состояния — данные о здоровье. Они хранятся только на этом телефоне, " +
+        "Аллергии, тип питания и состояния — данные о здоровье. Нужны, чтобы тарелка дня подходила тебе. " +
+            "Хранятся только на этом телефоне, " +
             "зашифрованными, не попадают в уведомления и аналитику. Удалить можно по разделам или всё сразу; " +
             "отзыв согласия удаляет всё."
-    const val CONSENT_YES = "Согласен"
+    const val CONSENT_YES = "Даю согласие"
     const val CONSENT_REVOKE = "отозвать согласие"
 
     fun consentDate(ms: Long): String =
@@ -82,7 +83,8 @@ object NutritionTexts {
     const val LEVEL_TITLE = "Уровень питания"
     const val LEVEL_BACK = "Еда · Уровень"
     const val LEVEL_LOCKED = "закрыт безопасным режимом"
-    const val LEVEL_LATER = "после ревью Агента 3"
+    // Review 2026-11-07 (Agent 7): no internal team names on screen.
+    const val LEVEL_LATER = "скоро, после проверки"
     const val LEVEL_CHOSEN = "выбран"
 
     // Meal card (mockup n4)

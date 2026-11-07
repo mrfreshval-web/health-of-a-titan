@@ -72,6 +72,7 @@ dependencies {
     implementation(project(":feature:week"))
     implementation(project(":feature:me"))
     implementation(project(":feature:sos"))
+    implementation(project(":feature:nutrition"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
@@ -85,5 +86,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(project(":domain:nutrition"))
+    testImplementation(libs.snakeyaml)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

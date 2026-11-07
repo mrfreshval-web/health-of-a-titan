@@ -18,7 +18,10 @@ import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.feature.me.ME_HELP_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
+import com.healthofatitan.app.feature.me.ME_NUTRITION_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_WHOOP_ROW_TAG
+import com.healthofatitan.app.feature.nutrition.NutritionTexts
+import com.healthofatitan.app.feature.nutrition.PROFILE_SCREEN_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_CONNECT_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_SCREEN_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_HELP_TAG
@@ -151,5 +154,17 @@ class HotAppNavigationTest {
         launch()
         compose.onNodeWithTag(TODAY_CONNECT_TAG).performClick()
         compose.onNodeWithTag(WHOOP_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `me opens the food profile inside the me tab and back returns to me`() {
+        launch()
+        compose.onNodeWithTag(HotTab.ME.testTag).performClick()
+        compose.onNodeWithTag(ME_NUTRITION_ROW_TAG).performClick()
+        compose.onNodeWithTag(PROFILE_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(NutritionTexts.SET_UP)
+        compose.onNodeWithTag(HotTab.ME.testTag).assertIsSelected()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }
 }

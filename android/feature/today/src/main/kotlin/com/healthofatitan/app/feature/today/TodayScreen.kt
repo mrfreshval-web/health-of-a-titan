@@ -88,9 +88,14 @@ import kotlin.math.roundToInt
  *
  * @param stateful false renders the not-connected state without a ViewModel (navigation tests).
  */
-fun NavGraphBuilder.todayScreen(onConnectWhoop: () -> Unit, stateful: Boolean = true) {
+fun NavGraphBuilder.todayScreen(
+    onConnectWhoop: () -> Unit,
+    stateful: Boolean = true,
+    /** One card from another module (stream C «Тарелка дня»); the app passes it in. */
+    plateOfDay: @Composable () -> Unit = {},
+) {
     composable(route = HotRoute.TODAY) {
-        if (stateful) TodayRoute(onConnectWhoop) else TodayScreen(TodayUiState(), onConnectWhoop)
+        if (stateful) TodayRoute(onConnectWhoop, plateOfDay) else TodayScreen(TodayUiState(), onConnectWhoop)
     }
 }
 
@@ -124,6 +129,7 @@ class TodayViewModel @Inject constructor(
 @Composable
 private fun TodayRoute(
     onConnectWhoop: () -> Unit,
+    plateOfDay: @Composable () -> Unit,
     viewModel: TodayViewModel = hiltViewModel(),
     dayModel: DayViewModel = hiltViewModel(),
 ) {
@@ -136,6 +142,7 @@ private fun TodayRoute(
         onSync = viewModel::sync,
         day = day.takeIf { it.loaded },
         actions = DayActions(onToggle = dayModel::toggle, onEvening = dayModel::saveEvening),
+        plateOfDay = plateOfDay,
     )
 }
 
@@ -149,6 +156,7 @@ fun TodayScreen(
     /** Slice 2: the day (regime, plan, evening); null while it loads. */
     day: DayUiState? = null,
     actions: DayActions = DayActions(),
+    plateOfDay: @Composable () -> Unit = {},
 ) {
     val whoop = state.whoop
     val connected = whoop != null && whoop.connected
@@ -172,14 +180,21 @@ fun TodayScreen(
             if (!connected) {
                 NotConnected(onConnectWhoop)
             } else {
-                Connected(whoop!!, state, day, actions, onSync)
+                Connected(whoop!!, state, day, actions, onSync, plateOfDay)
             }
         }
     }
 }
 
 @Composable
-private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: DayUiState?, actions: DayActions, onSync: () -> Unit) {
+private fun ColumnScope.Connected(
+    whoop: WhoopStatus,
+    state: TodayUiState,
+    day: DayUiState?,
+    actions: DayActions,
+    onSync: () -> Unit,
+    plateOfDay: @Composable () -> Unit,
+) {
     val metrics = state.metrics
     val glance = state.glance
     val today = day?.today ?: LocalDate.now()
@@ -220,6 +235,7 @@ private fun ColumnScope.Connected(whoop: WhoopStatus, state: TodayUiState, day: 
         if (day != null) DayPending()
         Tiles(state)
     }
+    plateOfDay()
     val eveningDay = day?.eveningFor
     when {
         eveningDay != null -> EveningDeckCard(eveningDay, actions.onEvening)

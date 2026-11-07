@@ -50,9 +50,18 @@ import javax.inject.Inject
  * @param stateful false renders the screens from default state without ViewModels (navigation
  *   tests run without Hilt).
  */
-fun NavGraphBuilder.meScreen(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit = {}, stateful: Boolean = true) {
+fun NavGraphBuilder.meScreen(
+    onOpenWhoop: () -> Unit,
+    onOpenHelp: () -> Unit = {},
+    stateful: Boolean = true,
+    onOpenNutrition: () -> Unit = {},
+) {
     composable(route = HotRoute.ME) {
-        if (stateful) MeRoute(onOpenWhoop, onOpenHelp) else MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
+        if (stateful) {
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenNutrition)
+        } else {
+            MeScreen(whoop = null, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenNutrition = onOpenNutrition)
+        }
     }
 }
 
@@ -65,6 +74,7 @@ fun NavGraphBuilder.whoopScreen(stateful: Boolean = true) {
 const val ME_SCREEN_TAG = "screen_me"
 const val ME_WHOOP_ROW_TAG = "me_whoop_row"
 const val ME_HELP_ROW_TAG = "me_help_row"
+const val ME_NUTRITION_ROW_TAG = "me_nutrition_row"
 
 @HiltViewModel
 class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel() {
@@ -73,13 +83,19 @@ class MeViewModel @Inject constructor(connection: WhoopConnection) : ViewModel()
 }
 
 @Composable
-private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
+private fun MeRoute(onOpenWhoop: () -> Unit, onOpenHelp: () -> Unit, onOpenNutrition: () -> Unit, viewModel: MeViewModel = hiltViewModel()) {
     val whoop by viewModel.whoop.collectAsStateWithLifecycle()
-    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp)
+    MeScreen(whoop = whoop, onOpenWhoop = onOpenWhoop, onOpenHelp = onOpenHelp, onOpenNutrition = onOpenNutrition)
 }
 
 @Composable
-fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = Modifier, onOpenHelp: () -> Unit = {}) {
+fun MeScreen(
+    whoop: WhoopStatus?,
+    onOpenWhoop: () -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenHelp: () -> Unit = {},
+    onOpenNutrition: () -> Unit = {},
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -104,6 +120,16 @@ fun MeScreen(whoop: WhoopStatus?, onOpenWhoop: () -> Unit, modifier: Modifier = 
                 caption = "988 · 911",
                 divider = false,
                 modifier = Modifier.testTag(ME_HELP_ROW_TAG),
+            )
+        }
+        // Stream C (A41 §10): the profile of specifics, shared by food and training.
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = "Еда и тело",
+                onClick = onOpenNutrition,
+                caption = "Аллергены · тип питания · уровень",
+                divider = false,
+                modifier = Modifier.testTag(ME_NUTRITION_ROW_TAG),
             )
         }
         Section("Подключения")

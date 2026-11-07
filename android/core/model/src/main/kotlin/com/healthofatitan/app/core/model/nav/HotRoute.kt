@@ -22,6 +22,18 @@ object HotRoute {
     /** «Рассвет» (A37 §4): the morning screen, once a day at the first open; outside the tabs. */
     const val DAWN = "dawn"
 
+    /** «Я › Еда и тело» (A41 §10): the profile of specifics, shared with training. Inside a tab. */
+    const val NUTRITION_PROFILE = "nutrition_profile"
+
+    /** Nutrition level (A41 §4). Inside a tab. */
+    const val NUTRITION_LEVEL = "nutrition_level"
+
+    /** Meal card of one slot of today (A41 §10). Inside the «Сегодня» tab. */
+    const val NUTRITION_MEAL_ARG = "slot"
+    const val NUTRITION_MEAL = "nutrition_meal/{$NUTRITION_MEAL_ARG}"
+
+    fun nutritionMeal(slot: String): String = "nutrition_meal/$slot"
+
     const val DEEP_LINK_SCHEME = "hot"
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"

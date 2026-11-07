@@ -47,6 +47,9 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
+import com.healthofatitan.app.feature.nutrition.NutritionTexts
+import com.healthofatitan.app.feature.nutrition.PlateOfDay
+import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.sos.sosScreen
 import com.healthofatitan.app.feature.today.dawnScreen
 import com.healthofatitan.app.feature.today.todayScreen
@@ -144,14 +147,27 @@ fun HotApp(
                 startDestination = HotRoute.TODAY,
                 modifier = if (fullScreen) Modifier else Modifier.padding(padding),
             ) {
-                todayScreen(onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } }, stateful = stateful)
+                val openNutrition = { route: String -> navController.navigate(route) { launchSingleTop = true } }
+                todayScreen(
+                    onConnectWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
+                    stateful = stateful,
+                    plateOfDay = {
+                        PlateOfDay(
+                            onOpenMeal = { openNutrition(HotRoute.nutritionMeal(it)) },
+                            onOpenProfile = { openNutrition(HotRoute.NUTRITION_PROFILE) },
+                            onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) },
+                        )
+                    },
+                )
                 mentorScreen(onOpenHelp = { navController.openSos() })
                 weekScreen()
                 meScreen(
                     onOpenWhoop = { navController.navigate(HotRoute.WHOOP) { launchSingleTop = true } },
                     onOpenHelp = { navController.openSos() },
                     stateful = stateful,
+                    onOpenNutrition = { openNutrition(HotRoute.NUTRITION_PROFILE) },
                 )
+                nutritionScreens(onOpenLevel = { openNutrition(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
                 whoopScreen(stateful = stateful)
                 dawnScreen(onStart = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
                 sosScreen(onClose = { if (!navController.popBackStack()) navController.openTab(HotRoute.TODAY) })
@@ -194,6 +210,9 @@ private class NestedScreen(val tab: HotTab, val title: String, val backLabel: St
 
 private val NESTED = mapOf(
     HotRoute.WHOOP to NestedScreen(HotTab.ME, "WHOOP", "Я · Подключения"),
+    HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.ME, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
+    HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.ME, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),
+    HotRoute.NUTRITION_MEAL to NestedScreen(HotTab.TODAY, NutritionTexts.PLATE_OF_DAY, NutritionTexts.MEAL_BACK),
 )
 
 /**

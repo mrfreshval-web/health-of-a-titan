@@ -48,3 +48,4 @@ include(":integration:whoop")
 include(":domain:engine")
 // Stream C «Еда» (A41): nutrition engine and screens.
 include(":domain:nutrition")
+include(":feature:nutrition")

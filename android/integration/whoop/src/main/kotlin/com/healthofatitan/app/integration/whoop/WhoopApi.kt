@@ -18,9 +18,13 @@ sealed class WhoopApiException(message: String) : IOException(message) {
 
     class NotAllowed : WhoopApiException("not allowed")
 
-    class Unavailable : WhoopApiException("edge or whoop unavailable")
+    /** The HoT Worker could not hand out a token (outage); [code] is its HTTP status. */
+    class Unavailable(val code: Int? = null) : WhoopApiException("edge unavailable")
 
     class RateLimited : WhoopApiException("rate limited")
+
+    /** WHOOP answered a data request with a non-2xx status (403 scope, 404 path, 5xx outage…). */
+    class Http(val code: Int, val path: String) : WhoopApiException("whoop http $code")
 }
 
 /**
@@ -38,12 +42,18 @@ class WhoopApi(
     private val baseUrl: HttpUrl = DEFAULT_BASE_URL.toHttpUrl(),
 ) {
 
-    internal suspend fun window(from: Instant, to: Instant): WhoopWindow = WhoopWindow(
-        cycles = collection("cycle", from, to, WhoopCycle.serializer()),
-        recoveries = collection("recovery", from, to, WhoopRecovery.serializer()),
-        sleeps = collection("activity/sleep", from, to, WhoopSleep.serializer()),
-        workouts = collection("activity/workout", from, to, WhoopWorkout.serializer()),
-    )
+    /** Loads the window collection by collection; [onStep] reports which one is on its way. */
+    internal suspend fun window(from: Instant, to: Instant, onStep: (SyncStep) -> Unit = {}): WhoopWindow {
+        onStep(SyncStep.CYCLES)
+        val cycles = collection("cycle", from, to, WhoopCycle.serializer())
+        onStep(SyncStep.RECOVERY)
+        val recoveries = collection("recovery", from, to, WhoopRecovery.serializer())
+        onStep(SyncStep.SLEEP)
+        val sleeps = collection("activity/sleep", from, to, WhoopSleep.serializer())
+        onStep(SyncStep.WORKOUTS)
+        val workouts = collection("activity/workout", from, to, WhoopWorkout.serializer())
+        return WhoopWindow(cycles, recoveries, sleeps, workouts)
+    }
 
     private suspend fun <T> collection(path: String, from: Instant, to: Instant, item: KSerializer<T>): List<T> {
         val pageSerializer = WhoopPage.serializer(item)
@@ -74,7 +84,7 @@ class WhoopApi(
                 TokenOutcome.NotConnected -> throw WhoopApiException.NotConnected()
                 TokenOutcome.ReauthRequired -> throw WhoopApiException.ReauthRequired()
                 TokenOutcome.NotAllowed -> throw WhoopApiException.NotAllowed()
-                TokenOutcome.Unavailable -> throw WhoopApiException.Unavailable()
+                is TokenOutcome.Unavailable -> throw WhoopApiException.Unavailable(t.code)
             }
             val request = Request.Builder().url(url).header("Authorization", "Bearer $token").header("Accept", "application/json").build()
             http.newCall(request).await().use { res ->
@@ -82,7 +92,7 @@ class WhoopApi(
                     res.isSuccessful -> return res.body.string()
                     res.code == 401 -> stale = token
                     res.code == 429 -> throw WhoopApiException.RateLimited()
-                    else -> throw WhoopApiException.Unavailable()
+                    else -> throw WhoopApiException.Http(res.code, url.encodedPath)
                 }
             }
         }

@@ -122,7 +122,7 @@ class WhoopAuthTest {
     fun `a worker outage keeps the session`() = runBlocking {
         accessHandler = { ok("""{"error":"whoop_unavailable"}""", code = 502) }
         val store = InMemoryWhoopCredentialStore(WhoopCredentials("hs1.4242.s", "4242"))
-        assertEquals(TokenOutcome.Unavailable, WhoopAccessTokens(edgeHttp(), store, clock).get())
+        assertEquals(TokenOutcome.Unavailable(502),WhoopAccessTokens(edgeHttp(), store, clock).get())
         assertEquals("4242", store.credentials.value?.whoopUserId)
     }
 

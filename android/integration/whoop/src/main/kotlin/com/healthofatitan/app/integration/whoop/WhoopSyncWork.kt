@@ -34,7 +34,7 @@ class WhoopSyncWorker(context: Context, params: WorkerParameters) : CoroutineWor
 
     override suspend fun doWork(): Result {
         val syncer = EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).whoopSyncer()
-        return when (syncer.sync()) {
+        return when (syncer.sync(SyncTrigger.BACKGROUND)) {
             is SyncOutcome.Done, is SyncOutcome.Stop -> Result.success()
             is SyncOutcome.Retry -> if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
         }

@@ -7,9 +7,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
 import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
 import dagger.Module
 import dagger.Provides
@@ -60,4 +62,10 @@ object DatabaseModule {
 
     @Provides
     fun provideDawnDao(db: HotDatabase): DawnDao = db.dawnDao()
+
+    @Provides
+    fun provideDailyLoopDao(db: HotDatabase): DailyLoopDao = db.dailyLoopDao()
+
+    @Provides
+    fun providePathDao(db: HotDatabase): PathDao = db.pathDao()
 }

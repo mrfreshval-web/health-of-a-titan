@@ -128,7 +128,7 @@ object StatusRingsTexts {
             r.strainCeiling != null && r.mode != null -> "потолок нагрузки «${r.mode.word}» — ${ceiling(r.strainCeiling)}"
             else -> "нагрузку WHOOP пришлёт после синхронизации"
         },
-        if (r.steps == null) "шаги появятся с источником шагов" else "шаги из WHOOP",
+        if (r.steps == null) "шаги появятся с Health Connect" else "шаги телефона",
         r.bedtimeMin?.let { "отбой в ${clock(it)}" } ?: "отбой — когда будет план",
     ).joinToString(" · ")
 

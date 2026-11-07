@@ -50,4 +50,7 @@ object RuleSet {
 
     /** Evening deck → next morning (D-027): «тело забито» lightens the training (context.yaml, A39). */
     val EVE_01 = RuleRef("EVE-01", 1)
+
+    /** Return after a pause (return.yaml RET-01): the minimal version of the plan (A18 И4.4). */
+    val RET_01 = RuleRef("RET-01", 1)
 }

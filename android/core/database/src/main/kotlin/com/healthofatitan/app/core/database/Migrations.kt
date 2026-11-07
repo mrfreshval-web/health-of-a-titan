@@ -80,5 +80,47 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /**
+     * Stream A «Каждый день»: «Закрыть день» answers on `evening_check` (A18 И4.1), the return log
+     * (И4.4) and safety events without any text (A07 §4.7, И4.3). No health values, no raw WHOOP.
+     */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `training` TEXT")
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `food` TEXT")
+            db.execSQL("ALTER TABLE `evening_check` ADD COLUMN `plan_helped` INTEGER")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `return_log` (`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`kind` TEXT NOT NULL, `at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `day_key`, `kind`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `safety_event` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`user_id` TEXT NOT NULL, `day_key` TEXT NOT NULL, `at` INTEGER NOT NULL, `level` INTEGER NOT NULL, " +
+                    "`reason` TEXT, `source` TEXT NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_safety_event_user_id_at` ON `safety_event` (`user_id`, `at`)")
+        }
+    }
+
+    /**
+     * Stream Г «Путь» (D-033, A42 §3): the 12-week goal and the user's steps of the day. Process
+     * goals only («N days of 7»), no raw WHOOP values. Tables are prefixed `path_`.
+     */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_goal` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`sphere` TEXT NOT NULL, `start_day` TEXT NOT NULL, `baseline` INTEGER, `stage1` INTEGER NOT NULL, " +
+                    "`stage2` INTEGER NOT NULL, `stage3` INTEGER NOT NULL, `status` TEXT NOT NULL, `created_at` INTEGER NOT NULL, " +
+                    "`ended_day` TEXT)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_path_goal_user_id_status` ON `path_goal` (`user_id`, `status`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `path_step` (`user_id` TEXT NOT NULL, `goal_id` INTEGER NOT NULL, `day_key` TEXT NOT NULL, " +
+                    "`version` TEXT NOT NULL, `done_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `goal_id`, `day_key`))",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }

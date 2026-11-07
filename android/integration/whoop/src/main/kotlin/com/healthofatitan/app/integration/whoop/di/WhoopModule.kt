@@ -2,6 +2,7 @@ package com.healthofatitan.app.integration.whoop.di
 
 import android.app.AlarmManager
 import android.content.Context
+import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.MetricDao
@@ -18,6 +19,7 @@ import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
 import com.healthofatitan.app.integration.whoop.WhoopSyncScheduler
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
 import com.healthofatitan.app.integration.whoop.day.CrisisSignals
+import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DayNotifier
 import com.healthofatitan.app.integration.whoop.day.HaikuLibrary
@@ -105,13 +107,18 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource): DayPlanRepository =
-        DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock)
+    fun provideDayPlans(metricDao: MetricDao, dayDao: DayDao, alarms: NextAlarmSource, loop: DailyLoopRepository): DayPlanRepository =
+        DayPlanRepository(metricDao, dayDao, alarms, SystemZoneClock, loop)
 
-    /** CrisisGuard (A07) is not built yet: no crisis signals until slice 3 brings it. */
+    /** Return after a pause (A18 И4.4) and the crisis log without text (A07 §4.7). */
     @Provides
     @Singleton
-    fun provideCrisisSignals(): CrisisSignals = CrisisSignals.None
+    fun provideDailyLoop(dao: DailyLoopDao): DailyLoopRepository = DailyLoopRepository(dao, SystemZoneClock)
+
+    /** CrisisGuard (A07 §4.1): a level ≥ 2 in the last 72 h silences the haiku of «Рассвет». */
+    @Provides
+    @Singleton
+    fun provideCrisisSignals(loop: DailyLoopRepository): CrisisSignals = loop
 
     /** «Рассвет»: the haiku library comes from the content pipeline (assets/content/haiku). */
     @Provides

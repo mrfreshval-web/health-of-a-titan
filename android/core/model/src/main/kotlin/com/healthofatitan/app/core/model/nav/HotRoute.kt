@@ -8,14 +8,26 @@ object HotRoute {
     const val TODAY = "today"
     const val MENTOR = "mentor"
     const val WEEK = "week"
+
+    /** Tab «Путь» (D-033, A42 §3.1): the Titan, the 12-week goal, its stages and «Твой Титан». */
+    const val PATH = "path"
+
+    /**
+     * «Настройки» under the avatar in the corner of every header (D-033): help, the mentor and the
+     * connections. Not a tab any more; `hot://me` still opens it.
+     */
     const val ME = "me"
 
-    /** «Я → Подключения → WHOOP» (A11 §11, A18 И1.1); lives under the «Я» tab. */
+    /** «Аватар › Наставник» (D-030, A38 §9): the mentor's character. */
+    const val MENTOR_PERSONA = "mentor_persona"
+
+    /** «Настройки → Подключения → WHOOP» (A11 §11, A18 И1.1). */
     const val WHOOP = "whoop"
 
     /**
-     * Outside the tabs, the crisis screen. D-029: no header button any more; reachable in ≤ 2 taps
-     * («Я › Помощь», «⋮ › Помощь» in the mentor chat), from the quick settings tile and the shortcut.
+     * Outside the tabs, the crisis screen. D-029 / D-033: no header button; reachable in ≤ 2 taps
+     * from every tab («аватар › Помощь», «⋮ › Помощь» in the mentor chat), from the quick settings
+     * tile and the shortcut.
      */
     const val SOS = "sos"
 
@@ -26,6 +38,6 @@ object HotRoute {
     const val SOS_DEEP_LINK = "$DEEP_LINK_SCHEME://$SOS"
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"
 
-    /** Bottom bar order: «Сегодня · Наставник · Неделя · Я». */
-    val tabs: List<String> = listOf(TODAY, MENTOR, WEEK, ME)
+    /** Bottom bar order: «Сегодня · Наставник · Неделя · Путь» (D-033: still four). */
+    val tabs: List<String> = listOf(TODAY, MENTOR, WEEK, PATH)
 }

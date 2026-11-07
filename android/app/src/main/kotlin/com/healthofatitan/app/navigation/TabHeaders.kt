@@ -33,6 +33,6 @@ object TabHeaders {
         HotTab.TODAY -> null // the date stands over the hero on the screen itself (A37 s2)
         HotTab.MENTOR -> "Винс · ИИ"
         HotTab.WEEK -> week(date)
-        HotTab.ME -> null
+        HotTab.PATH -> "Путь"
     }
 }

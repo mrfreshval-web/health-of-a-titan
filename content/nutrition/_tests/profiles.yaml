@@ -1,0 +1,81 @@
+# Test profiles for scripts/check_nutrition.py (filter tests). Every profile must:
+#  (1) never get a meal (after swaps) with an excluded allergen, origin, lactose level or tag;
+#  (2) still get at least `min_options` meals per main slot at its effective level;
+#  (3) get the expected mode, level cap, hidden numbers and forbidden methods.
+# Negative controls (`must_reject`) prove the filter is not a no-op.
+version: 1
+reviewedBy: []
+status: draft
+
+profiles:
+  - id: P-nuts
+    ru: "Аллергия на арахис и орехи, тяжёлая реакция"
+    level: structured
+    allergies: [{id: peanut, severity: anaphylaxis}, {id: tree_nut, severity: anaphylaxis}]
+    expect: {mode: normal, max_level: structured, min_options: 3, must_reject_raw: [M002, M041, M037]}
+  - id: P-celiac
+    ru: "Целиакия"
+    level: precise
+    medical: [celiac]
+    expect: {mode: filter_only, max_level: precise, min_options: 3, must_reject_raw: [M001, M003, M016, M048]}
+  - id: P-gluten-avoid
+    ru: "Избегаю глютена (без целиакии)"
+    level: base
+    intolerances: [gluten_sensitive]
+    expect: {mode: normal, max_level: base, min_options: 3, must_reject_raw: [M003, M018]}
+  - id: P-lactose
+    ru: "Непереносимость лактозы"
+    level: base
+    intolerances: [lactose]
+    expect: {mode: normal, max_level: base, min_options: 3, must_reject_raw: [M004, M020]}
+  - id: P-milk-allergy
+    ru: "Аллергия на белок молока"
+    level: structured
+    allergies: [{id: milk, severity: allergy}]
+    expect: {mode: normal, max_level: structured, min_options: 3, must_reject_raw: [M001, M040, M045]}
+  - id: P-vegan
+    ru: "Веган"
+    level: structured
+    diets: [vegan]
+    expect: {mode: normal, max_level: structured, min_options: 3, must_reject_raw: [M011, M012, M036]}
+  - id: P-vegan-gf-nuts
+    ru: "Веган + без глютена + аллергия на орехи"
+    level: base
+    diets: [vegan, gluten_free]
+    allergies: [{id: tree_nut, severity: allergy}, {id: peanut, severity: allergy}]
+    expect: {mode: normal, max_level: base, min_options: 2, must_reject_raw: [M009, M013]}
+  - id: P-halal
+    ru: "Халяль"
+    level: base
+    diets: [halal]
+    expect: {mode: normal, max_level: base, min_options: 3, must_reject_raw: [M024, M028]}
+  - id: P-kosher
+    ru: "Кошер"
+    level: structured
+    diets: [kosher]
+    expect: {mode: normal, max_level: structured, min_options: 3, must_reject_raw: [M019, M024, M026]}
+  - id: P-fish-shellfish
+    ru: "Аллергия на рыбу и морепродукты"
+    level: precise
+    allergies: [{id: fish, severity: allergy}, {id: crustacean, severity: allergy}, {id: mollusc, severity: allergy}]
+    expect: {mode: normal, max_level: precise, min_options: 3, must_reject_raw: [M012, M019, M026, M038]}
+  - id: P-ed
+    ru: "РПП в анамнезе, хочет «Точность»"
+    level: precise
+    medical: [ed_history]
+    expect: {mode: ed_care, max_level: base, hide_numbers: true, forbidden_methods: [macro_ranges, protein_g_per_kg, carb_periodization, tre_12, energy_reference], min_options: 3}
+  - id: P-kidney
+    ru: "Болезнь почек"
+    level: structured
+    medical: [kidney]
+    expect: {mode: safe, max_level: base, forbidden_methods: [protein_g_per_kg, macro_ranges, protein_distribution], min_options: 3}
+  - id: P-diabetes
+    ru: "Диабет"
+    level: precise
+    medical: [diabetes]
+    expect: {mode: safe, max_level: structured, forbidden_methods: [carb_periodization, tre_12], min_options: 3}
+  - id: P-pregnant
+    ru: "Беременность"
+    level: structured
+    life_stage: [pregnancy]
+    expect: {mode: safe, max_level: base, forbidden_methods: [tre_12, macro_ranges], min_options: 3}

@@ -1,0 +1,74 @@
+# Examples of meals proposed by Claude (SCHEMA.md §8) with the expected verdict of the validator.
+# A reject case must fail for the reason in `why`; the validator prints the actual reason.
+version: 1
+cases:
+  - id: C01
+    profile: P-vegan
+    expect: accept
+    why: "веганское блюдо из разрешённых компонентов"
+    meal: {ru: "Чечевица с бататом и шпинатом", levels: [structured], slots: [dinner], plate: moderate,
+           components: [{c: lentils, n: 1}, {c: sweet_potato, n: 1}, {c: spinach, n: 1}, {c: olive_oil, n: 0.5}],
+           context: [home], prep_min: 20, tags: [plant], allergens: [], may_contain: [], diets: [vegan]}
+  - id: C02
+    profile: P-vegan
+    expect: reject
+    why: "Claude назвал блюдо веганским, но в нём греческий йогурт"
+    meal: {ru: "Боул с киноа и йогуртовым соусом", levels: [structured], slots: [lunch], plate: moderate,
+           components: [{c: quinoa, n: 1}, {c: chickpeas, n: 1}, {c: greek_yogurt, n: 0.5}, {c: cucumber, n: 1}],
+           context: [office], prep_min: 10, tags: [plant], allergens: [milk], may_contain: [], diets: [vegan]}
+  - id: C03
+    profile: P-celiac
+    expect: reject
+    why: "овсянка без маркировки «может содержать» глютен — при целиакии исключена"
+    meal: {ru: "Овсянка с бананом и семечками", levels: [precise], slots: [breakfast], plate: moderate,
+           components: [{c: oats, n: 1}, {c: banana, n: 1}, {c: pumpkin_seeds, n: 0.5}],
+           context: [home], prep_min: 5, tags: [quick], allergens: [], may_contain: [gluten], diets: []}
+  - id: C04
+    profile: P-celiac
+    expect: accept
+    why: "та же идея на овсянке «без глютена»"
+    meal: {ru: "Овсянка «без глютена» с бананом и семечками", levels: [precise], slots: [breakfast], plate: moderate,
+           components: [{c: oats_gf, n: 1}, {c: banana, n: 1}, {c: pumpkin_seeds, n: 0.5}],
+           context: [home], prep_min: 5, tags: [quick], allergens: [], may_contain: [], diets: []}
+  - id: C05
+    profile: P-lactose
+    expect: reject
+    why: "заявлено «без аллергенов», а в составе молоко — расхождение объявленного и выведенного"
+    meal: {ru: "Гречка с молоком", levels: [base], slots: [breakfast], plate: moderate,
+           components: [{c: buckwheat, n: 1}, {c: milk, n: 1}],
+           context: [home], prep_min: 10, tags: [russian_classic], allergens: [], may_contain: [], diets: []}
+  - id: C06
+    profile: P-lactose
+    expect: reject
+    why: "стоп-слово «детокс»"
+    meal: {ru: "Детокс-салат с огурцом и киноа", levels: [base], slots: [lunch], plate: easy,
+           components: [{c: quinoa, n: 1}, {c: cucumber, n: 1}, {c: chickpeas, n: 1}],
+           context: [office], prep_min: 10, tags: [plant], allergens: [], may_contain: [], diets: []}
+  - id: C07
+    profile: P-ed
+    expect: reject
+    why: "при бережном режиме еды в тексте нет граммов"
+    meal: {ru: "Курица 150 г с рисом", levels: [base], slots: [lunch], plate: moderate,
+           components: [{c: chicken_breast, n: 1}, {c: rice_white, n: 1}, {c: broccoli, n: 1}],
+           context: [home], prep_min: 20, tags: [], allergens: [], may_contain: [], diets: []}
+  - id: C08
+    profile: P-nuts
+    expect: reject
+    why: "при анафилаксии генерация отключена — только проверенная библиотека"
+    meal: {ru: "Индейка с рисом и брокколи", levels: [structured], slots: [dinner], plate: moderate,
+           components: [{c: turkey, n: 1}, {c: rice_brown, n: 1}, {c: broccoli, n: 1}],
+           context: [home], prep_min: 20, tags: [], allergens: [], may_contain: [], diets: []}
+  - id: C09
+    profile: P-kosher
+    expect: reject
+    why: "мясо с молочным в одном блюде"
+    meal: {ru: "Говядина с картофелем и сметаной", levels: [structured], slots: [dinner], plate: moderate,
+           components: [{c: beef_lean, n: 1}, {c: potato, n: 1}, {c: sour_cream, n: 0.5}, {c: cabbage, n: 1}],
+           context: [home], prep_min: 30, tags: [russian_classic], allergens: [milk], may_contain: [], diets: []}
+  - id: C10
+    profile: P-diabetes
+    expect: reject
+    why: "уровень «Точность» выше потолка профиля («Опора»)"
+    meal: {ru: "Тяжёлый день: индейка и двойная гречка", levels: [precise], slots: [lunch], plate: hard,
+           components: [{c: turkey, n: 1}, {c: buckwheat, n: 2}, {c: frozen_veg_mix, n: 1}],
+           context: [home], prep_min: 20, tags: [fuel], allergens: [], may_contain: [], diets: []}

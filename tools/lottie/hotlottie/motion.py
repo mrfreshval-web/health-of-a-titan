@@ -125,7 +125,8 @@ class Script:
                 o = j["shoulder" + side]
                 tgt = fixed or lerp(ja["hand" + side], jb["hand" + side])
                 ln = p.get("armLen" + side, 1.0)
-                a1, a2 = rig.ik2(o, tgt, rig.L["ua"] * ln, rig.L["fa"] * ln, j["elbow" + side])
+                ul = ln * p.get("uaLen" + side, 1.0)
+                a1, a2 = rig.ik2(o, tgt, rig.L["ua"] * ul, rig.L["fa"] * ln, j["elbow" + side])
                 p["ua" + side] = _near(a1, p["ua" + side])
                 p["fa" + side] = _near(a2, p["fa" + side])
             j = rig.joints(p, self.front)

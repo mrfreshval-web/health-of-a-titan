@@ -98,6 +98,58 @@ def stick(side="N", at=12.2, length=6.0):
     return add
 
 
+def rail(y, x0, x1, base=None):
+    """A wall seen face-on behind the figure (v4, leg swings side-on to the wall): a hand rail on
+    its brackets and the skirting line; no edge the swinging leg could cross."""
+    def add(b, vals, frames):
+        paths = [_poly([b.fr.px(x0, y), b.fr.px(x1, y)])]
+        for x in (x0 + 4.0, x1 - 4.0):
+            paths.append(_poly([b.fr.px(x, y), b.fr.px(x, y + 2.2)]))
+        if base is not None:
+            paths.append(_poly([b.fr.px(x0 - 6, base), b.fr.px(x1 + 6, base)]))
+        b.add("props_rail", 4, lt.transform(), [_line_group(paths, PROP_PX, opacity=45)])
+    return add
+
+
+def band(layer):
+    """The band between the hands (v4, band dislocates seen from the front), drawn twice: in front of
+    the body while the hands are in front (frame key "_band_front" = 1) and behind it afterwards."""
+    def add(b, vals, frames):
+        pts = []
+        for v in vals:
+            n, f = b.fr.px(*v["hand"]["N"]), b.fr.px(*v["hand"]["F"])
+            pts.append([n[0], n[1], f[0], f[1]])
+
+        def wrap(vv):
+            return lt.path_value([(vv[0], vv[1]), (vv[2], vv[3])], [(0, 0), (0, 0)], [(0, 0), (0, 0)], False)
+        ks = lt.fit_linear(pts, b.breaks, 1.0, wrap=wrap)
+        vis = [p.get("_band_front", 1.0) > 0.5 for p in frames]
+        if layer == "behind":
+            vis = [not x for x in vis]
+        b.add("props_band_" + layer, 4, lt.transform(), [lt.group("props_line", [{"ty": "sh", "nm": "band", "ks": ks},
+                                                                               lt.stroke(PROPS, PROP_PX * 1.3, "props_stroke", opacity=80)])])
+        lay = b.layers[-1]
+        if all(vis[:-1]):
+            return
+        if layer == "behind":
+            # one window: in/out points, the path keys outside it dropped (the size budget)
+            f0, f1 = vis.index(True), len(vis) - vis[::-1].index(True)
+            lay["ip"], lay["op"] = f0, f1
+            k = ks["k"] if isinstance(ks, dict) and ks.get("a") == 1 else None
+            if k:
+                lo = max([i for i, key in enumerate(k) if key["t"] <= f0] or [0])
+                hi = min([i for i, key in enumerate(k) if key["t"] >= f1] or [len(k) - 1])
+                ks["k"] = k[lo:hi + 1]
+        else:
+            keys, prev = [], None
+            for f, v in enumerate(vis):
+                if v != prev:
+                    keys.append({"t": f, "s": [100 if v else 0], "h": 1})
+                    prev = v
+            lay["ks"]["o"] = {"a": 1, "k": keys}
+    return add
+
+
 def strap(side="N"):
     """Strap from the hand to the sole of the foot (hamstring stretch)."""
     def add(b, vals, frames):

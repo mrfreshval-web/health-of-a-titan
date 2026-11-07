@@ -11,7 +11,7 @@
     "touch": 60,
     "poster": 60
    },
-   "bytes": 78153
+   "bytes": 105039
   },
   "ex-arm-circles": {
    "file": "lottie/ex-arm-circles.json",
@@ -22,7 +22,7 @@
     "poster": 0,
     "up": 30
    },
-   "bytes": 69059
+   "bytes": 69697
   },
   "ex-band-dislocate": {
    "file": "lottie/ex-band-dislocate.json",
@@ -34,7 +34,7 @@
     "poster": 60,
     "behind": 120
    },
-   "bytes": 61005
+   "bytes": 141717
   },
   "ex-breath-long-exhale": {
    "file": "lottie/ex-breath-long-exhale.json",
@@ -45,7 +45,7 @@
     "inhale": 240,
     "poster": 240
    },
-   "bytes": 61583
+   "bytes": 90593
   },
   "ex-cat-cow": {
    "file": "lottie/ex-cat-cow.json",
@@ -57,7 +57,7 @@
     "poster": 90,
     "cow": 330
    },
-   "bytes": 79083
+   "bytes": 108841
   },
   "ex-deep-squat-hold": {
    "file": "lottie/ex-deep-squat-hold.json",
@@ -72,7 +72,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 91024
+   "bytes": 117910
   },
   "ex-goblet-squat": {
    "file": "lottie/ex-goblet-squat.json",
@@ -83,7 +83,7 @@
     "bottom": 180,
     "poster": 180
    },
-   "bytes": 86516
+   "bytes": 113998
   },
   "ex-leg-swings": {
    "file": "lottie/ex-leg-swings.json",
@@ -94,7 +94,7 @@
     "front": 48,
     "poster": 48
    },
-   "bytes": 65434
+   "bytes": 81724
   },
   "ex-pullup": {
    "file": "lottie/ex-pullup.json",
@@ -106,7 +106,7 @@
     "top": 72,
     "poster": 72
    },
-   "bytes": 79613
+   "bytes": 77715
   },
   "ex-scap-pushup": {
    "file": "lottie/ex-scap-pushup.json",
@@ -117,7 +117,7 @@
     "protract": 60,
     "poster": 60
    },
-   "bytes": 76109
+   "bytes": 104161
   },
   "ex-stretch-calf": {
    "file": "lottie/ex-stretch-calf.json",
@@ -132,7 +132,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 77183
+   "bytes": 104069
   },
   "ex-stretch-chest-doorway": {
    "file": "lottie/ex-stretch-chest-doorway.json",
@@ -147,7 +147,7 @@
     "hold_loop_end": 696,
     "exit": 696
    },
-   "bytes": 70703
+   "bytes": 71613
   },
   "ex-stretch-child": {
    "file": "lottie/ex-stretch-child.json",
@@ -162,7 +162,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 91202
+   "bytes": 118088
   },
   "ex-stretch-hamstring": {
    "file": "lottie/ex-stretch-hamstring.json",
@@ -177,7 +177,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 64464
+   "bytes": 89522
   },
   "ex-stretch-hip-flexor": {
    "file": "lottie/ex-stretch-hip-flexor.json",
@@ -192,7 +192,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 73364
+   "bytes": 93332
   },
   "ex-stretch-lat-wall": {
    "file": "lottie/ex-stretch-lat-wall.json",
@@ -207,7 +207,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 91114
+   "bytes": 118000
   },
   "ex-stretch-pigeon": {
    "file": "lottie/ex-stretch-pigeon.json",
@@ -222,7 +222,7 @@
     "hold_loop_end": 720,
     "exit": 720
    },
-   "bytes": 77673
+   "bytes": 104559
   },
   "ex-stretch-quad": {
    "file": "lottie/ex-stretch-quad.json",
@@ -237,7 +237,7 @@
     "hold_loop_end": 690,
     "exit": 690
    },
-   "bytes": 75999
+   "bytes": 92588
   },
   "ex-worlds-greatest": {
    "file": "lottie/ex-worlds-greatest.json",
@@ -249,7 +249,7 @@
     "reach_up": 240,
     "poster": 240
    },
-   "bytes": 87400
+   "bytes": 114286
   },
   "ex-wrist-prep": {
    "file": "lottie/ex-wrist-prep.json",
@@ -261,7 +261,7 @@
     "poster": 48,
     "back": 132
    },
-   "bytes": 88053
+   "bytes": 114939
   },
   "hero-first-skill": {
    "file": "lottie/hero-first-skill.json",
@@ -275,7 +275,7 @@
     "pause": 105,
     "poster": 179
    },
-   "bytes": 99168
+   "bytes": 123678
   },
   "hero-level-up": {
    "file": "lottie/hero-level-up.json",

@@ -47,7 +47,6 @@ import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotBackground
 import com.healthofatitan.app.core.ui.component.HotTopBar
-import com.healthofatitan.app.core.ui.component.StubScreen
 import com.healthofatitan.app.core.ui.component.SyncMarkPhase
 import com.healthofatitan.app.core.ui.component.SyncMarkState
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
@@ -77,6 +76,7 @@ import com.healthofatitan.app.feature.me.whoopScreen
 import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
+import com.healthofatitan.app.feature.path.behindScreen
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
 import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate
 import com.healthofatitan.app.feature.path.pathRitualScreen
@@ -335,7 +335,7 @@ fun HotApp(
                     onHelp = { navController.openSos() },
                 )
                 pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
-                behindScreen()
+                behindScreen(stateful = stateful, onHelp = { navController.openSos() })
                 meScreen(
                     onOpenWhoop = { open(HotRoute.WHOOP) },
                     onOpenHelp = { navController.openSos() },
@@ -401,13 +401,6 @@ fun HotApp(
                 saveFailed = ageGateSaveFailed,
             )
         }
-    }
-}
-
-/** «За плечами» (D-038, A47): Взято · Несу · Дано. A placeholder until its slice. */
-private fun NavGraphBuilder.behindScreen() {
-    composable(route = HotRoute.BEHIND) {
-        StubScreen(lead = TodayCopy.BEHIND_SOON, blocks = emptyList(), testTag = BEHIND_SCREEN_TAG)
     }
 }
 

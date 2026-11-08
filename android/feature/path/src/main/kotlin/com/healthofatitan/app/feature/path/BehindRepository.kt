@@ -20,6 +20,7 @@ import com.healthofatitan.app.feature.path.logic.BehindSafety
 import com.healthofatitan.app.feature.path.logic.DayRecord
 import com.healthofatitan.app.feature.path.logic.PathStage
 import com.healthofatitan.app.feature.path.logic.RecordKind
+import com.healthofatitan.app.feature.path.logic.RuWords
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -90,12 +91,12 @@ class BehindRepository @Inject constructor(
         val days = days(today)
         val records = buildList {
             days.values.filter { it.mode != null }.forEach { d ->
-                add(BehindRecord(RecordKind.DAY, d.day, "${com.healthofatitan.app.feature.path.logic.RuWords.dated(d.day)} · ${d.mode!!.word}", words = d.mode.word))
+                add(BehindRecord(RecordKind.DAY, d.day, "${RuWords.dated(d.day)} · ${d.mode!!.word}", words = d.mode.word))
             }
             addAll(trainings())
             addAll(weeks(today))
             i.goals.forEach { (g, e) -> addAll(chapter(g, e, today)) }
-            hardWeeks(days.values.toList(), today).forEach(::add)
+            addAll(hardWeeks(days.values.toList(), today))
         }
         val since = (days.keys + records.filter { it.kind != RecordKind.CHAPTER && it.kind != RecordKind.MILESTONE }.map { it.day }).minOrNull()
         return BehindData(

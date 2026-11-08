@@ -38,14 +38,15 @@ data class ProfileSnapshot(
  * @param events the event journal (A58 §8): a newly marked `ed_history`, `ed_signals` or
  *   `underweight_reported` writes the entry of `ED_CARE` for the safety bus (A60 §3.3 «входы — в
  *   один словарь»). Unmarking writes nothing: only the person's choice ends `ED_CARE` (D-057).
- * @param transaction runs a withdrawal of consent as one transaction (`HotDatabase.withTransaction`)
+ * @param transaction runs a withdrawal of consent as one transaction (`HotDatabase.withTransaction`);
+ *   it stands before [now] so that a trailing lambda stays the clock
  */
 class ProfileStore(
     private val nutritionDao: NutritionDao,
     private val consentDao: ConsentDao,
     private val events: EventLogDao? = null,
-    private val now: () -> Long = System::currentTimeMillis,
     private val transaction: suspend (suspend () -> Unit) -> Unit = { it() },
+    private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val user = HotDatabase.LOCAL_USER
 

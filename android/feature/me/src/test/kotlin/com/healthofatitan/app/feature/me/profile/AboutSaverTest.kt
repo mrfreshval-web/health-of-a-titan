@@ -41,7 +41,7 @@ class AboutSaverTest {
     }
 
     @Test
-    fun `a rise from 1 to 2 opens help; level 1 alone only shows the quiet line`() = runBlocking {
+    fun `a rise from 1 to 2 opens help, level 1 alone only shows the quiet line`() = runBlocking {
         val first = saver.save(CLARIFY)
         assertEquals(CrisisLevel.CLARIFY, first.assessment.level)
         assertFalse(first.openHelp)
@@ -51,7 +51,7 @@ class AboutSaverTest {
     }
 
     @Test
-    fun `the event has the source PROFILE and no text; the text is saved whatever it says`() = runBlocking {
+    fun `the event has the source PROFILE and no text, the text is saved whatever it says`() = runBlocking {
         saver.save(PASSIVE)
         val (assessment, source) = logged.single()
         assertEquals(CrisisSource.PROFILE, source)
@@ -61,7 +61,7 @@ class AboutSaverTest {
     }
 
     @Test
-    fun `nothing but the safety journal is touched: no ED_CARE, a clean text clears the line`() = runBlocking {
+    fun `nothing but the safety journal is touched - no ED_CARE, a clean text clears the line`() = runBlocking {
         saver.save(PASSIVE)
         saver.save("Работаю посменно, по утрам бегаю.")
         // AboutSaver has the profile store and the safety log only: ED_CARE cannot be switched from here.

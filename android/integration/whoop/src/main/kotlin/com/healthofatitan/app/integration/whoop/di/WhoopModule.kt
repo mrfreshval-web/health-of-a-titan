@@ -6,10 +6,12 @@ import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
+import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
 import com.healthofatitan.app.integration.whoop.EdgeClient
+import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import com.healthofatitan.app.integration.whoop.EncryptedWhoopCredentialStore
 import com.healthofatitan.app.integration.whoop.FileSyncLogStore
 import com.healthofatitan.app.integration.whoop.SyncLogStore
@@ -135,7 +137,12 @@ object WhoopModule {
     /** Return after a pause (A18 И4.4) and the crisis log without text (A07 §4.7). */
     @Provides
     @Singleton
-    fun provideDailyLoop(dao: DailyLoopDao): DailyLoopRepository = DailyLoopRepository(dao, SystemZoneClock)
+    fun provideDailyLoop(dao: DailyLoopDao, bus: SafetyBus): DailyLoopRepository = DailyLoopRepository(dao, SystemZoneClock, bus)
+
+    /** The safety bus (A60 §3, D-051): one SafetyState for «Сегодня», «Неделя» and «Путь». */
+    @Provides
+    @Singleton
+    fun provideSafetyBus(dao: EventLogDao): SafetyBus = SafetyBus(dao, SystemZoneClock)
 
     /** CrisisGuard (A07 §4.1): a level ≥ 2 in the last 72 h silences the haiku of «Рассвет». */
     @Provides

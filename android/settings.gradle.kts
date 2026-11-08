@@ -63,3 +63,5 @@ include(":domain:checkin")
 include(":feature:checkin")
 // «Сегодня» v3 (A46 v0.3, D-042): blocks, supports, tasks of the day, rhythm, «Почему так».
 include(":domain:today")
+// «Единый Титан» (D-051, A60 §3): the safety bus SafetyState over the event journal.
+include(":domain:safety")

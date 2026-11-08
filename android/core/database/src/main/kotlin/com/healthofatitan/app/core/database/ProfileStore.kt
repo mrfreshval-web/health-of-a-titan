@@ -1,14 +1,19 @@
 package com.healthofatitan.app.core.database
 
 import com.healthofatitan.app.core.database.dao.ConsentDao
+import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.entity.ConsentRecordEntity
+import com.healthofatitan.app.core.database.entity.EventLogEntity
 import com.healthofatitan.app.core.database.entity.NutritionProfileEntity
 import com.healthofatitan.app.core.model.profile.ProfileCategory
 import com.healthofatitan.app.core.model.profile.UserConstraints
+import com.healthofatitan.app.core.model.safety.SafetyEventKinds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.time.Instant
+import java.time.ZoneId
 import java.util.TimeZone
 
 /**
@@ -29,10 +34,15 @@ data class ProfileSnapshot(
 /**
  * Read and write the profile of specifics (S4). One instance for the app; inject it where the
  * profile is needed (`ProfileStore.profile`). Revoking consent deletes every category.
+ *
+ * @param events the event journal (A58 §8): a newly marked `ed_history`, `ed_signals` or
+ *   `underweight_reported` writes the entry of `ED_CARE` for the safety bus (A60 §3.3 «входы — в
+ *   один словарь»). Unmarking writes nothing: only the person's choice ends `ED_CARE` (D-057).
  */
 class ProfileStore(
     private val nutritionDao: NutritionDao,
     private val consentDao: ConsentDao,
+    private val events: EventLogDao? = null,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val user = HotDatabase.LOCAL_USER
@@ -74,10 +84,33 @@ class ProfileStore(
     suspend fun save(constraints: UserConstraints) {
         val t = now()
         val (filled, empty) = ProfileCategory.entries.partition { constraints.has(it) }
+        val before = events?.let { medicalCodes() }
         nutritionDao.replace(
             user,
             filled.map { NutritionProfileEntity(user, it.key, constraints.codes(it).joinToString(SEP), t) },
             empty.map { it.key },
+        )
+        if (before != null) recordEdCare(before, constraints.codes(ProfileCategory.MEDICAL).toSet(), t)
+    }
+
+    private suspend fun medicalCodes(): Set<String> =
+        nutritionDao.profile(user).firstOrNull { it.category == ProfileCategory.MEDICAL.key }?.codes?.split(SEP)?.toSet().orEmpty()
+
+    /** A code of `ED_CARE` that was not marked before starts the mode; of several, `body` (the longer cooldown) wins. */
+    private suspend fun recordEdCare(before: Set<String>, after: Set<String>, t: Long) {
+        val journal = events ?: return
+        val reasons = (after - before).mapNotNull { SafetyEventKinds.ED_PROFILE_CODES[it] }
+        if (reasons.isEmpty()) return
+        val reason = if (SafetyEventKinds.REASON_BODY in reasons) SafetyEventKinds.REASON_BODY else reasons.first()
+        journal.append(
+            EventLogEntity(
+                userId = user,
+                kind = SafetyEventKinds.ED_CARE_ENTER,
+                payload = reason,
+                source = SOURCE_PROFILE,
+                at = t,
+                dayKey = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+            ),
         )
     }
 
@@ -99,6 +132,7 @@ class ProfileStore(
         const val CONSENT_ID = "profile_s4"
         const val CONSENT_VERSION = 1
         const val LEVEL_KEY = "level"
+        const val SOURCE_PROFILE = "profile"
         private const val SEP = ";"
     }
 }

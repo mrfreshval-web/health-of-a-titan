@@ -2,6 +2,11 @@ package com.healthofatitan.app.navigation
 
 import android.app.Application
 import android.content.Intent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
@@ -29,7 +34,15 @@ import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.theme.HotTheme
+import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.feature.me.ME_HELP_ROW_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_ADULTS_ONLY_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_BACK_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_CHECK_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_CONTINUE_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_HELP_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_UNDER_TAG
 import com.healthofatitan.app.feature.me.ME_MENTOR_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.ME_NUTRITION_ROW_TAG
@@ -333,5 +346,109 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(sexTag(SexForCalc.UNSPECIFIED)).performScrollTo().assertIsSelected()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
+    }
+
+    // ── The gate 18+ (R-13, A61 §1.2) ───────────────────────────────────────────────────────────
+
+    private var gate by mutableStateOf(AgeGate.ASK)
+
+    private fun launchGated(pendingRoute: String? = null, confirmed: MutableList<Unit> = mutableListOf()) {
+        gate = AgeGate.ASK
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    pendingRoute = pendingRoute,
+                    navController = nav,
+                    stateful = false,
+                    ageGate = gate,
+                    onAdultConfirmed = {
+                        confirmed += Unit
+                        gate = AgeGate.CONFIRMED
+                    },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `R-13 without age18 the app does not go on until the person confirms 18 or more`() {
+        val confirmed = mutableListOf<Unit>()
+        launchGated(confirmed = confirmed)
+        compose.onNodeWithTag(AGE_GATE_TAG).assertExists()
+        // nothing of the app is reachable behind the gate, and «Рассвет» does not open over it
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(HotTab.WEEK.testTag).assertDoesNotExist()
+        assertEquals(HotRoute.TODAY, nav.currentDestination?.route)
+
+        compose.onNodeWithTag(AGE_GATE_CONTINUE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).performClick()
+        compose.onNodeWithTag(AGE_GATE_CONTINUE_TAG).assertIsEnabled().performClick()
+        assertEquals(1, confirmed.size)
+
+        compose.onNodeWithTag(AGE_GATE_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(HotTab.WEEK.testTag).assertExists()
+    }
+
+    @Test
+    fun `R-13 the dawn does not open over the gate, only after it`() {
+        val offered = mutableListOf<Unit>()
+        gate = AgeGate.ASK
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    navController = nav,
+                    stateful = false,
+                    rassvetDue = RassvetStep.DECK,
+                    rassvetNext = RassvetStep.DECK,
+                    onRassvetOffered = { offered += Unit },
+                    ageGate = gate,
+                    onAdultConfirmed = { gate = AgeGate.CONFIRMED },
+                )
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(HotRoute.TODAY, nav.currentDestination?.route)
+        assertTrue(offered.isEmpty())
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).performClick()
+        compose.onNodeWithTag(AGE_GATE_CONTINUE_TAG).performClick()
+        compose.waitForIdle()
+        assertEquals(HotRoute.CHECKIN, nav.currentDestination?.route)
+        assertEquals(1, offered.size)
+    }
+
+    @Test
+    fun `R-13 under 18 sees adults only with help one tap away, and nothing is stored`() {
+        val confirmed = mutableListOf<Unit>()
+        launchGated(confirmed = confirmed)
+        compose.onNodeWithTag(AGE_GATE_UNDER_TAG).performClick()
+        compose.onNodeWithTag(AGE_GATE_ADULTS_ONLY_TAG).assertExists()
+        compose.onNodeWithTag(AGE_GATE_HELP_TAG).performClick()
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(SOS_CALL_112_TAG).assertExists()
+        compose.onNodeWithTag(SOS_CALL_911_TAG).assertExists()
+        compose.onNodeWithContentDescription("Закрыть").performClick()
+        compose.onNodeWithTag(AGE_GATE_TAG).assertExists()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertDoesNotExist()
+        assertTrue(confirmed.isEmpty())
+        compose.onNodeWithTag(AGE_GATE_BACK_TAG).performClick()
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).assertExists()
+    }
+
+    @Test
+    fun `R-13 help is never behind the gate, the tile and the shortcut open sos at once`() {
+        launchGated(pendingRoute = HotRoute.SOS)
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(AGE_GATE_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(SOS_CALL_112_TAG).assertExists()
+    }
+
+    @Test
+    fun `R-13 help from the question itself opens sos`() {
+        launchGated()
+        compose.onNodeWithTag(AGE_GATE_HELP_TAG).performClick()
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
     }
 }

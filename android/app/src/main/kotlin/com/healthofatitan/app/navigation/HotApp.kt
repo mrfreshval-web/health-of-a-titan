@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -63,6 +64,8 @@ import com.healthofatitan.app.feature.checkin.EveningAreas
 import com.healthofatitan.app.feature.checkin.EveningKnownLine
 import com.healthofatitan.app.feature.checkin.EveningWeather
 import com.healthofatitan.app.feature.checkin.checkinScreens
+import com.healthofatitan.app.core.database.AgeGate
+import com.healthofatitan.app.feature.me.consent.AgeGateScreen
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.profile.profileScreen
@@ -129,6 +132,10 @@ fun RassvetStep.route(): String = when (this) {
  *   on the «Рассвет» point.
  * @param onRassvetOffered the ritual was opened by itself today: it is not offered again.
  * @param persona the mentor's character for Винс's circle (D-030); null = not chosen yet.
+ * @param ageGate the gate 18+ (R-13, A61 §1.2): until [AgeGate.CONFIRMED] the gate lies over the
+ *   whole app and nothing of it can be seen or tapped; SOS is never behind it — the tile, the
+ *   shortcut and «Помощь» on the gate open it over the gate. Tests start confirmed.
+ * @param onAdultConfirmed «Мне есть 18 лет» was confirmed (written as `ConsentRecord age18`).
  */
 @Composable
 fun HotApp(
@@ -141,6 +148,8 @@ fun HotApp(
     rassvetNext: RassvetStep? = null,
     onRassvetOffered: () -> Unit = {},
     persona: MentorPersona? = null,
+    ageGate: AgeGate = AgeGate.CONFIRMED,
+    onAdultConfirmed: () -> Unit = {},
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -149,6 +158,8 @@ fun HotApp(
         currentRoute == HotRoute.BREATHER || currentRoute == HotRoute.PATH_RITUAL || currentRoute in CHECKIN_FULL_SCREEN
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
+    val gated = ageGate != AgeGate.CONFIRMED && !inSos
+    var underage by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(pendingRoute) {
         if (pendingRoute != null) {
@@ -166,9 +177,9 @@ fun HotApp(
     // «Рассвет» (D-040): one trigger a day, only over «Сегодня», never over help; then its steps
     // follow one another while the person goes on (the deck, the reveal, the dawn).
     var chained by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(rassvetDue, currentRoute) {
+    LaunchedEffect(rassvetDue, currentRoute, gated) {
         val step = rassvetDue ?: return@LaunchedEffect
-        if (pendingRoute == null && currentRoute == HotRoute.TODAY && AutoOpen.reason(0, step) == AutoOpenReason.RASSVET) {
+        if (!gated && pendingRoute == null && currentRoute == HotRoute.TODAY && AutoOpen.reason(0, step) == AutoOpenReason.RASSVET) {
             onRassvetOffered()
             chained = "${LocalDate.now()}:${step.name}"
             navController.navigate(step.route()) { launchSingleTop = true }
@@ -199,6 +210,8 @@ fun HotApp(
     // «Ночное небо» behind every tab (A36 §4); SOS draws its own sober background on top.
     HotBackground {
         Scaffold(
+            // Behind the gate 18+ the app is not in the tree of accessibility either (R-13).
+            modifier = if (gated) Modifier.clearAndSetSemantics {} else Modifier,
             containerColor = Color.Transparent,
             topBar = {
                 if (!fullScreen) {
@@ -320,6 +333,16 @@ fun HotApp(
                     stateful = stateful,
                 )
             }
+        }
+        // The gate 18+ (R-13): over everything, and «Помощь» on it opens SOS over the gate.
+        if (gated) {
+            AgeGateScreen(
+                gate = ageGate,
+                under = underage,
+                onUnderChange = { underage = it },
+                onConfirm = onAdultConfirmed,
+                onHelp = { navController.openSos() },
+            )
         }
     }
 }

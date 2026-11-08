@@ -2,6 +2,7 @@ package com.healthofatitan.app.core.database
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.healthofatitan.app.core.model.safety.SafetyEventKinds
 
 /**
  * Room migrations. Every released schema must upgrade without data loss: the founder installs
@@ -381,8 +382,48 @@ object Migrations {
         }
     }
 
+    /**
+     * «Единый Титан, часть 1» (A58 §8, A60 §3, D-051, D-057): the event journal `event_log`, from
+     * which the safety bus `SafetyState` is projected. The journal starts with what the bus must
+     * already know on the first open of the new build:
+     * - every crisis level of `safety_event` (date, level, source; never words) — a crisis of the
+     *   last 72 h stays visible to «Сегодня», «Неделя» and «Путь» after the update;
+     * - `ED_CARE` for a profile of specifics (with the S4 consent) that marks `ed_history`,
+     *   `ed_signals` or `underweight_reported`: reason `body` if `underweight_reported` is there
+     *   (the longer cooldown), otherwise `self_report`; the time is the row's `updated_at`.
+     * `safety_event` stays as it is (the crisis log of A07 §4.7).
+     */
+    val MIGRATION_14_15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `event_log` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`kind` TEXT NOT NULL, `payload` TEXT, `source` TEXT, `at` INTEGER NOT NULL, `day_key` TEXT NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_event_log_user_id_kind_at` ON `event_log` (`user_id`, `kind`, `at`)")
+            db.execSQL(
+                "INSERT INTO `event_log` (`user_id`, `kind`, `payload`, `source`, `at`, `day_key`) " +
+                    "SELECT `user_id`, '${SafetyEventKinds.CRISIS}', CAST(`level` AS TEXT), `source`, `at`, `day_key` " +
+                    "FROM `safety_event` ORDER BY `at`, `id`",
+            )
+            val codes = "(';' || n.`codes` || ';')"
+            val any = SafetyEventKinds.ED_PROFILE_CODES.keys.joinToString(" OR ") { "$codes LIKE '%;$it;%'" }
+            val body = SafetyEventKinds.ED_PROFILE_CODES.filterValues { it == SafetyEventKinds.REASON_BODY }.keys
+                .joinToString(" OR ") { "$codes LIKE '%;$it;%'" }
+            db.execSQL(
+                "INSERT INTO `event_log` (`user_id`, `kind`, `payload`, `source`, `at`, `day_key`) " +
+                    "SELECT n.`user_id`, '${SafetyEventKinds.ED_CARE_ENTER}', " +
+                    "CASE WHEN $body THEN '${SafetyEventKinds.REASON_BODY}' ELSE '${SafetyEventKinds.REASON_SELF_REPORT}' END, " +
+                    "'migration', n.`updated_at`, date(n.`updated_at` / 1000, 'unixepoch') " +
+                    "FROM `nutrition_profile` n WHERE n.`category` = 'medical' AND ($any) " +
+                    "AND (SELECT c.`granted` FROM `consent_record` c WHERE c.`user_id` = n.`user_id` " +
+                    "AND c.`consent_id` = '${ProfileStore.CONSENT_ID}' ORDER BY c.`id` DESC LIMIT 1) = 1",
+            )
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
+        MIGRATION_14_15,
     )
 }

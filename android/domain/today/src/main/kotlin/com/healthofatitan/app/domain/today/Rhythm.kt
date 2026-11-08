@@ -74,7 +74,7 @@ object RhythmRules {
         val windows = i.sleep?.takeIf { i.scenario != Scenario.NO_WHOOP }?.let { s ->
             listOfNotNull(
                 BodyWindow(BodyWindowKind.COFFEE, s.caffeineUntilMin),
-                BodyWindow(BodyWindowKind.DINNER, s.dinnerUntilMin),
+                BodyWindow(BodyWindowKind.DINNER, s.dinnerUntilMin).takeIf { s.foodWindows },
                 BodyWindow(BodyWindowKind.SCREENS, s.screensFromMin),
                 s.bedtimeMin?.let { BodyWindow(BodyWindowKind.BEDTIME, it) },
             )

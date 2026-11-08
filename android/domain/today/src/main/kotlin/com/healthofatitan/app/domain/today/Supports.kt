@@ -29,7 +29,7 @@ object SupportNorms {
     /** Waking hours counted for «часы с движением» («7 из 12»). */
     const val MOVING_HOURS_GOAL = 12
 
-    /** Meals of a day plan (A41) until the plan of the day says otherwise. */
+    /** Meals of a day while there is no food plan; with a plan the main slots count ([TodayFood.mealsPlanned]). */
     const val MEALS_DEFAULT = 4
 
     const val GLASS_ML = 250
@@ -104,7 +104,12 @@ data class SleepPrep(
     val dinnerUntilMin: Int = SupportNorms.DINNER_UNTIL_MIN,
     val screensFromMin: Int = SupportNorms.SCREENS_FROM_MIN,
     val bedtimeMin: Int? = null,
+    /** False under `HIDE_FOOD_WINDOWS` (A60 §3.4): «ужин до» is not a condition and is not shown. */
+    val foodWindows: Boolean = true,
 ) {
+    /** Conditions counted today: four, or three without the dinner window. */
+    val total: Int get() = if (foodWindows) TOTAL else TOTAL - 1
+
     /**
      * Conditions held so far, an estimate: a window counts once its time has passed without a mark
      * against it (a workout ending later, a meal marked later). Screens are counted from their hour.
@@ -113,7 +118,7 @@ data class SleepPrep(
         var n = 0
         if (nowMin >= caffeineUntilMin) n++
         if (nowMin >= trainingUntilMin && (lastWorkoutEndMin == null || lastWorkoutEndMin <= trainingUntilMin)) n++
-        if (nowMin >= dinnerUntilMin && (lastMealMin == null || lastMealMin <= dinnerUntilMin)) n++
+        if (foodWindows && nowMin >= dinnerUntilMin && (lastMealMin == null || lastMealMin <= dinnerUntilMin)) n++
         if (nowMin >= screensFromMin) n++
         return n
     }
@@ -145,6 +150,8 @@ data class SupportsInput(
     val sleep: SleepPrep = SleepPrep(),
     val lastWorkoutEndMin: Int? = null,
     val lastMealMin: Int? = null,
+    /** The food plan and what the safety bus hides (S3); null keeps [mealsPlanned] and shows all. */
+    val food: TodayFood? = null,
 )
 
 object Supports {
@@ -169,6 +176,7 @@ object Supports {
         val noData = i.scenario == Scenario.NO_WHOOP
         val corridor = SupportNorms.effortCorridor(i.mode)
         val effortHidden = i.scenario == Scenario.SAFETY
+        val noKcal = i.food?.hideCalories == true
         val strain = i.strain?.takeIf { !effortHidden && !noData }
         val effort = SupportView(
             id = SupportId.EFFORT,
@@ -176,12 +184,16 @@ object Supports {
             value = strain?.let(::one) ?: "—",
             caption = if (effortHidden) null else range(corridor),
             fill = strain?.let { (it / corridor.endInclusive).toFloat().coerceIn(0f, 1f) } ?: 0f,
-            source = if (effortHidden) TodayCopy.EFFORT_HIDDEN else TodayCopy.SOURCE_WHOOP_CYCLE,
+            source = when {
+                effortHidden -> TodayCopy.EFFORT_HIDDEN
+                noKcal -> TodayCopy.SOURCE_WHOOP_LOAD
+                else -> TodayCopy.SOURCE_WHOOP_CYCLE
+            },
             estimate = false,
             pending = strain == null,
             tone = if (strain != null && strain > corridor.endInclusive) SupportTone.NOTE else if (strain != null) SupportTone.LIT else SupportTone.CALM,
             spoken = "${TodayCopy.EFFORT}: " + (strain?.let { "${one(it)}, коридор ${range(corridor)}" } ?: TodayCopy.NO_DATA) +
-                (i.kilojoule?.takeIf { strain != null }?.let { ", ${kcal(it)} ккал" } ?: ""),
+                (i.kilojoule?.takeIf { strain != null && !noKcal }?.let { ", ${kcal(it)} ккал" } ?: ""),
         )
 
         val steps = steps(i).takeIf { !noData || i.phoneSteps != null }
@@ -201,20 +213,36 @@ object Supports {
                 (hours?.let { ", часов с движением $it из ${SupportNorms.MOVING_HOURS_GOAL}" } ?: ""),
         )
 
-        val planned = i.mealsPlanned.coerceAtLeast(1)
+        val planned = (i.food?.mealsPlanned ?: i.mealsPlanned).coerceAtLeast(1)
         val meals = i.mealsMarked.coerceIn(0, planned)
-        val nutrition = SupportView(
-            id = SupportId.NUTRITION,
-            label = TodayCopy.NUTRITION,
-            value = TodayCopy.ofTotal(meals, planned),
-            caption = null,
-            fill = meals.toFloat() / planned,
-            source = TodayCopy.SOURCE_MEALS,
-            estimate = false,
-            pending = false,
-            tone = if (meals > 0) SupportTone.LIT else SupportTone.CALM,
-            spoken = "${TodayCopy.NUTRITION}: ${TodayCopy.ofTotal(meals, planned)} приёмов",
-        )
+        // ED_CARE (A60 §3.4): no «0 из 4», no column filling up with meals — one quiet word
+        val nutrition = if (i.food?.hideCounts == true) {
+            SupportView(
+                id = SupportId.NUTRITION,
+                label = TodayCopy.NUTRITION,
+                value = TodayCopy.NUTRITION_GENTLE,
+                caption = null,
+                fill = 0f,
+                source = TodayCopy.SOURCE_MEALS_GENTLE,
+                estimate = false,
+                pending = false,
+                tone = SupportTone.CALM,
+                spoken = "${TodayCopy.NUTRITION}: ${TodayCopy.NUTRITION_GENTLE}",
+            )
+        } else {
+            SupportView(
+                id = SupportId.NUTRITION,
+                label = TodayCopy.NUTRITION,
+                value = TodayCopy.ofTotal(meals, planned),
+                caption = null,
+                fill = meals.toFloat() / planned,
+                source = TodayCopy.SOURCE_MEALS,
+                estimate = false,
+                pending = false,
+                tone = if (meals > 0) SupportTone.LIT else SupportTone.CALM,
+                spoken = "${TodayCopy.NUTRITION}: ${TodayCopy.ofTotal(meals, planned)} приёмов",
+            )
+        }
 
         val norm = SupportNorms.waterGlasses(i.weightKg, i.strain)
         val water = SupportView(
@@ -234,15 +262,15 @@ object Supports {
         val sleep = SupportView(
             id = SupportId.SLEEP_TONIGHT,
             label = TodayCopy.SLEEP_TONIGHT,
-            value = TodayCopy.ofTotal(held, SleepPrep.TOTAL),
+            value = TodayCopy.ofTotal(held, i.sleep.total),
             // the bedtime alone: «отбой 23:00» does not fit a fifth of 412 dp (T-10); the word is in «Ритм дня»
             caption = i.sleep.bedtimeMin?.let(::clock),
-            fill = held.toFloat() / SleepPrep.TOTAL,
+            fill = held.toFloat() / i.sleep.total,
             source = TodayCopy.SOURCE_SLEEP_PREP,
             estimate = true,
             pending = false,
             tone = if (held > 0) SupportTone.LIT else SupportTone.CALM,
-            spoken = "${TodayCopy.SLEEP_TONIGHT}: ${TodayCopy.ofTotal(held, SleepPrep.TOTAL)} условий",
+            spoken = "${TodayCopy.SLEEP_TONIGHT}: ${TodayCopy.ofTotal(held, i.sleep.total)} условий",
         )
         return listOf(effort, movement, nutrition, water, sleep)
     }

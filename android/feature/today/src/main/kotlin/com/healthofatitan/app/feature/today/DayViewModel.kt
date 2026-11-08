@@ -17,6 +17,7 @@ import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.RitualSettings
 import com.healthofatitan.app.domain.today.Safety
 import com.healthofatitan.app.domain.today.TaskMove
+import com.healthofatitan.app.domain.today.TodayFood
 import com.healthofatitan.app.domain.today.WeekPlan
 import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.healthconnect.StepsRepository
@@ -26,6 +27,7 @@ import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.DayView
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
 import com.healthofatitan.app.integration.whoop.day.TodayMarks
+import com.healthofatitan.app.integration.whoop.day.TodayFoodSource
 import com.healthofatitan.app.integration.whoop.day.TodayMarksRepository
 import com.healthofatitan.app.integration.whoop.day.TodayMorning
 import com.healthofatitan.app.integration.whoop.day.TodaySafetySource
@@ -79,6 +81,8 @@ data class DayUiState(
     /** «С возвращением» is due (A18 И4.4). */
     val returning: Boolean = false,
     val rituals: RitualSettings = RitualSettings(),
+    /** The food plan of today and what the safety bus hides (audit 2026-11-08 S3). */
+    val food: TodayFood = TodayFood(),
 ) {
     val today: LocalDate get() = now.toLocalDate()
 
@@ -143,6 +147,7 @@ private data class DayExtras(
     val haiku: List<String>? = null,
     val dawnShown: Boolean = false,
     val self: Int? = null,
+    val food: TodayFood = TodayFood(),
 )
 
 /** A source that fails or has not answered yet reads as its fallback: the screen never waits on it. */
@@ -158,6 +163,7 @@ class DayViewModel @Inject constructor(
     private val weekPlan: WeekPlanSource,
     private val safety: TodaySafetySource,
     private val morningOf: TodayMorning,
+    private val foodOf: TodayFoodSource,
 ) : ViewModel() {
 
     private val justSaved = MutableStateFlow(false)
@@ -196,7 +202,7 @@ class DayViewModel @Inject constructor(
             morningOf.dawnShown(d).orElse(false),
             flow { emit(morningOf.self(d)) }.orElse(null),
         ) { shown, self -> shown to self }
-        combine(first, second) { e, s -> e.copy(dawnShown = s.first, self = s.second) }
+        combine(first, second, foodOf.food(d).orElse(TodayFood())) { e, s, food -> e.copy(dawnShown = s.first, self = s.second, food = food) }
     }
 
     val state: StateFlow<DayUiState> =
@@ -210,6 +216,7 @@ class DayViewModel @Inject constructor(
                 haiku = e.haiku,
                 dawnShown = e.dawnShown,
                 returning = returning,
+                food = e.food,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 

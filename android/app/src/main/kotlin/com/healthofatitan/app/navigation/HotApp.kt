@@ -311,7 +311,7 @@ fun HotApp(
                 )
                 profileScreen(stateful = stateful)
                 mentorPersonaScreen(stateful = stateful)
-                nutritionScreens(onOpenLevel = { open(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
+                nutritionScreens(onOpenLevel = { open(HotRoute.NUTRITION_LEVEL) }, stateful = stateful, onOpen = open)
                 whoopScreen(stateful = stateful)
                 dawnScreen(onStart = back)
                 sosScreen(onClose = back)
@@ -402,6 +402,7 @@ private val NESTED = mapOf(
     HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
     HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.PATH, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),
     HotRoute.NUTRITION_MEAL to NestedScreen(HotTab.TODAY, NutritionTexts.PLATE_OF_DAY, NutritionTexts.MEAL_BACK),
+    HotRoute.NUTRITION_DAY to NestedScreen(HotTab.TODAY, NutritionTexts.PLATE_OF_DAY, TodayCopy.BLOCK_SUPPORTS),
     HotRoute.TRAINING to NestedScreen(HotTab.TODAY, TrainingTexts.SCREEN_TITLE, TrainingTexts.BACK_LABEL),
     HotRoute.CHECKIN_SETTINGS to NestedScreen(HotTab.PATH, CheckinTexts.SETTINGS, null),
     HotRoute.CHECKIN_COLLECTION to NestedScreen(HotTab.PATH, CheckinTexts.COLLECTION, CheckinTexts.SETTINGS),

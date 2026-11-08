@@ -90,7 +90,7 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         if (dict == null) return@Column
         if (!snap.consented) {
             Consent(actions)
-            if (state.edCareActive) EdCareOff(onOff = { actions.onWithdraw(false) })
+            if (state.edCareActive || state.edCareHistory) EdCareOff(onOff = { actions.onWithdraw(false) }, active = state.edCareActive)
             Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
             return@Column
         }

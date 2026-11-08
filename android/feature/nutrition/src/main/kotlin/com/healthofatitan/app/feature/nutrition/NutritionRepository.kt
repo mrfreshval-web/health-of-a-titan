@@ -137,11 +137,14 @@ class NutritionRepository @Inject constructor(
     suspend fun setConsent(granted: Boolean) = profiles.setConsent(granted)
 
     /**
-     * Withdraws S4 (D-058). [keepEdCare] counts only while `ED_CARE` is on in the bus: then one
-     * mark «режим включён» stays; otherwise everything is deleted.
+     * Withdraws S4 (D-058). [keepEdCare] counts only while `ED_CARE` is on in the bus (one mark
+     * «режим включён» stays) or its history still hides things (П-2: one mark «скрыто» stays);
+     * otherwise everything is deleted.
      */
-    suspend fun withdrawConsent(keepEdCare: Boolean) =
-        profiles.withdrawConsent(keepEdCare = keepEdCare && bus.current().edCare.active)
+    suspend fun withdrawConsent(keepEdCare: Boolean) {
+        val ed = bus.current().edCare
+        profiles.withdrawConsent(keepEdCare = keepEdCare && (ed.active || ed.history), modeOff = !ed.active)
+    }
 
     suspend fun save(constraints: UserConstraints) = profiles.save(constraints)
 

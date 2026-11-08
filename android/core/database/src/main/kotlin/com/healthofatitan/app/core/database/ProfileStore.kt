@@ -79,9 +79,12 @@ class ProfileStore(
      *
      * @param keepEdCare the person answered «Да» to «Оставить бережный режим еды?» (asked only while
      *   `ED_CARE` is on): one mark «режим включён» stays — an entry `self_choice` resting on the
-     *   narrow consent [KEEP_CONSENT_ID]. «Нет» or a closed question: nothing stays.
+     *   narrow consent [KEEP_CONSENT_ID]. «Нет»: nothing stays.
+     * @param modeOff the mode was already off and only its history hid things (П-2): the kept mark
+     *   is the entry and the person's exit at the same moment — calories, weight and body photo
+     *   stay hidden, the mode itself does not come back
      */
-    suspend fun withdrawConsent(keepEdCare: Boolean) = transaction {
+    suspend fun withdrawConsent(keepEdCare: Boolean, modeOff: Boolean = false) = transaction {
         val t = now()
         // «Выключить бережный режим еды» without S4 (Ю-3) does not write a second revoke of S4
         if (consentDao.latest(user, CONSENT_ID)?.granted == true) record(CONSENT_ID, CONSENT_VERSION, false, t)
@@ -91,6 +94,7 @@ class ProfileStore(
         journal?.deleteByPrefix(user, SafetyEventKinds.ED_CARE_PREFIX)
         if (keepEdCare && journal != null) {
             record(KEEP_CONSENT_ID, KEEP_CONSENT_VERSION, true, t)
+            val day = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate().toString()
             journal.append(
                 EventLogEntity(
                     userId = user,
@@ -98,9 +102,12 @@ class ProfileStore(
                     payload = SafetyEventKinds.REASON_SELF_CHOICE,
                     source = SafetyEventKinds.SOURCE_CONSENT_KEEP,
                     at = t,
-                    dayKey = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+                    dayKey = day,
                 ),
             )
+            if (modeOff) {
+                journal.append(EventLogEntity(userId = user, kind = SafetyEventKinds.ED_CARE_EXIT, payload = null, source = SafetyEventKinds.SOURCE_CONSENT_KEEP, at = t, dayKey = day))
+            }
         } else if (consentDao.latest(user, KEEP_CONSENT_ID)?.granted == true) {
             // the mark of an earlier «Да» is gone with the events: its consent ends too
             record(KEEP_CONSENT_ID, KEEP_CONSENT_VERSION, false, t)

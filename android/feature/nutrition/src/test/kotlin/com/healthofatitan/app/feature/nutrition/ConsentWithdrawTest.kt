@@ -216,16 +216,51 @@ class ConsentWithdrawTest {
     @Test
     fun `the off button of the kept mode answers no`() {
         var off = 0
-        compose.setContent { HotTheme { EdCareOff(onOff = { off++ }) } }
+        compose.setContent { HotTheme { EdCareOff(onOff = { off++ }, active = false) } }
+        compose.onNodeWithText(ConsentWithdrawTexts.HIDDEN_OFF.n).assertExists()
         compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
         assertEquals(1, off)
     }
 
     @Test
-    fun `the confirmation says the hidden things come back when only the history is left`() {
-        compose.setContent { HotTheme { ConsentWithdraw(edCareActive = false, edCareHistory = true, onWithdraw = {}) } }
+    fun `with only the history the question asks to keep things hidden`() {
+        val answers = mutableListOf<Boolean>()
+        compose.setContent { HotTheme { ConsentWithdraw(edCareActive = false, edCareHistory = true, onWithdraw = { answers += it }) } }
         compose.onNodeWithTag(WITHDRAW_BUTTON_TAG).performClick()
-        compose.onNodeWithText(ConsentWithdrawTexts.CONFIRM_BODY_HISTORY.n, substring = true).assertExists()
+        compose.onNodeWithTag(WITHDRAW_CONFIRM_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.KEEP_TITLE_HISTORY.n).assertExists()
+        compose.onNodeWithTag(KEEP_ED_CARE_YES_TAG).performClick()
+        assertEquals(listOf(true), answers)
+    }
+
+    @Test
+    fun `back on the question returns to the confirmation and deletes nothing`() {
+        val atQuestion = WithdrawStep.ASK_KEEP
+        assertEquals(WithdrawMove(WithdrawStep.CONFIRM), withdrawNext(atQuestion, WithdrawEvent.BACK, ask = true))
+        assertEquals(WithdrawMove(WithdrawStep.NONE), withdrawNext(WithdrawStep.CONFIRM, WithdrawEvent.BACK, ask = true))
+        assertEquals(WithdrawMove(WithdrawStep.ASK_KEEP), withdrawNext(WithdrawStep.CONFIRM, WithdrawEvent.CONFIRM, ask = true))
+        assertEquals(WithdrawMove(WithdrawStep.NONE, withdraw = false), withdrawNext(WithdrawStep.CONFIRM, WithdrawEvent.CONFIRM, ask = false))
+        assertEquals(WithdrawMove(WithdrawStep.NONE, withdraw = true), withdrawNext(atQuestion, WithdrawEvent.KEEP_YES, ask = true))
+        assertEquals(WithdrawMove(WithdrawStep.NONE, withdraw = false), withdrawNext(atQuestion, WithdrawEvent.KEEP_NO, ask = true))
+    }
+
+    @Test
+    fun `yes with only the history keeps calories, weight and body photo hidden, not the mode`() = runTest {
+        store.setConsent(true)
+        bus.enterEdCare(EdCareReason.SELF_CHOICE)
+        assertTrue(bus.chooseEdCareExit())
+        assertTrue(bus.current().edCare.history)
+        store.withdrawConsent(keepEdCare = true, modeOff = true)
+
+        val rows = edCareRows()
+        assertEquals(listOf(SafetyEventKinds.ED_CARE_ENTER, SafetyEventKinds.ED_CARE_EXIT), rows.map { it.kind })
+        assertTrue(rows.all { it.source == SafetyEventKinds.SOURCE_CONSENT_KEEP })
+        assertEquals(true, consent(ProfileStore.KEEP_CONSENT_ID)?.granted)
+        val state = bus.current()
+        assertFalse(state.edCare.active)
+        assertTrue(state.edCare.history)
+        val today = state.restrictions(SafetyConsumer.TODAY)
+        listOf(Restriction.HIDE_CALORIES, Restriction.HIDE_WEIGHT, Restriction.HIDE_BODY_PHOTO).forEach { assertTrue(it in today, "$it") }
     }
 
     @Test

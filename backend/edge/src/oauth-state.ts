@@ -29,22 +29,55 @@ export function isValidVerifier(verifier: unknown): verifier is string {
   return typeof verifier === "string" && VERIFIER_RE.test(verifier);
 }
 
-function macInput(payload: string, challenge: string): string {
-  return `hot-edge|oauth-state|v1|${payload}|${challenge}`;
+/**
+ * What a state is for (A65 §2.2, §2.3): `login` («Войти через WHOOP»), `link` (add WHOOP to the
+ * signed-in account) or `reauth` (step-up with the WHOOP identity of the account). For `link` and
+ * `reauth` the MAC also covers a [binding] — a hash of the account id and the session id — so a
+ * code started by one session cannot be spent by another (CSRF binding).
+ */
+export type StateIntent = "login" | "link" | "reauth";
+
+export interface StateBinding {
+  intent: StateIntent;
+  /** base64url(SHA-256(account_id | sid)); empty for `login`. */
+  binding: string;
 }
 
-export async function issueState(key: CryptoKey, challenge: string, nowSeconds: number): Promise<string> {
+const LOGIN: StateBinding = { intent: "login", binding: "" };
+
+export function isStateIntent(value: unknown): value is StateIntent {
+  return value === "login" || value === "link" || value === "reauth";
+}
+
+/** The binding of a `link`/`reauth` state to the account session. */
+export function sessionBinding(accountId: string, sid: string): Promise<string> {
+  return sha256b64url(`hot-edge|oauth-binding|v1|${accountId}|${sid}`);
+}
+
+function macInput(payload: string, challenge: string, bind: StateBinding): string {
+  // `login` keeps the format of slice 1, so states issued before the update stay valid.
+  const base = `hot-edge|oauth-state|v1|${payload}|${challenge}`;
+  return bind.intent === "login" ? base : `${base}|${bind.intent}|${bind.binding}`;
+}
+
+export async function issueState(key: CryptoKey, challenge: string, nowSeconds: number, bind: StateBinding = LOGIN): Promise<string> {
   const body = new Uint8Array(12);
   new DataView(body.buffer).setUint32(0, nowSeconds + STATE_TTL_SECONDS);
   body.set(randomBytes(8), 4);
   const payload = b64urlEncode(body);
-  const mac = (await hmac(key, macInput(payload, challenge))).slice(0, MAC_BYTES);
+  const mac = (await hmac(key, macInput(payload, challenge, bind))).slice(0, MAC_BYTES);
   return `${payload}.${b64urlEncode(mac)}`;
 }
 
 export type StateCheck = "ok" | "malformed" | "bad_signature" | "expired";
 
-export async function verifyState(key: CryptoKey, state: unknown, verifier: unknown, nowSeconds: number): Promise<StateCheck> {
+export async function verifyState(
+  key: CryptoKey,
+  state: unknown,
+  verifier: unknown,
+  nowSeconds: number,
+  bind: StateBinding = LOGIN,
+): Promise<StateCheck> {
   if (typeof state !== "string" || !isValidVerifier(verifier)) return "malformed";
   const parts = state.split(".");
   if (parts.length !== 2) return "malformed";
@@ -58,7 +91,7 @@ export async function verifyState(key: CryptoKey, state: unknown, verifier: unkn
   }
   if (body.length !== 12) return "malformed";
   const challenge = await sha256b64url(verifier);
-  const expected = b64urlEncode((await hmac(key, macInput(payload, challenge))).slice(0, MAC_BYTES));
+  const expected = b64urlEncode((await hmac(key, macInput(payload, challenge, bind))).slice(0, MAC_BYTES));
   if (!timingSafeEqual(expected, mac)) return "bad_signature";
   const exp = new DataView(body.buffer, body.byteOffset, body.byteLength).getUint32(0);
   return nowSeconds > exp ? "expired" : "ok";

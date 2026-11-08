@@ -12,7 +12,10 @@ import { DEFAULT_REDIRECT_URI, WhoopClient, WhoopError, type WhoopTokens } from 
  *    each value to its user and field, so a sealed value cannot be moved elsewhere.
  *  - Refresh is single-flight: concurrent `/access` calls share one WHOOP refresh. This matters
  *    because WHOOP rotates refresh tokens — two parallel refreshes would kill the session.
- *  - The phone authenticates with its session token; only its SHA-256 is stored.
+ *  - Since D-062 (A65) the phone signs in to a HoT account; the Worker checks the account
+ *    session and calls the `account-*` ops, which trust the Worker (the DO is not reachable from
+ *    outside). The legacy device session `hs1` (only its SHA-256 is stored) keeps working for
+ *    `/whoop/access` and `/whoop/disconnect` until `/auth/migrate` retires it (A65 §3.5).
  *  - Nothing here logs; errors leave the object as plain status codes.
  *
  * Internal protocol (Worker → DO only, never exposed): `POST https://vault/<op>` with JSON.
@@ -24,6 +27,7 @@ export interface VaultRecord {
   refresh: string; // sealed
   access: string; // sealed
   accessExpiresAt: number; // epoch ms
+  /** SHA-256 of the legacy `hs1` session; "" when the tokens belong to an account session. */
   sessionHash: string;
   connectedAt: number;
   refreshedAt: number;
@@ -70,9 +74,17 @@ export class WhoopVault {
     try {
       switch (op) {
         case "/connect": {
-          const session = await this.connect(String(body.userId), body.tokens as WhoopTokens);
+          const session = await this.connect(String(body.userId), body.tokens as WhoopTokens, body.legacySession === true);
           return Response.json({ session });
         }
+        case "/account-access":
+          return Response.json(await this.accountAccess());
+        case "/account-disconnect":
+          return Response.json({ ok: await this.accountDisconnect() });
+        case "/legacy-check":
+          return Response.json({ userId: await this.legacyCheck(String(body.sessionHash)) });
+        case "/legacy-retire":
+          return Response.json({ ok: await this.legacyRetire(String(body.sessionHash)) });
         case "/access":
           return Response.json(await this.access(String(body.sessionHash)));
         case "/verify":
@@ -108,10 +120,13 @@ export class WhoopVault {
     return `hot-edge|whoop-vault|v1|${userId}|${field}`;
   }
 
-  /** Stores fresh tokens after login and returns a new session token (old session dies). */
-  async connect(userId: string, tokens: WhoopTokens): Promise<string> {
+  /**
+   * Stores fresh tokens after login (any older `hs1` session dies). With [legacySession] it also
+   * returns a new `hs1` token (tests of the migration path); account logins get null.
+   */
+  async connect(userId: string, tokens: WhoopTokens, legacySession = false): Promise<string | null> {
     const key = await this.key();
-    const session = newSessionToken(userId);
+    const session = legacySession ? newSessionToken(userId) : null;
     const now = this.now();
     const record: VaultRecord = {
       v: 1,
@@ -119,7 +134,7 @@ export class WhoopVault {
       refresh: await seal(key, tokens.refreshToken, this.aad(userId, "refresh")),
       access: await seal(key, tokens.accessToken, this.aad(userId, "access")),
       accessExpiresAt: tokens.expiresAt,
-      sessionHash: await sessionHash(session),
+      sessionHash: session ? await sessionHash(session) : "",
       connectedAt: now,
       refreshedAt: now,
     };
@@ -130,8 +145,36 @@ export class WhoopVault {
 
   private async authorized(hash: string): Promise<VaultRecord | null> {
     const record = await this.storage.get<VaultRecord>(RECORD_KEY);
-    if (!record || !timingSafeEqual(record.sessionHash, hash)) return null;
+    // An account-mode record has no legacy session: "" never matches.
+    if (!record || !record.sessionHash || !hash || !timingSafeEqual(record.sessionHash, hash)) return null;
     return record;
+  }
+
+  /** `/auth/migrate`: the WHOOP user id of a valid legacy session, or null. */
+  async legacyCheck(hash: string): Promise<string | null> {
+    return (await this.authorized(hash))?.userId ?? null;
+  }
+
+  /** `/auth/migrate` done: the legacy session is spent; the tokens stay for the account. */
+  async legacyRetire(hash: string): Promise<boolean> {
+    const record = await this.authorized(hash);
+    if (!record) return false;
+    await this.storage.put(RECORD_KEY, { ...record, sessionHash: "" });
+    return true;
+  }
+
+  /** Access token for the account that owns this WHOOP identity (checked by the Worker). */
+  async accountAccess(): Promise<AccessResult> {
+    const record = await this.storage.get<VaultRecord>(RECORD_KEY);
+    if (!record) return { status: "reauth_required" };
+    return this.accessFor(record);
+  }
+
+  /** «Отключить WHOOP» from an account session: revoke at WHOOP (best effort) and wipe. */
+  async accountDisconnect(): Promise<boolean> {
+    const record = await this.storage.get<VaultRecord>(RECORD_KEY);
+    if (record) await this.revokeAndWipe(record);
+    return true;
   }
 
   async verify(hash: string): Promise<string | null> {
@@ -144,6 +187,10 @@ export class WhoopVault {
     const record = await this.authorized(hash);
     if (!record) return { status: "unauthorized" };
     if (!isAllowedWhoopUser(record.userId, this.env)) return { status: "not_allowed" };
+    return this.accessFor(record);
+  }
+
+  private async accessFor(record: VaultRecord): Promise<AccessResult> {
     if (record.accessExpiresAt - this.now() > ACCESS_MIN_TTL_MS) {
       return { status: "ok", accessToken: await open(await this.key(), record.access, this.aad(record.userId, "access")), expiresAt: record.accessExpiresAt };
     }
@@ -193,13 +240,18 @@ export class WhoopVault {
   async disconnect(hash: string): Promise<boolean> {
     const record = await this.authorized(hash);
     if (!record) return false;
+    await this.revokeAndWipe(record);
+    return true;
+  }
+
+  private async revokeAndWipe(record: VaultRecord): Promise<void> {
     try {
       const key = await this.key();
       let accessToken: string | null = null;
       if (record.accessExpiresAt > this.now()) {
         accessToken = await open(key, record.access, this.aad(record.userId, "access"));
       } else {
-        const refreshed = await this.access(hash);
+        const refreshed = await this.accessFor(record);
         if (refreshed.status === "ok") accessToken = refreshed.accessToken;
       }
       if (accessToken) await this.client().revoke(accessToken);
@@ -208,6 +260,5 @@ export class WhoopVault {
     }
     this.inflight = null;
     await this.storage.deleteAll();
-    return true;
   }
 }

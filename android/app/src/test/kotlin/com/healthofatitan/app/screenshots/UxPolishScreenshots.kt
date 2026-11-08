@@ -27,7 +27,12 @@ import com.healthofatitan.app.feature.me.MeScreen
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopScreen
 import com.healthofatitan.app.feature.me.whoop.WhoopUiState
+import com.healthofatitan.app.domain.mentor.Speaker
+import com.healthofatitan.app.feature.mentor.MentorActions
 import com.healthofatitan.app.feature.mentor.MentorScreen
+import com.healthofatitan.app.feature.mentor.MentorTexts
+import com.healthofatitan.app.feature.mentor.MentorUi
+import com.healthofatitan.app.feature.mentor.UiLine
 import com.healthofatitan.app.feature.path.PathActions
 import com.healthofatitan.app.feature.path.PathData
 import com.healthofatitan.app.feature.path.PathScreen
@@ -233,8 +238,23 @@ class UxPolishScreenshots {
     fun mentor() = shoot("u11-mentor") {
         HotBackground {
             Column(Modifier.fillMaxSize()) {
-                Header(title = "Наставник", overline = "Винс · ИИ")
-                MentorScreen()
+                Header(title = "Винс", back = true, overline = "Сегодня")
+                MentorScreen(
+                    ui = MentorUi(
+                        persona = MentorPersona.BRO,
+                        lines = listOf(
+                            UiLine(Speaker.MENTOR, MentorTexts.greeting(MentorPersona.BRO)),
+                            UiLine(Speaker.PERSON, "Спал 5 часов. Тренироваться сегодня?"),
+                            UiLine(
+                                Speaker.MENTOR,
+                                "Да, но легче. Присед 3×6 на 70 % от плана, отдых 150 с, RPE 6. " +
+                                    "Почему: короткая ночь — держим технику, не рекорд. Смотри на пульс в разминке.",
+                            ),
+                        ),
+                    ),
+                    summaries = emptyList(),
+                    actions = MentorActions(),
+                )
             }
         }
     }

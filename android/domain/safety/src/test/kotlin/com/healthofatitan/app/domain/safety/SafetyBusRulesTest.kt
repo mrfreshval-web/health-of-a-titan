@@ -205,4 +205,24 @@ class SafetyBusRulesTest {
     fun `events from the future are not applied yet`() {
         assertNull(project(e(SafetyEvents.CRISIS, "3", t0 + day), now = t0).flags[SafetyFlag.CRISIS_L3])
     }
+
+    @Test
+    fun `the training reads the bus - a crisis hides it, sickness leaves mobility, clinical flags cap the intensity`() {
+        val crisis = project(e(SafetyEvents.CRISIS, "2"), now = t0 + hour)
+        assertTrue(crisis.forbids(SafetyConsumer.TRAINING, Restriction.HELP_FIRST))
+        assertTrue(crisis.forbids(SafetyConsumer.TRAINING, Restriction.NO_LOAD))
+        assertEquals(setOf(Restriction.NO_LOAD), SafetyPolicy.of(SafetyConsumer.TRAINING, SafetyFlag.SICK))
+        listOf(
+            SafetyFlag.PREGNANT, SafetyFlag.POSTPARTUM_12M, SafetyFlag.LACTATING, SafetyFlag.MEDS_HR, SafetyFlag.MEDS_PSY,
+            SafetyFlag.CHRONIC, SafetyFlag.INJURY, SafetyFlag.SCREEN_NOT_CLEARED, SafetyFlag.AGE_65P,
+        ).forEach { assertTrue(Restriction.INTENSITY_CAP in SafetyPolicy.of(SafetyConsumer.TRAINING, it), "$it") }
+        val ed = project(e(SafetyEvents.ED_CARE_ENTER, EdCareReason.SIGNALS.code), now = t0 + hour)
+        assertTrue(ed.forbids(SafetyConsumer.TRAINING, Restriction.HIDE_FOOD_TALK))
+    }
+
+    @Test
+    fun `an unknown state forbids the training everything it can forbid`() {
+        val strictest = SafetyPolicy.strictest(SafetyConsumer.TRAINING)
+        listOf(Restriction.HELP_FIRST, Restriction.NO_LOAD, Restriction.INTENSITY_CAP).forEach { assertTrue(it in strictest, "$it") }
+    }
 }

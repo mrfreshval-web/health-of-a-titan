@@ -58,6 +58,7 @@ import com.healthofatitan.app.domain.today.week.FitnessInput
 import com.healthofatitan.app.domain.today.week.FitnessMilestones
 import com.healthofatitan.app.domain.today.week.LastWeek
 import com.healthofatitan.app.domain.today.week.MilestoneInputs
+import com.healthofatitan.app.domain.today.week.PathWeek
 import com.healthofatitan.app.domain.today.week.Pattern
 import com.healthofatitan.app.domain.today.week.PatternTexts
 import com.healthofatitan.app.domain.today.week.PlanStatus
@@ -101,8 +102,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -133,13 +136,20 @@ interface WeekSignals {
 data class WeekProfile(val edCare: Boolean = false, val pregnancy: Boolean = false, val betaBlockers: Boolean = false, val healthAnxiety: Boolean = false)
 
 /**
- * The seam to «Путь» (A57 §4.3, D-050), built in claude/path-v1: the lever of the active goal
- * becomes the experiment of the week; on Sunday «Путь» listens to [WeekRepository.revealed] (the
- * Sculpture's lights fly to the details of «Срез», the Titan of the horizon takes a step).
+ * The seam to «Путь» (A57 §4.3, D-050, A67 С-3), bound by `:feature:path` (`PathWeekBridge`): the
+ * stage of the active goal gives the goals of the week ([stageGoals], мост ①); the lever of the
+ * goal becomes the experiment of the week (С4); on Sunday «Путь» listens to
+ * [WeekRepository.revealed] (the Sculpture's lights fly to the details of «Срез», С4).
  */
 interface WeekPathBridge {
-    /** The lever of the Path goal as an experiment, or null when there is no goal. */
+    /** The lever of the Path goal as an experiment, or null when there is no goal (slice С4). */
     suspend fun lever(): ExperimentSeed? = null
+
+    /**
+     * The goal of the Path as the weeks see it, live: its stage goals, a pause, or no goal. A new
+     * value re-reads the current week (a goal taken today pours into it, A56 §2).
+     */
+    fun stageGoals(): Flow<PathWeek> = flowOf(PathWeek.NoGoal)
 
     companion object {
         val None: WeekPathBridge = object : WeekPathBridge {}
@@ -225,19 +235,28 @@ class WeekRepository(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun week(day: LocalDate): Flow<WeekPlan> =
-        combine(changes, glance, todayDao.observeDay(user, day.toString())) { _, g, _ -> g }.mapLatest { g -> withProgress(day, g) }
+        combine(changes, glance, todayDao.observeDay(user, day.toString()), pathFlow) { _, g, _, _ -> g }.mapLatest { g -> withProgress(day, g) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun candidates(day: LocalDate): Flow<List<DayTask>> =
-        combine(changes, glance, plans.latest, todayDao.observeDay(user, day.toString())) { _, g, plan, marks -> Triple(g, plan, marks) }
-            .mapLatest { (g, plan, marks) -> candidatesOf(day, g, plan, marks) }
+        combine(changes, glance, plans.latest, todayDao.observeDay(user, day.toString()), pathFlow) { _, g, plan, marks, p -> Pair(Triple(g, plan, marks), p) }
+            .mapLatest { (t, p) -> candidatesOf(day, t.first, t.second, t.third, p) }
+
+    /** The Path as the weeks see it (A67 С-3); a broken bridge is «no goal», never a broken week. */
+    private val pathFlow: Flow<PathWeek> = path.stageGoals().catchToNoGoal().distinctUntilChanged()
+
+    private suspend fun pathWeek(): PathWeek = runCatching { pathFlow.first() }.getOrDefault(PathWeek.NoGoal)
 
     private suspend fun candidatesOf(
         day: LocalDate,
         g: WhoopGlance?,
         plan: com.healthofatitan.app.integration.whoop.day.DayView?,
         marks: List<TodayMarkEntity>,
+        pathNow: PathWeek = PathWeek.NoGoal,
     ): List<DayTask> {
+        // A67 С-4: the steps of the stage carry the short name of the goal; the mode of the day and
+        // the safety bus decide the rest further down (TaskRules.pick), the goal never overrides them.
+        val goalName = (pathNow as? PathWeek.Active)?.name
         val week = withProgress(day, g)
         val sick = plan?.dayKey == day && DayFlag.SICK in plan.flags
         val doneToday = marks.filter { it.kind == TodayMarkEntity.KIND_TASK_DONE }.mapNotNull { WeekGoalRules.goalOfTask(it.ref) }.toSet()
@@ -260,10 +279,11 @@ class WeekRepository(
                 hasMini = true,
                 done = item.status != ItemStatus.OPEN,
                 route = if (goal.kind == TaskKind.TRAINING) HotRoute.TRAINING else null,
+                goal = WeekGoalRules.goalMark(goal, goalName),
             )
         }
         val covered = fromPlan.mapNotNull { it.weekGoalId }.toSet()
-        val rest = WeekGoalRules.candidates(week, day, doneToday, paused = sick).filter { it.weekGoalId !in covered }
+        val rest = WeekGoalRules.candidates(week, day, doneToday, paused = sick, goal = goalName).filter { it.weekGoalId !in covered }
         return fromPlan + rest
     }
 
@@ -277,7 +297,7 @@ class WeekRepository(
         target = target,
         unit = unit,
         progress = 0,
-        source = runCatching { GoalSource.valueOf(source) }.getOrDefault(GoalSource.PATH),
+        source = WeekGoalRules.sourceOf(goalId, source),
         measure = runCatching { GoalMeasure.valueOf(measure) }.getOrDefault(GoalMeasure.TIMES),
     )
 
@@ -303,7 +323,14 @@ class WeekRepository(
             val status = runCatching { PlanStatus.valueOf(stored.status) }.getOrDefault(PlanStatus.PROPOSED)
             val now = WeekGoalRules.status(status, monday, now())
             if (now != status) weekDao.upsertPlan(stored.copy(status = now.name))
-            return@withLock WeekPlan(monday, weekDao.goals(user, monday.toString()).map { it.toGoal() }) to now
+            val plan = WeekPlan(monday, weekDao.goals(user, monday.toString()).map { it.toGoal() })
+            // «Беру путь» this week: the goals of the stage pour into it once (A56 §2, A67 С-3)
+            val poured = if (monday == CalendarWeek.start(LocalDate.now(clock))) WeekGoalRules.pour(plan, pathWeek()) else null
+            if (poured != null) {
+                weekDao.savePlan(stored.copy(status = now.name), poured.goals.mapIndexed { i, g -> g.toRow(monday, i) })
+                return@withLock poured to now
+            }
+            return@withLock plan to now
         }
         val proposal = propose(monday, glance.value)
         val status = WeekGoalRules.status(PlanStatus.PROPOSED, monday, now())
@@ -326,7 +353,7 @@ class WeekRepository(
                 chargeInNorm = chargeInNorm(prevMonday, prevMonday.plusDays(6)),
             )
         }
-        return WeekGoalRules.propose(monday, previous, last, kindOf(monday))
+        return WeekGoalRules.propose(monday, previous, last, kindOf(monday), path = pathWeek())
     }
 
     // ── Progress of the goals ────────────────────────────────────────────────────────────────────
@@ -549,7 +576,7 @@ class WeekRepository(
             waistAgeDays = inputs.waistDay?.let { ChronoUnit.DAYS.between(it, today).toInt() },
             ritual = ritual,
             previousDaysInSupport = prevScores.takeIf { it.isNotEmpty() }?.count { it.inSupport },
-            pathSteps = plan.goals.filter { it.source == GoalSource.PATH && it.progress > 0 }.size,
+            pathSteps = plan.goals.filter { it.source == GoalSource.STAGE && it.progress > 0 }.size,
             returnedToday = runCatching { todayDao.day(user, today.toString()) }.getOrDefault(emptyList()).count { it.kind == TodayMarkEntity.KIND_TASK_TO_WEEK },
             sickNow = sickNow,
         )
@@ -860,7 +887,7 @@ class WeekRepository(
         ensurePlan(monday)
         val rows = weekDao.goals(user, monday.toString())
         val id = WeekGoalRules.REMINDER_PREFIX + (rows.count { it.goalId.startsWith(WeekGoalRules.REMINDER_PREFIX) } + 1) + "-" + clock.millis() % 100_000
-        val goal = WeekGoal(id, Sphere.MIND, TaskKind.REMINDER, text, days.coerceIn(1, 7), WeekCopy.UNIT_DAYS, 0, GoalSource.PATH, GoalMeasure.DAYS)
+        val goal = WeekGoal(id, Sphere.MIND, TaskKind.REMINDER, text, days.coerceIn(1, 7), WeekCopy.UNIT_DAYS, 0, GoalSource.PERSON, GoalMeasure.DAYS)
         weekDao.upsertGoals(listOf(goal.toRow(monday, rows.size)))
         bump()
     }
@@ -919,6 +946,9 @@ class WeekRepository(
         private val TASK_ITEMS = setOf(DayEngine.Ids.TRAINING, DayEngine.Ids.FOCUS)
     }
 }
+
+/** A broken bridge reads as «no goal» (upstream errors only; the flow stays exception-transparent). */
+private fun Flow<PathWeek>.catchToNoGoal(): Flow<PathWeek> = catch { emit(PathWeek.NoGoal) }
 
 /** «Пол для расчётов» of the profile as the HUNT model reads it; «не указывать» gives no sex. */
 private fun SexForCalc.toSex(): Sex? = when (this) {

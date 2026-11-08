@@ -34,7 +34,15 @@ import com.healthofatitan.app.core.ui.component.TOP_BAR_BACK_TAG
 import com.healthofatitan.app.core.ui.component.TOP_BAR_TITLE_TAG
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.ui.theme.HotTheme
+import com.healthofatitan.app.core.account.AccountGate
 import com.healthofatitan.app.core.database.AgeGate
+import com.healthofatitan.app.feature.me.account.SIGN_IN_GOOGLE_TAG
+import com.healthofatitan.app.feature.me.account.SIGN_IN_HELP_TAG
+import com.healthofatitan.app.feature.me.account.SIGN_IN_TAG
+import com.healthofatitan.app.feature.me.account.SIGN_IN_WHOOP_TAG
+import com.healthofatitan.app.feature.me.account.SignInActions
+import com.healthofatitan.app.feature.me.account.SignInScreen
+import com.healthofatitan.app.feature.me.account.SignInUiState
 import com.healthofatitan.app.feature.me.ME_HELP_ROW_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_ADULTS_ONLY_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_BACK_TAG
@@ -48,7 +56,11 @@ import com.healthofatitan.app.feature.me.consent.AGE_GATE_UNDER_TAG
 import com.healthofatitan.app.feature.me.ME_MENTOR_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.ME_NUTRITION_ROW_TAG
+import com.healthofatitan.app.feature.me.ME_ACCOUNT_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_PROFILE_ROW_TAG
+import com.healthofatitan.app.feature.me.account.ACCOUNT_SCREEN_TAG
+import com.healthofatitan.app.feature.me.account.ACCOUNT_SIGN_OUT_TAG
+import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.profile.PROFILE_ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.profile.addressTag
@@ -350,6 +362,21 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }
 
+    @Test
+    fun `settings open the account with sign out, inside the Path tab`() {
+        // A65 §2.3: «Настройки › Аккаунт».
+        launch()
+        compose.onNodeWithTag(AVATAR_TAG).performClick()
+        compose.onNodeWithTag(AVATAR_SETTINGS_TAG).performClick()
+        compose.onNodeWithTag(ME_ACCOUNT_ROW_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(ACCOUNT_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(AccountTexts.TITLE.n)
+        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+        compose.onNodeWithTag(ACCOUNT_SIGN_OUT_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
+    }
+
     // ── The gate 18+ (R-13, A61 §1.2) ───────────────────────────────────────────────────────────
 
     private var gate by mutableStateOf(AgeGate.ASK)
@@ -478,5 +505,66 @@ class HotAppNavigationTest {
         launchGated()
         compose.onNodeWithTag(AGE_GATE_HELP_TAG).performClick()
         compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+    }
+
+    // ── «Вход» (A65, D-062): after the gate 18+, never over SOS ─────────────────────────────────
+
+    private var account by mutableStateOf(AccountGate.SIGNED_OUT)
+
+    private fun launchSignIn(ageGate: AgeGate) {
+        gate = ageGate
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    navController = nav,
+                    stateful = false,
+                    ageGate = gate,
+                    onAdultConfirmed = { gate = AgeGate.CONFIRMED },
+                    accountGate = account,
+                    signIn = { onHelp -> SignInScreen(SignInUiState(), SignInActions(help = onHelp)) },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `sign-in comes after the gate 18+ and closes when the account appears`() {
+        account = AccountGate.SIGNED_OUT
+        launchSignIn(AgeGate.ASK)
+        compose.onNodeWithTag(AGE_GATE_TAG).assertExists()
+        compose.onNodeWithTag(SIGN_IN_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).performClick()
+        compose.onNodeWithTag(AGE_GATE_CONTINUE_TAG).performClick()
+        compose.onNodeWithTag(SIGN_IN_TAG).assertExists()
+        compose.onNodeWithTag(SIGN_IN_GOOGLE_TAG).assertExists()
+        compose.onNodeWithTag(SIGN_IN_WHOOP_TAG).assertExists()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertDoesNotExist()
+        account = AccountGate.SIGNED_IN
+        compose.waitForIdle()
+        compose.onNodeWithTag(SIGN_IN_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `help on sign-in opens sos over it`() {
+        account = AccountGate.SIGNED_OUT
+        launchSignIn(AgeGate.CONFIRMED)
+        compose.onNodeWithTag(SIGN_IN_HELP_TAG).performClick()
+        compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(SOS_CALL_112_TAG).assertExists()
+        compose.onNodeWithTag(SIGN_IN_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun `no sign-in while migrating hs1 or in a build without the Worker`() {
+        account = AccountGate.MIGRATING
+        launchSignIn(AgeGate.CONFIRMED)
+        for (state in listOf(AccountGate.MIGRATING, AccountGate.NOT_REQUIRED, AccountGate.LOADING)) {
+            account = state
+            compose.waitForIdle()
+            compose.onNodeWithTag(SIGN_IN_TAG).assertDoesNotExist()
+            compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
+        }
     }
 }

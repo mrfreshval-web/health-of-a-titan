@@ -7,8 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Base64
 
-/** The phone's WHOOP credential: only the device session of the Worker (class SEC, A14 §3.1). */
-data class WhoopCredentials(val session: String, val whoopUserId: String)
+/**
+ * «WHOOP is connected» on the phone (class SEC, A14 §3.1). Since D-062 (A65) the Worker is asked
+ * with the account session; [legacySession] is the old device session `hs1` of slice 1, kept only
+ * until `/auth/migrate` turns it into an account (A65 §3.5).
+ */
+data class WhoopCredentials(val whoopUserId: String, val legacySession: String? = null)
 
 interface WhoopCredentialStore {
     val credentials: StateFlow<WhoopCredentials?>
@@ -35,9 +39,8 @@ class EncryptedWhoopCredentialStore(
     override val credentials: StateFlow<WhoopCredentials?> = state.asStateFlow()
 
     private fun load(): WhoopCredentials? {
-        val session = read(KEY_SESSION) ?: return null
         val user = read(KEY_USER) ?: return null
-        return WhoopCredentials(session, user)
+        return WhoopCredentials(user, legacySession = read(KEY_SESSION))
     }
 
     private fun read(key: String): String? = runCatching {
@@ -53,8 +56,11 @@ class EncryptedWhoopCredentialStore(
     @Synchronized
     override fun save(credentials: WhoopCredentials) {
         prefs.edit()
-            .putString(KEY_SESSION, seal(KEY_SESSION, credentials.session))
             .putString(KEY_USER, seal(KEY_USER, credentials.whoopUserId))
+            .apply {
+                val legacy = credentials.legacySession
+                if (legacy != null) putString(KEY_SESSION, seal(KEY_SESSION, legacy)) else remove(KEY_SESSION)
+            }
             .commit()
         state.value = credentials
     }

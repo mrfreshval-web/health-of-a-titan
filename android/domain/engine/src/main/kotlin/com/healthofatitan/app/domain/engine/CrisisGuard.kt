@@ -56,8 +56,11 @@ enum class CrisisReason {
     PATTERN,
 }
 
-/** Where the words came from (A07 §4: every mode). Stored with the event, never the text. */
-enum class CrisisSource { EVENING, MENTOR, VOICE, SOS, JOURNAL }
+/**
+ * Where the words came from (A07 §4: every mode). Stored with the event, never the text.
+ * [PROFILE] is «О себе» (A65 §5.2): a standing text, kept apart from the journal in the patterns.
+ */
+enum class CrisisSource { EVENING, MENTOR, VOICE, SOS, JOURNAL, PROFILE }
 
 data class CrisisAssessment(val level: CrisisLevel, val reason: CrisisReason? = null) {
     companion object {

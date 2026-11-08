@@ -14,5 +14,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.robolectric)
+    testImplementation(libs.snakeyaml)
     testImplementation(libs.androidx.test.ext.junit)
 }

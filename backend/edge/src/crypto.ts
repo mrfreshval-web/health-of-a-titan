@@ -4,7 +4,11 @@
  * One root secret, TOKEN_ENC_KEY (32 random bytes, base64), is never used directly. HKDF-SHA256
  * derives one key per purpose, so a key can never be misused for another job:
  *  - "hot-edge/whoop-token/aead/v1" → AES-256-GCM for the WHOOP refresh and access tokens;
- *  - "hot-edge/oauth-state/hmac/v1" → HMAC-SHA256 for the signed OAuth `state`.
+ *  - "hot-edge/oauth-state/hmac/v1" → HMAC-SHA256 for the signed OAuth `state`;
+ *  - "hot-edge/auth-nonce/hmac/v1" → HMAC-SHA256 for login nonces and sign-up tickets (A65 §2.1);
+ *  - "hot-edge/refresh-pepper/hmac/v1" → keyed hash of refresh tokens at rest (A65 §3.1);
+ *  - "hot-edge/refresh-rotate/hmac/v1" → derives the next refresh token from the presented one,
+ *    so a network retry gets the same answer without the server keeping any token (A65 §3.2).
  *
  * Nothing here logs. Errors carry no secret material.
  */
@@ -80,6 +84,12 @@ export interface EdgeKeys {
   tokenAead: CryptoKey;
   /** HMAC-SHA256 for the OAuth state. */
   stateMac: CryptoKey;
+  /** HMAC-SHA256 for `/auth/nonce` values and sign-up tickets. */
+  nonceMac: CryptoKey;
+  /** HMAC-SHA256 «pepper» for refresh-token hashes. */
+  refreshPepper: CryptoKey;
+  /** HMAC-SHA256 that derives the next refresh token. */
+  refreshRotate: CryptoKey;
 }
 
 const keyCache = new Map<string, Promise<EdgeKeys>>();
@@ -109,14 +119,15 @@ export function deriveKeys(tokenEncKey: string | undefined): Promise<EdgeKeys> {
       false,
       ["encrypt", "decrypt"],
     );
-    const stateMac = await crypto.subtle.deriveKey(
-      hkdf("hot-edge/oauth-state/hmac/v1"),
-      ikm,
-      { name: "HMAC", hash: "SHA-256", length: 256 },
-      false,
-      ["sign", "verify"],
-    );
-    return { tokenAead, stateMac };
+    const mac = (info: string) =>
+      crypto.subtle.deriveKey(hkdf(info), ikm, { name: "HMAC", hash: "SHA-256", length: 256 }, false, ["sign", "verify"]);
+    return {
+      tokenAead,
+      stateMac: await mac("hot-edge/oauth-state/hmac/v1"),
+      nonceMac: await mac("hot-edge/auth-nonce/hmac/v1"),
+      refreshPepper: await mac("hot-edge/refresh-pepper/hmac/v1"),
+      refreshRotate: await mac("hot-edge/refresh-rotate/hmac/v1"),
+    };
   })();
   // A failed derivation must not stay cached: the next request re-reads the secret.
   derived.catch(() => keyCache.delete(tokenEncKey));

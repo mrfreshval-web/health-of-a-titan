@@ -102,6 +102,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -324,7 +325,7 @@ class WeekRepository(
             if (now != status) weekDao.upsertPlan(stored.copy(status = now.name))
             val plan = WeekPlan(monday, weekDao.goals(user, monday.toString()).map { it.toGoal() })
             // «Беру путь» this week: the goals of the stage pour into it once (A56 §2, A67 С-3)
-            val poured = if (monday == CalendarWeek.start(now().toLocalDate())) WeekGoalRules.pour(plan, pathWeek()) else null
+            val poured = if (monday == CalendarWeek.start(LocalDate.now(clock))) WeekGoalRules.pour(plan, pathWeek()) else null
             if (poured != null) {
                 weekDao.savePlan(stored.copy(status = now.name), poured.goals.mapIndexed { i, g -> g.toRow(monday, i) })
                 return@withLock poured to now
@@ -946,17 +947,10 @@ class WeekRepository(
     }
 }
 
-/** «Пол для расчётов» of the profile as the HUNT model reads it; «не указывать» gives no sex. */
-private fun Flow<PathWeek>.catchToNoGoal(): Flow<PathWeek> = kotlinx.coroutines.flow.flow {
-    try {
-        collect { emit(it) }
-    } catch (e: kotlinx.coroutines.CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        emit(PathWeek.NoGoal)
-    }
-}
+/** A broken bridge reads as «no goal» (upstream errors only; the flow stays exception-transparent). */
+private fun Flow<PathWeek>.catchToNoGoal(): Flow<PathWeek> = catch { emit(PathWeek.NoGoal) }
 
+/** «Пол для расчётов» of the profile as the HUNT model reads it; «не указывать» gives no sex. */
 private fun SexForCalc.toSex(): Sex? = when (this) {
     SexForCalc.MALE -> Sex.MALE
     SexForCalc.FEMALE -> Sex.FEMALE

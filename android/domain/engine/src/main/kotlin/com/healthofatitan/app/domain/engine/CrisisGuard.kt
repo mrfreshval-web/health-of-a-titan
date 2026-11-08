@@ -84,8 +84,8 @@ object CrisisGuard {
 
     private class Trigger(val level: CrisisLevel, val reason: CrisisReason, val pattern: Regex)
 
-    /** Unicode word classes: `\w` and `\b` must match Cyrillic. */
-    private fun rx(pattern: String): Regex = Regex("(?U)$pattern")
+    /** Unicode word classes: `\w` and `\b` must match Cyrillic, on the JVM and on Android ([UnicodeRegex]). */
+    private fun rx(pattern: String): Regex = UnicodeRegex.of(pattern)
 
     private fun t(level: CrisisLevel, reason: CrisisReason, vararg patterns: String): List<Trigger> =
         patterns.map { Trigger(level, reason, rx(it)) }

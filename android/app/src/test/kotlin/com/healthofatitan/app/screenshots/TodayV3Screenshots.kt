@@ -204,6 +204,21 @@ class TodayV3Screenshots {
         )
     }
 
+    /**
+     * Variant B «Тише» (A66 v0.5 §3.2а, mockup `today-calm/B-tishe.png`) on the real 412 × 915 dp
+     * screen: the head under the header, the haiku under the scene, the tiles without cards and
+     * «День» above the fold.
+     */
+    @Test
+    @Config(sdk = [35], application = Application::class, qualifiers = "w412dp-h915dp-xxhdpi")
+    fun calm05b() = shoot("05b-today-calm") {
+        Screen(
+            TodayUiState(whoop = whoop(), metrics = metrics.copy(charge = facet(68.0)), glance = glance()),
+            day(at(9, 41), plan = plan(Regime.BOOST), marks = TodayMarks(water = 3, meals = setOf("breakfast")), dawn = true)
+                .copy(haiku = listOf("Ночь была долгой.", "Ладони помнят металл.", "Сегодня — выше.")),
+        )
+    }
+
     @Test
     fun nightPending() = shoot("4.2-night-pending") {
         Screen(TodayUiState(whoop = whoop()), day(at(6, 20), plan = null, marks = TodayMarks()))

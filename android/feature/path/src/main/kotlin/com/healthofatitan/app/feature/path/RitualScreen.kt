@@ -62,6 +62,7 @@ import com.healthofatitan.app.core.ui.R
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
+import com.healthofatitan.app.core.ui.crash.CrashLog
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.PathColors
@@ -158,12 +159,18 @@ class RitualViewModel @Inject constructor(private val repository: PathRepository
     /** «Беру путь»: the goal starts today; the first fire from «Взято» flies at once. */
     fun take(onDone: () -> Unit) {
         viewModelScope.launch {
-            val data = repository.data.first()
-            val goal = build(draft.value, data)
-            if (RitualLogic.violations(goal, data.given, PathFeatureFlags.current, data.goals).isEmpty()) {
-                repository.start(goal, RitualLogic.firstFire(goal, emptyList()), draft.value.letter)
-                onDone()
-            }
+            // A failure keeps the ritual open and leaves a report instead of closing the app.
+            val started = runCatching {
+                val data = repository.data.first()
+                val goal = build(draft.value, data)
+                if (RitualLogic.violations(goal, data.given, PathFeatureFlags.current, data.goals).isEmpty()) {
+                    repository.start(goal, RitualLogic.firstFire(goal, emptyList()), draft.value.letter)
+                    true
+                } else {
+                    false
+                }
+            }.onFailure { CrashLog.record("ritual.take", it) }.getOrDefault(false)
+            if (started) onDone()
         }
     }
 }

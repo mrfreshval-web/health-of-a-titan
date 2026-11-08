@@ -3,6 +3,7 @@ package com.healthofatitan.app
 import android.app.Application
 import android.util.Log
 import com.healthofatitan.app.core.database.HotDatabase
+import com.healthofatitan.app.core.ui.crash.CrashLog
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.ReturnWatchWorker
 import com.healthofatitan.app.integration.whoop.day.MorningCoordinator
@@ -30,6 +31,8 @@ class HotApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // The last failure stays on the phone so the person can copy it (no crash service).
+        CrashLog.install(this, BuildConfig.VERSION_NAME)
         // Create/open the encrypted database off the main thread (slice 0 acceptance:
         // the file exists and is not readable by plain sqlite3). No data is logged.
         appScope.launch {

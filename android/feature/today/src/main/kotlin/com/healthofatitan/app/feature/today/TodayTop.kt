@@ -97,8 +97,9 @@ data class NowPick(val now: DayTask?, val rest: List<DayTask>, val link: String?
 }
 
 /**
- * The pure rules of the top of «Сегодня» by mockup 05b (A66 §1.1, §3.2–3.4, §11.2): where the sun
- * stands, how high the columns glow, what the three tiles say and which task is «Сейчас».
+ * The pure rules of the top of «Сегодня», variant B «Тише» (A66 v0.5 §1.1, §3.2а–3.4): where the
+ * blocks stand, how large the Titan is, where the sun stands, how high the columns glow, what the
+ * three tiles say and which task is «Сейчас».
  */
 object TodayTopRules {
     /** The scale of Заряд (A25): 5–95, the personal norm 50, «как обычно» |z| < 0.5 → 43–57. */
@@ -108,17 +109,62 @@ object TodayTopRules {
     const val USUAL_LOW = 43
     const val USUAL_HIGH = 57
 
-    /** A66 §3.2: the centre of the sun y = 452 − 3.02 × Заряд on the 915 dp screen; feet at y 452. */
-    const val FEET_Y = 452f
-    const val SUN_PER_POINT = 3.02f
-
-    /** The screen above the scene (status bar and the header, A66 §3.2): the scene starts at y 100. */
+    /** The screen above the scene (status bar and the header, A66 §3.2а): the scene starts at y 100. */
     const val SCENE_TOP = 100f
-    const val SCENE_HEIGHT = 370f
 
-    /** The Titan frame on «Сегодня» (A66 §11.2): 440 dp, left −14 dp, shares of the side. */
-    const val FRAME = 440f
-    const val FRAME_LEFT = -14f
+    /**
+     * Variant B «Тише» (A66 v0.5 §3.2а, mockup `today-calm/B-tishe.png`, `calm.py` `variant_b`): the
+     * places on the 412 × 915 dp screen, y from the top of the screen. The scene runs from under the
+     * header to the line of the mode word; the haiku, the tiles, «Сейчас» and «День» follow it.
+     */
+    const val FEET_Y = 322f
+    const val MODE_WORD_Y = 334f
+    const val MODE_WORD_HEIGHT = 20f
+    const val HAIKU_Y = 360f
+    const val HAIKU_SIZE = 15f
+    const val HAIKU_LINE = 19f
+    const val HAIKU_LINES = 3
+    const val METRICS_Y = 436f
+    const val METRIC_ARC = 50f
+    const val NOW_Y = 540f
+    const val NOW_HEIGHT = 84f
+    const val DAY_Y = 644f
+    const val DAY_END_Y = 760f
+
+    /** The bottom of the screen the tab bar leaves free (mockup: the bar starts at y 811). */
+    const val TAB_BAR_Y = 811f
+
+    /** The gap between the blocks of «Сегодня» (HotSpacing.cardGap): the tiles end where it begins. */
+    const val BLOCK_GAP = 16f
+
+    /** The scene ends under the mode word: the word stands inside it, on the ground. */
+    const val SCENE_HEIGHT = MODE_WORD_Y + MODE_WORD_HEIGHT - SCENE_TOP
+
+    /** The mode word in dp from the top of the scene. */
+    const val MODE_WORD_TOP = MODE_WORD_Y - SCENE_TOP
+
+    /** From the end of the scene to the haiku, from the haiku to the tiles. */
+    const val HAIKU_GAP = HAIKU_Y - SCENE_TOP - SCENE_HEIGHT
+    const val METRICS_GAP = METRICS_Y - HAIKU_Y - HAIKU_LINE * HAIKU_LINES
+
+    /** The row of the three tiles: from its top to the gap before «Сейчас». */
+    const val METRICS_HEIGHT = NOW_Y - BLOCK_GAP - METRICS_Y
+
+    /** The sun (A66 §3.2а): y = 322 − 1.99 × Заряд on the screen at the reference frame, a 38 dp disk. */
+    const val SUN_PER_POINT = 1.99f
+    const val SUN_DIAMETER = 38f
+
+    /** The one glow of the screen: the sky around the sun (A66 §3.2а «ореол неба 0,2»). */
+    const val SKY_GLOW = 0.2f
+
+    /** The columns are quieter (A66 §3.2а): the render desaturated and dimmed, the glow of the day 0.32. */
+    const val COLUMN_SATURATION = 0.55f
+    const val COLUMN_BRIGHTNESS = 0.85f
+    const val COLUMN_GLOW = 0.32f
+
+    /** The Titan frame on «Сегодня» (A66 §3.2а): 280 dp, left 66 dp on 412, shares of the side. */
+    const val FRAME = 280f
+    const val FRAME_LEFT = 66f
     const val FEET = 0.875f
     const val CAPITAL = 0.134f
     const val BASE = 0.893f
@@ -134,18 +180,43 @@ object TodayTopRules {
     /** The z of a usual value (A66 §3.3: |z| < 0.5). */
     const val USUAL_Z = 0.5
 
-    /**
-     * The centre of the sun, in dp from the top of the scene: linear in Заряд (A66 §1.1), the norm
-     * 50 in the middle of its travel; never stretched above or squeezed below.
-     */
-    fun sunCenterY(charge: Float): Float =
-        FEET_Y - SCENE_TOP - SUN_PER_POINT * charge.coerceIn(CHARGE_MIN.toFloat(), CHARGE_MAX.toFloat())
-
     /** The feet of the Titan in dp from the top of the scene. */
     val feetY: Float get() = FEET_Y - SCENE_TOP
 
-    /** The top of the Titan frame in dp from the top of the scene (above it: the frame is cut). */
+    /** The top of the reference frame in dp from the top of the scene (above it: the frame is cut). */
     val frameTop: Float get() = feetY - FEET * FRAME
+
+    /** The top of the head in the render, as a share of the frame (the capitals stand higher). */
+    const val HEAD = 0.203f
+
+    /**
+     * The rule of the head (A66 §3.2а, obligatory): the top of the head is never higher than the
+     * bottom of the header + 24 dp, on any width. The scene starts at the bottom of the header.
+     */
+    const val HEAD_ROOM = 24f
+
+    /** The width of the mockup the frame was drawn on. */
+    const val SCREEN_WIDTH = 412f
+
+    /**
+     * The side of the Titan frame on a scene [width] dp wide: 280 : 412 of the width, but never so
+     * large that the head comes closer than [HEAD_ROOM] to the header on a wide phone.
+     */
+    fun frameSide(width: Float): Float = minOf(width * FRAME / SCREEN_WIDTH, (feetY - HEAD_ROOM) / (FEET - HEAD))
+
+    /** The left edge of the frame on a scene [width] dp wide: the axis of the Titan is the centre. */
+    fun frameLeft(width: Float, side: Float = frameSide(width)): Float = (width - side) / 2f
+
+    /** The top of the head in dp from the top of the scene for a frame of [side] dp. */
+    fun headTop(side: Float): Float = feetY - (FEET - HEAD) * side
+
+    /**
+     * The centre of the sun, in dp from the top of the scene: linear in Заряд (A66 §1.1), from the
+     * line of the feet (Заряд 0) to 10 dp above the head (Заряд 100); its travel follows the frame
+     * when a narrow or wide phone resizes it. Never stretched above or squeezed below the scale.
+     */
+    fun sunCenterY(charge: Float, side: Float = FRAME): Float =
+        feetY - SUN_PER_POINT * (side / FRAME) * charge.coerceIn(CHARGE_MIN.toFloat(), CHARGE_MAX.toFloat())
 
     /**
      * The share of the closed day (A66 §1.1): the mean of the counted rows of «День», each at most 1

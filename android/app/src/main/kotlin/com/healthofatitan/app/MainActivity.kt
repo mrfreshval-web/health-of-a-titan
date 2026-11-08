@@ -36,6 +36,7 @@ import com.healthofatitan.app.core.ui.text.LocalAddressForm
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.navigation.DeepLinks
 import com.healthofatitan.app.integration.whoop.WhoopConnection
+import com.healthofatitan.app.navigation.CrashReportDialog
 import com.healthofatitan.app.navigation.HotApp
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.today.Rassvet
@@ -223,6 +224,7 @@ class MainActivity : ComponentActivity() {
                         firstLaunch = first,
                         onboarding = { onHelp -> FirstLaunchRoute(onHelp = onHelp, onDone = {}) },
                     )
+                    CrashReportDialog()
                 }
             }
         }

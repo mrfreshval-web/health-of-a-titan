@@ -1,12 +1,11 @@
 package com.healthofatitan.app.core.ui.component
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -33,7 +31,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.Titanium
 import kotlin.math.cos
@@ -97,12 +94,15 @@ fun MetricArc(
 private val TileShape = RoundedCornerShape(16.dp)
 
 /**
- * A metric tile of «Сегодня» (A66 §3.3): the arc with the number in its centre, the name and the
- * word to the norm. The whole tile is one button; TalkBack reads [spoken] (the full sentence, never
- * «дуга, 57»).
+ * A metric tile of «Сегодня» (A66 §3.3, variant B «Тише» §3.2а): the arc with the number in its
+ * centre, the name and the word to the norm, straight on the background — no card; the row divides
+ * the tiles with hairlines. The whole tile is one button (the ripple keeps the 16 dp rounding);
+ * TalkBack reads [spoken] (the full sentence, never «дуга, 57»).
  *
  * @param value the number in the arc; «—» without data
  * @param arc the position of the value on the arc, 0…1; null draws the dashed «нет данных»
+ * @param arcSize the side of the arc (50 dp in «Тише»)
+ * @param height the least height of the tile; a two-line word makes it taller
  */
 @Composable
 fun MetricTile(
@@ -115,28 +115,27 @@ fun MetricTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onClickLabel: String? = null,
+    arcSize: Dp = 50.dp,
+    height: Dp = 88.dp,
 ) {
-    val tokens = HotThemeTokens.colors
     val tap = onClick
     Column(
         modifier
-            .height(112.dp)
+            .heightIn(min = height)
             .clip(TileShape)
-            .background(Brush.verticalGradient(listOf(tokens.glassTop, tokens.glassBottom)), TileShape)
-            .border(1.dp, tokens.hairline, TileShape)
             .clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick)
             .clearAndSetSemantics {
                 contentDescription = spoken
                 role = Role.Button
                 this.onClick(label = onClickLabel) { tap(); true }
             }
-            .padding(top = 10.dp, start = 4.dp, end = 4.dp),
+            .padding(top = 2.dp, start = 4.dp, end = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        MetricArc(arc, band) {
+        MetricArc(arc, band, size = arcSize) {
             Text(
                 value,
-                style = HotType.numeral.copy(fontSize = if (value.length > 3) 18.sp else 20.sp, lineHeight = 24.sp),
+                style = HotType.numeral.copy(fontSize = if (value.length > 3) 16.sp else 19.sp, lineHeight = 22.sp),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 softWrap = false,

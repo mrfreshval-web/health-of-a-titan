@@ -44,38 +44,36 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
-import com.healthofatitan.app.core.ui.theme.HotType
-import com.healthofatitan.app.core.ui.theme.Titanium
 import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.TaskKind
 import com.healthofatitan.app.domain.today.TodayCopy
 
 private val NowShape = RoundedCornerShape(24.dp)
-private val BadgeShape = RoundedCornerShape(14.dp)
+private val BadgeShape = RoundedCornerShape(12.dp)
 
 /**
- * The card «Сейчас» (A66 §3.4), 96 dp: the sign of the kind (44 dp), «СЕЙЧАС», the title in one
- * line, the line of the link 13 sp («→ Силовые 2 из 3 → цель») and ▶ 48 dp. A tap and ▶ do what a
- * tap on the task does; «Отметить» and «Не сегодня» are custom actions (WCAG 2.5.1).
+ * The card «Сейчас» (A66 §3.4, variant B «Тише» §3.2а), 84 dp: the neutral sign of the kind (40 dp),
+ * «Сейчас», the title in one line, the line of the link 13 sp («→ Силовые 2 из 3 → цель») and ▶ as
+ * a Dawn outline, not a fill: the «+» of the tab bar stays the one filled Dawn. A tap and ▶ do what
+ * a tap on the task does; «Отметить» and «Не сегодня» are custom actions (WCAG 2.5.1).
  */
 @Composable
 internal fun NowCard(
     task: DayTask,
     link: String?,
-    mode: HotMode?,
     onTap: () -> Unit,
     onDone: () -> Unit,
     onNotToday: (() -> Unit)?,
 ) {
     val tokens = HotThemeTokens.colors
-    val accent = mode?.color() ?: tokens.modeRazgon
+    val neutral = MaterialTheme.colorScheme.onSurfaceVariant
+    val dawn = MaterialTheme.colorScheme.primary
     val connect = task.kind == TaskKind.CONNECT_WHOOP
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 96.dp)
+            .heightIn(min = TodayTopRules.NOW_HEIGHT.dp)
             .clip(NowShape)
             .background(Brush.verticalGradient(listOf(tokens.glassTop, tokens.glassBottom)), NowShape)
             .border(1.dp, tokens.hairline, NowShape)
@@ -88,19 +86,23 @@ internal fun NowCard(
                     onNotToday?.let { f -> CustomAccessibilityAction(TodayCopy.NOT_TODAY) { f(); true } },
                 )
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(44.dp)
-                .background(accent.copy(alpha = 0.12f), BadgeShape)
+                .size(40.dp)
+                .background(neutral.copy(alpha = 0.08f), BadgeShape)
                 .clearAndSetSemantics { }
-                .drawBehind { kindGlyph(task.kind, accent) },
+                .drawBehind { kindGlyph(task.kind, neutral) },
         )
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(TodayTopCopy.NOW.uppercase(), style = HotType.mono, color = MaterialTheme.colorScheme.primary)
+            Text(
+                TodayTopCopy.NOW.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                color = neutral,
+            )
             Text(
                 task.title,
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.Medium),
@@ -124,20 +126,24 @@ internal fun NowCard(
                 Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(tokens.dawnFill), CircleShape)
+                    .border(1.5.dp, dawn.copy(alpha = 0.6f), CircleShape)
                     .testTag(TASK_PLAY_TAG)
                     .clickable(role = Role.Button, onClick = onTap)
                     .clearAndSetSemantics {
                         contentDescription = TodayCopy.START
                         role = Role.Button
                     }
-                    .drawBehind { play(Titanium.OnDawn) },
+                    .drawBehind { play(dawn) },
             )
         }
     }
 }
 
-/** «ещё 2 дела ›» (A66 §3.4): unfolds «Дела дня» in place; at least 48 dp to touch (§3.11). */
+/**
+ * «ещё 2 дела ›» (A66 §3.4): unfolds «Дела дня» in place. In «Тише» (§3.2а) it takes 24 dp of the
+ * screen so «День» stays above the fold; the touch target is still 48 dp (§3.11): Compose grows a
+ * smaller clickable to `minimumTouchTargetSize` when it hit-tests.
+ */
 @Composable
 internal fun MoreLink(text: String, open: Boolean, onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
@@ -149,10 +155,9 @@ internal fun MoreLink(text: String, open: Boolean, onClick: () -> Unit) {
         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
-            .heightIn(min = 48.dp)
             .testTag(TASKS_MORE_TAG)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
     )
 }
 

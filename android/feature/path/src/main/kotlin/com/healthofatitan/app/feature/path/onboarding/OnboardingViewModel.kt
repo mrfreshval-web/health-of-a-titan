@@ -6,6 +6,7 @@ import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.datastore.FirstLaunchPrefs
 import com.healthofatitan.app.core.datastore.FirstLaunchSettings
+import com.healthofatitan.app.core.ui.crash.CrashLog
 import com.healthofatitan.app.domain.engine.CrisisGuard
 import com.healthofatitan.app.domain.metrics.Metrics
 import com.healthofatitan.app.domain.path.GoalLayer
@@ -236,7 +237,7 @@ class OnboardingViewModel @Inject constructor(
                 settings.setStep(OnboardingStep.WEEK.name)
                 val goals = loadWeek()
                 draft.update { it.copy(step = OnboardingStep.WEEK, week = goals) }
-            }
+            }.onFailure { CrashLog.record("onboarding.take", it) }
             draft.update { it.copy(busy = false) }
         }
     }

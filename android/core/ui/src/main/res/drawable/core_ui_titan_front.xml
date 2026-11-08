@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TEMPORARY placeholder for the Titan render «titan_front» (A66 §11.2): the figure from the front
+  between two columns, transparent background, square frame. It will be replaced by the render with
+  the same name (licence decision of Agent 7). Geometry follows A66 §11.2 in shares of the side
+  (viewport 440): feet y 0.875, capitals y 0.134, bases y 0.893, columns x 0.115–0.29 and
+  0.71–0.885; the palms rest on the shafts below the capitals (A47 §2).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="440dp"
+    android:height="440dp"
+    android:viewportWidth="440"
+    android:viewportHeight="440">
+
+    <!-- Left column: abacus, echinus, fluted shaft, base (x 50.6–127.6) -->
+    <path
+        android:fillColor="#C9A25E"
+        android:pathData="M50.6,59 L127.6,59 L127.6,70 L50.6,70 Z" />
+    <path
+        android:fillColor="#B48D4C"
+        android:pathData="M58,70 L120,70 L114,84 L64,84 Z" />
+    <path
+        android:fillColor="#C49C58"
+        android:pathData="M64,84 L114,84 L114,378 L64,378 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9A7A3E"
+        android:strokeWidth="1.5"
+        android:pathData="M75,90 L75,372 M89,90 L89,372 M103,90 L103,372" />
+    <path
+        android:fillColor="#B48D4C"
+        android:pathData="M56,378 L122,378 L127.6,393 L50.6,393 Z" />
+
+    <!-- Right column (x 312.4–389.4) -->
+    <path
+        android:fillColor="#C9A25E"
+        android:pathData="M312.4,59 L389.4,59 L389.4,70 L312.4,70 Z" />
+    <path
+        android:fillColor="#B48D4C"
+        android:pathData="M320,70 L382,70 L376,84 L326,84 Z" />
+    <path
+        android:fillColor="#C49C58"
+        android:pathData="M326,84 L376,84 L376,378 L326,378 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#9A7A3E"
+        android:strokeWidth="1.5"
+        android:pathData="M337,90 L337,372 M351,90 L351,372 M365,90 L365,372" />
+    <path
+        android:fillColor="#B48D4C"
+        android:pathData="M318,378 L384,378 L389.4,393 L312.4,393 Z" />
+
+    <!-- The Titan: marble silhouette, arms out to the shafts, feet on y 385 -->
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M220,82 C230,82 237,90 237,100 C237,111 230,119 220,119 C210,119 203,111 203,100 C203,90 210,82 220,82 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M212,116 L228,116 L230,132 L210,132 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M184,130 L114,152 L114,166 L186,150 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M256,130 L326,152 L326,166 L254,150 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M178,132 L262,132 L256,182 L246,232 L250,252 L190,252 L194,232 L184,182 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M190,250 L219,250 L216,318 L212,378 L214,385 L194,385 L198,378 L194,318 Z" />
+    <path
+        android:fillColor="#E9E4DA"
+        android:pathData="M221,250 L250,250 L246,318 L242,378 L246,385 L226,385 L228,378 L224,318 Z" />
+</vector>

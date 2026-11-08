@@ -160,6 +160,9 @@ class TodaySlots(
 )
 
 const val TODAY_SCREEN_TAG = "screen_today"
+
+/** The side margins of «Сегодня» (A66 §1.2: 16 dp on 412 dp). */
+internal val TODAY_EDGE = 16.dp
 const val TODAY_CONNECT_TAG = "today_connect_whoop"
 
 data class TodayUiState(
@@ -238,6 +241,14 @@ data class TodayView(
     val food: TodayFood = TodayFood(),
     /** The compact «Тарелка дня» line under the supports; null without a plan or under `HIDE_FOOD_TALK`. */
     val plate: PlateLine? = null,
+    /** «Заряд · Ночь · Ты» under the scene (A66 §3.3). */
+    val tiles: List<MetricTileView> = emptyList(),
+    /** The share of the closed day: how high the columns glow (A66 §1.1). */
+    val dayShare: Float = 0f,
+    /** «Сейчас» and the rest of the tasks folded under it (A66 §3.4). */
+    val now: NowPick = NowPick.EMPTY,
+    /** The scene as one TalkBack node (A66 §3.11). */
+    val sceneSpoken: String = "",
 )
 
 /** «Тарелка дня · Обед 13:00»: the next main meal and the card it opens (A41 §10, S3). */
@@ -363,6 +374,14 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
             estimate = estimate,
         ),
     )
+    val tiles = TodayTopRules.tiles(
+        me = me,
+        scenario = scenario,
+        nightMinutes = sleepHours?.let { (it * 60).roundToInt() },
+        needMinutes = glance?.sleep?.takeIf { it.wakeDay == today }?.needHours?.let { (it * 60).roundToInt() },
+        nightZ = state.metrics.sleepHours?.z?.takeIf { state.metrics.dayKey == today },
+    )
+    val dayShare = TodayTopRules.dayShare(supports)
     return TodayView(
         scenario = scenario,
         light = Scenarios.light(scenario, now),
@@ -373,6 +392,10 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
         blocks = TodayLayout.blocks(scenario, now),
         food = food,
         plate = plateLine(food, scenario, now.hour * 60 + now.minute, marks?.meals.orEmpty()),
+        tiles = tiles,
+        dayShare = dayShare,
+        now = TodayTopRules.now(tasks, scenario, day?.week),
+        sceneSpoken = TodayTopRules.sceneSpoken(me.mode, tiles.firstOrNull { it.kind == MetricKind.CHARGE }, dayShare),
     )
 }
 
@@ -406,19 +429,28 @@ fun TodayScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = HotSpacing.edge, end = HotSpacing.edge, top = 0.dp, bottom = HotSpacing.sectionGap + 56.dp)
+                .padding(top = 0.dp, bottom = HotSpacing.sectionGap + 56.dp)
                 .testTag(TODAY_SCREEN_TAG),
             verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
         ) {
             view.blocks.forEach { block ->
-                when (block) {
-                    TodayBlock.ME -> BlockMe(view, onOpen = { withConnect.onOpen(HotRoute.WHY) })
-                    TodayBlock.SUPPORTS -> BlockSupports(view, day?.today ?: LocalDate.now(), withConnect)
-                    TodayBlock.TASKS -> BlockTasks(view, day?.today ?: LocalDate.now(), withConnect, marks)
-                    TodayBlock.RHYTHM -> BlockRhythm(view, day, withConnect, slots)
+                // the scene runs edge to edge (A66 §3.2); everything else keeps the 16 dp margins (§1.2)
+                if (block == TodayBlock.ME) {
+                    BlockMe(view, onOpen = { withConnect.onOpen(HotRoute.WHY) }, onRoute = withConnect.onOpen)
+                } else {
+                    Column(Modifier.padding(horizontal = TODAY_EDGE), verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap)) {
+                        when (block) {
+                            TodayBlock.SUPPORTS -> BlockSupports(view, day?.today ?: LocalDate.now(), withConnect)
+                            TodayBlock.TASKS -> BlockTasks(view, day?.today ?: LocalDate.now(), withConnect, marks)
+                            TodayBlock.RHYTHM -> BlockRhythm(view, day, withConnect, slots)
+                            TodayBlock.ME -> Unit
+                        }
+                    }
                 }
             }
-            if (whoop != null && connected) SyncFooter(whoop, state, onSync)
+            if (whoop != null && connected) {
+                Column(Modifier.padding(horizontal = TODAY_EDGE)) { SyncFooter(whoop, state, onSync) }
+            }
         }
         // «Отмечено · Отменить» for 5 s after a mark (A46 §2.4), over the content.
         UndoBar(marks, Modifier.align(Alignment.BottomCenter).padding(horizontal = HotSpacing.edge, vertical = 12.dp))

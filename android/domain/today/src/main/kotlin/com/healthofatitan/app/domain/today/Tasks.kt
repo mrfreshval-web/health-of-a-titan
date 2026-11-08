@@ -16,8 +16,34 @@ object CalendarWeek {
 /** Spheres of the week goals (A52 §2.2). */
 enum class Sphere { BODY, WORK, SLEEP, FOOD, MIND }
 
-/** Where a week goal comes from (A52 §4). */
-enum class GoalSource { PATH, WORK, PATTERN }
+/**
+ * Where a week goal comes from (A45 §17.2, A67 С-3). The names before A45 (`PATH`, `WORK`,
+ * `PATTERN`) still read through [parse]: no Room migration is needed.
+ */
+enum class GoalSource {
+    /** The stage of the active Path goal (the bridge Путь → Неделя, A67 §2.1 ①). */
+    STAGE,
+
+    /** HoT's starter goals while there is no active goal (П-1, W-10): never shown as the Path. */
+    START,
+
+    /** A pattern of the week or the experiment (A52 §3). */
+    EXPERIMENT,
+
+    /** Taken by the person: a reminder, a skew of the ritual, what drags on. */
+    PERSON,
+    ;
+
+    companion object {
+        /** Stored value → source: `PATH` → [STAGE], `PATTERN` → [EXPERIMENT], `WORK` → [START]; unknown → [START]. */
+        fun parse(stored: String?): GoalSource = when (stored) {
+            "PATH" -> STAGE
+            "PATTERN" -> EXPERIMENT
+            "WORK" -> START
+            else -> entries.firstOrNull { it.name == stored } ?: START
+        }
+    }
+}
 
 /** What kind of thing a task of the day is (A46 §2.4); [TaskKind.playVerb] is what ▶ does. */
 enum class TaskKind {
@@ -89,6 +115,12 @@ data class DayTask(
     val route: String? = null,
     /** Days in a row it was moved (A46 §2.4 «Сдвинуто 3 раза»). */
     val moved: Int = 0,
+    /**
+     * The short name of the Path goal this step serves (A57 §4.3, A67 С-4); null when the step is
+     * not from the stage of an active goal. A mark only: the mode of the day still decides full or
+     * mini, and the safety bus still decides whether there is a step at all.
+     */
+    val goal: String? = null,
 )
 
 /** Where «Не сегодня» sends a task (T-08): back to its week goal, never to tomorrow. */

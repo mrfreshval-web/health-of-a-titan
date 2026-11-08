@@ -47,7 +47,7 @@ object PatternRules {
             target = 3,
             unit = WeekCopy.UNIT_DAYS,
             progress = 0,
-            source = GoalSource.PATTERN,
+            source = GoalSource.EXPERIMENT,
             measure = GoalMeasure.DAYS,
         )
     }

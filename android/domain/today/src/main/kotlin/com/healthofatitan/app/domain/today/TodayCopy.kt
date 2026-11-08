@@ -46,6 +46,15 @@ object TodayCopy {
     const val SOURCE_STEPS = "WHOOP: шаги дня; по часам — Health Connect телефона"
     const val SOURCE_STEPS_PHONE = "Health Connect телефона"
     const val SOURCE_MEALS = "твои отметки приёмов пищи"
+
+    /** Черновик S3, ждёт ревью Агентов 10 и 16: the support under ED_CARE, no numbers (A60 §3.4). */
+    const val NUTRITION_GENTLE = "по себе"
+    const val SOURCE_MEALS_GENTLE = "бережный режим: без счёта"
+    const val SOURCE_WHOOP_LOAD = "WHOOP: нагрузка дня"
+
+    /** Черновик S3, ждёт ревью Агентов 16 и 10: the compact line and the link to the plate. */
+    const val PLATE_OF_DAY = "Тарелка дня"
+    const val NUTRITION_QUIET = "Еда сегодня — без счёта и без времени."
     const val SOURCE_WATER = "твои тапы; формула нормы — оценка"
     const val SOURCE_SLEEP_PREP = "время отметок и окна сна — оценка"
     const val EFFORT_HIDDEN = "WHOOP · сегодня скрыто"
@@ -184,7 +193,8 @@ object TodayCopy {
         M_NEED, M_DEEP, M_REM, M_LIGHT, M_AWAKE, M_EFFICIENCY, M_CONSISTENCY, M_DEBT, M_RHR, M_HRV, M_RHR_TREND, M_RESP,
         M_SPO2, M_SKIN, M_SELF, SRC_SLEEP, SRC_RECOVERY, SRC_CHECKIN, WEEK_SOON, BEHIND, BEHIND_SOON, ARSENAL_SOON,
         BREATHER_LINE, BREATHER_REST, BREATHER_OFF, BREATHER_HIDE, BREATHER_EXHALE, SUPPORT_SOURCE, SUPPORT_NORM,
-        BREATHER_BACK, STEPS_GOAL, goalMark("Пробежать 5 км"),
+        BREATHER_BACK, STEPS_GOAL, NUTRITION_GENTLE, SOURCE_MEALS_GENTLE, SOURCE_WHOOP_LOAD, PLATE_OF_DAY, NUTRITION_QUIET,
+        goalMark("Пробежать 5 км"),
     ) + MEALS.map { it.second }
 }
 

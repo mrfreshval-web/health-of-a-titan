@@ -23,6 +23,8 @@ import com.healthofatitan.app.feature.today.BREATHER_HELP_TAG
 import com.healthofatitan.app.feature.today.BREATHER_SCREEN_TAG
 import com.healthofatitan.app.feature.today.BREATHER_TAG
 import com.healthofatitan.app.feature.today.ME_WHY_TAG
+import com.healthofatitan.app.feature.today.SUPPORT_MEAL_OPEN_TAG
+import com.healthofatitan.app.feature.today.SUPPORT_PLATE_TAG
 import com.healthofatitan.app.feature.today.SUPPORT_SCREEN_TAG
 import com.healthofatitan.app.feature.today.SUPPORT_TAG
 import com.healthofatitan.app.feature.today.WHY_SCREEN_TAG
@@ -68,7 +70,9 @@ import com.healthofatitan.app.feature.me.profile.sexTag
 import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.core.model.profile.SexForCalc
 import com.healthofatitan.app.feature.me.ME_WHOOP_ROW_TAG
+import com.healthofatitan.app.feature.nutrition.MEAL_SCREEN_TAG
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
+import com.healthofatitan.app.feature.nutrition.PLATE_SCREEN_TAG
 import com.healthofatitan.app.feature.nutrition.PROFILE_SCREEN_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_CONNECT_TAG
 import com.healthofatitan.app.feature.me.whoop.WHOOP_SCREEN_TAG
@@ -221,6 +225,23 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
         compose.onNodeWithTag(SUPPORT_TAG + "water").performScrollTo().performClick()
         compose.onNodeWithTag(SUPPORT_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `S3 Today leads to food, then to a meal card and the plate of the day, inside Today`() {
+        launch()
+        compose.onNodeWithTag(SUPPORT_TAG + "nutrition").performScrollTo().performClick()
+        compose.onNodeWithTag(SUPPORT_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(SUPPORT_MEAL_OPEN_TAG + "lunch").performScrollTo().performClick()
+        compose.onNodeWithTag(MEAL_SCREEN_TAG).assertExists()
+        assertEquals(HotRoute.NUTRITION_MEAL, nav.currentDestination?.route)
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(NutritionTexts.PLATE_OF_DAY)
+        compose.onNodeWithTag(HotTab.TODAY.testTag).assertIsSelected()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(SUPPORT_PLATE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(PLATE_SCREEN_TAG).assertExists()
+        assertEquals(HotRoute.NUTRITION_DAY, nav.currentDestination?.route)
+        compose.onNodeWithTag(HotTab.TODAY.testTag).assertIsSelected()
     }
 
     @Test

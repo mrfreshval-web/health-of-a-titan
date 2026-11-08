@@ -88,6 +88,7 @@ import kotlin.math.roundToInt
 const val ME_WHY_TAG = "me_why"
 const val SUPPORT_TAG = "support_"
 const val WATER_ADD_TAG = "water_add"
+const val PLATE_LINE_TAG = "today_plate_line"
 const val TASK_TAG = "task_"
 const val TASK_PLAY_TAG = "task_play"
 const val TASK_NOT_TODAY_TAG = "task_not_today_"
@@ -253,7 +254,25 @@ fun BlockSupports(view: TodayView, today: LocalDate, actions: DayActions) {
                 SupportColumn(s, SupportPalette.of(s.tone, dark), Modifier.weight(1f)) { actions.onOpen(HotRoute.support(s.id.key)) }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        // «Тарелка дня» shares the row of «+ стакан» (S3): the block keeps its height (A46 v0.3)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val plate = view.plate
+            if (plate != null) {
+                Text(
+                    plate.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(PLATE_LINE_TAG)
+                        .clickable(role = Role.Button) { actions.onOpen(plate.route) }
+                        .padding(vertical = 12.dp),
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
             HotTextButton(TodayCopy.WATER_ADD, onClick = { actions.onWater(today, 1) }, modifier = Modifier.testTag(WATER_ADD_TAG))
         }
     }

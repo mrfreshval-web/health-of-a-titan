@@ -21,12 +21,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotNumbers
 import com.healthofatitan.app.core.ui.component.HotTextButton
-import com.healthofatitan.app.domain.engine.DayEngine
-import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.integration.whoop.day.DayItemView
 import kotlinx.coroutines.delay
@@ -52,20 +49,6 @@ fun nowItem(items: List<DayItemView>, nowMin: Int): DayItemView? {
         ?: open.filter { it.startMin != null && dayMin(it.startMin!!) >= now }.minByOrNull { dayMin(it.startMin!!) }
         ?: open.firstOrNull()
 }
-
-/**
- * Where a tap on an item leads (UX review 119, R3): the training opens «Тренировка дня» and its
- * player (stream B), a meal opens its card of «Тарелка дня» (stream C). Other items unfold in
- * place. A tap never marks an item done.
- */
-internal fun itemRoute(item: DayItemView): String? = when {
-    item.id == DayEngine.Ids.TRAINING -> HotRoute.TRAINING
-    item.kind == ItemKind.NUTRITION && item.id in MEAL_SLOTS -> HotRoute.nutritionMeal(item.id)
-    else -> null
-}
-
-/** Meal slots the nutrition card knows (A41 §10): the plan's item ids are the same words. */
-private val MEAL_SLOTS = setOf(DayEngine.Ids.BREAKFAST, "lunch", DayEngine.Ids.DINNER)
 
 /** WHOOP's own marks are not the user's to undo (A35). */
 internal fun canMark(item: DayItemView): Boolean = item.status == ItemStatus.OPEN || item.status == ItemStatus.DONE_SELF

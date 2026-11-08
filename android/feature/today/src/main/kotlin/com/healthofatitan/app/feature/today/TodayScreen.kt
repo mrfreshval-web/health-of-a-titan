@@ -70,6 +70,8 @@ import com.healthofatitan.app.domain.today.Supports
 import com.healthofatitan.app.domain.today.SupportsInput
 import com.healthofatitan.app.domain.today.TaskRules
 import com.healthofatitan.app.domain.today.TodayBlock
+import com.healthofatitan.app.domain.today.TodayCopy
+import com.healthofatitan.app.domain.today.TodayFood
 import com.healthofatitan.app.domain.today.TodayLayout
 import com.healthofatitan.app.integration.healthconnect.PhoneSteps
 import com.healthofatitan.app.integration.whoop.SyncIndicator
@@ -139,7 +141,7 @@ fun NavGraphBuilder.todayScreen(
         route = HotRoute.SUPPORT,
         arguments = listOf(navArgument(HotRoute.SUPPORT_ARG) { type = NavType.StringType }),
     ) { entry ->
-        SupportRoute(id = entry.arguments?.getString(HotRoute.SUPPORT_ARG), stateful = stateful)
+        SupportRoute(id = entry.arguments?.getString(HotRoute.SUPPORT_ARG), stateful = stateful, onOpen = onOpenRoute)
     }
     composable(route = HotRoute.BREATHER) { BreatherScreen(onHelp = onOpenHelp, onClose = onBack) }
     composable(route = HotRoute.ARSENAL) { ArsenalScreen() }
@@ -232,7 +234,41 @@ data class TodayView(
     val tasks: List<DayTask>,
     val rhythm: RhythmView,
     val blocks: List<TodayBlock>,
+    /** The food plan of today (S3); empty without a plan. */
+    val food: TodayFood = TodayFood(),
+    /** The compact «Тарелка дня» line under the supports; null without a plan or under `HIDE_FOOD_TALK`. */
+    val plate: PlateLine? = null,
 )
+
+/** «Тарелка дня · Обед 13:00»: the next main meal and the card it opens (A41 §10, S3). */
+data class PlateLine(val text: String, val route: String)
+
+/**
+ * The compact plate line: the next main meal opens its card; with every meal marked the whole
+ * plate opens. No line without a plan, under `HIDE_FOOD_TALK` or on the sober screen (A46 §4.8);
+ * no clock time under `HIDE_FOOD_WINDOWS`.
+ */
+internal fun plateLine(food: TodayFood, scenario: Scenario, nowMin: Int, marked: Set<String>): PlateLine? {
+    if (food.quiet || food.mealsPlanned == null || scenario == Scenario.SAFETY) return null
+    val next = food.next(nowMin, marked) ?: return PlateLine(TodayCopy.PLATE_OF_DAY, HotRoute.NUTRITION_DAY)
+    val time = next.timeMin?.takeIf { !food.hideTimes }?.let { " " + Supports.clock(it) }.orEmpty()
+    return PlateLine("${TodayCopy.PLATE_OF_DAY} · ${next.title}$time", HotRoute.nutritionMeal(next.slot))
+}
+
+/**
+ * The sleep preparation of today's plan (A46 §2.3): the dinner window is the plan's dinner (NUT-01)
+ * and is left out under `HIDE_FOOD_WINDOWS` (A60 §3.4). Null without a plan.
+ */
+internal fun sleepPrep(plan: DayView?, food: TodayFood): SleepPrep? = plan?.let {
+    val dinner = it.items.firstOrNull { i -> i.id == DayEngine.Ids.DINNER }?.let { d -> d.endMin ?: d.startMin }
+    SleepPrep(
+        caffeineUntilMin = it.caffeineCutoffMin,
+        dinnerUntilMin = dinner ?: SupportNorms.DINNER_UNTIL_MIN,
+        screensFromMin = it.windDownMin,
+        bedtimeMin = it.bedtimeMin,
+        foodWindows = !food.hideTimes,
+    )
+}
 
 /** A workout counts as «just confirmed» for scenario 4.5 for three hours after its end. */
 private val AFTER_WORKOUT: Duration = Duration.ofHours(3)
@@ -291,15 +327,8 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
     )
     // the cycle that runs today (it may have started yesterday evening)
     val cycle = glance?.cycle?.takeIf { !it.start.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }
-    val dinner = plan?.items?.firstOrNull { it.id == DayEngine.Ids.DINNER }?.let { it.endMin ?: it.startMin }
-    val prep = plan?.let {
-        SleepPrep(
-            caffeineUntilMin = it.caffeineCutoffMin,
-            dinnerUntilMin = dinner ?: SupportNorms.DINNER_UNTIL_MIN,
-            screensFromMin = it.windDownMin,
-            bedtimeMin = it.bedtimeMin,
-        )
-    } ?: SleepPrep()
+    val food = day?.food ?: TodayFood()
+    val prep = sleepPrep(plan, food) ?: SleepPrep(foodWindows = !food.hideTimes)
     val marks = day?.marks
     val supports = Supports.build(
         SupportsInput(
@@ -311,11 +340,12 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
             whoopSteps = cycle?.steps,
             phoneSteps = phone?.today,
             hourlySteps = phone?.hourly,
-            mealsMarked = marks?.meals?.size ?: 0,
+            mealsMarked = food.marked(marks?.meals.orEmpty()),
             water = marks?.water ?: 0,
             sleep = prep,
             lastWorkoutEndMin = workoutEnd?.takeIf { it.atZone(zone).toLocalDate() == today }?.let { minuteOf(it, zone) },
             lastMealMin = marks?.lastMealAt?.let { minuteOf(Instant.ofEpochMilli(it), zone) },
+            food = food,
         ),
     )
     val done = marks?.done.orEmpty()
@@ -333,7 +363,17 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
             estimate = estimate,
         ),
     )
-    return TodayView(scenario, Scenarios.light(scenario, now), me, supports, tasks, rhythm, TodayLayout.blocks(scenario, now))
+    return TodayView(
+        scenario = scenario,
+        light = Scenarios.light(scenario, now),
+        me = me,
+        supports = supports,
+        tasks = tasks,
+        rhythm = rhythm,
+        blocks = TodayLayout.blocks(scenario, now),
+        food = food,
+        plate = plateLine(food, scenario, now.hour * 60 + now.minute, marks?.meals.orEmpty()),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

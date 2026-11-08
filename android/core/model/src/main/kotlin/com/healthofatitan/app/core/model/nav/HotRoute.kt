@@ -61,6 +61,9 @@ object HotRoute {
 
     fun nutritionMeal(slot: String): String = "nutrition_meal/$slot"
 
+    /** «Тарелка дня» whole (A41 §10): from «Опоры › питание». Inside the «Сегодня» tab. */
+    const val NUTRITION_DAY = "nutrition_day"
+
     /** Stream B «Тренировка» (A40 §7): the session of the day, under «Сегодня». */
     const val TRAINING = "training"
 

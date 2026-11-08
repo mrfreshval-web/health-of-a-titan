@@ -281,7 +281,8 @@ fun ColumnScope.AccountProfileSection(
 @Composable
 private fun NameEditor(p: AccountProfile, actions: AccountProfileActions) {
     var editing by rememberSaveable { mutableStateOf(false) }
-    if (editing || p.name == null) {
+    val name = p.name
+    if (editing || name == null) {
         var typed by rememberSaveable(p.name) { mutableStateOf(p.name.orEmpty()) }
         OutlinedTextField(
             value = typed,
@@ -295,7 +296,7 @@ private fun NameEditor(p: AccountProfile, actions: AccountProfileActions) {
             editing = false
         }, enabled = typed.trim() != p.name.orEmpty())
     } else if (p.asksName) {
-        Text(AccountProfileTexts.nameAsk(p.name).text(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(AccountProfileTexts.nameAsk(name).text(), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HotSecondaryButton(AccountProfileTexts.NAME_YES.text(), actions.onConfirmName, Modifier.testTag(PROFILE_NAME_YES_TAG))
             HotTextButton(AccountProfileTexts.NAME_EDIT.text(), { editing = true })

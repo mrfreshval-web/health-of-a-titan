@@ -1,11 +1,6 @@
 package com.healthofatitan.app.domain.mentor
 
 /**
- * The gate before the model (A62 §8 layer 1, A07 §4.1): every message of the person passes
- * CrisisGuard on the phone first. The guard is passed in as a function so this module stays pure;
- * the app passes `CrisisGuard.assess(text).level.value`.
- */
-/**
  * What a message inside the crisis window (SafetyBus: CrisisGuard ≥ 2 within 72 h) does. The two
  * variants of the review of Агенты 3/10/7/16 (08.11), until the founder chooses:
  *
@@ -65,25 +60,62 @@ object MentorGate {
     /** The model layer may only raise (CrisisGuard.merge): the larger of the two acts. */
     fun merge(device: Int, model: Int?): Int = if (model != null && model > device) model else device
 
-    private val yes = setOf("да", "ага", "угу", "бывают", "бывает", "есть", "иногда", "часто", "yes", "yeah", "yep")
-    private val no = setOf("нет", "неа", "не", "no", "nope", "никогда")
+    private val yes = setOf(
+        "да", "ага", "угу", "бывают", "бывает", "бывало", "есть", "иногда", "часто", "периодически",
+        "наверное", "возможно", "yes", "yeah", "yep", "sometimes", "maybe",
+    )
+
+    /** «не бывает», «не есть» — отрицание; «не часто», «не иногда» — всё ещё «да». */
+    private val negatable = setOf("бывают", "бывает", "бывало", "есть")
+    private val fillers = setOf("ну", "эм", "хм", "well")
+    private val negations = setOf("нет", "неа", "не", "no", "nope", "никогда")
+
+    private fun words(text: String): List<String> =
+        text.lowercase().replace('ё', 'е').split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() && it !in fillers }
 
     /**
-     * A short consent to Text 1 of A07 §4.3 («бывают мысли навредить себе…?»): «да», «бывают»,
-     * «есть», «иногда», «yes»… → `SafetyAnswer.YES`. A long message, or any «нет» in it, is not a
-     * consent: the talk goes on with the gentle flag. Черновик — ждёт ревью Агентов 10 и 3.
+     * The answer to Text 1 of A07 §4.3 («бывают мысли навредить себе…?») is a consent → `SafetyAnswer.YES`
+     * unless it is a clear «нет». Doubt («не знаю», «наверное», «может быть») goes up, not down
+     * (ревью 10, 08.11). «да нет» is a colloquial «нет».
      */
     fun consent(text: String): Boolean {
-        val words = text.lowercase().replace('ё', 'е').split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
-        if (words.isEmpty() || words.size > MAX_CONSENT_WORDS) return false
-        if (words.any { it in no }) return false
-        return words.any { it in yes }
+        val w = words(text)
+        if (w.isEmpty()) return false
+        if (w.size >= 2 && w[0] == "да" && w[1] == "нет") return false
+        val short = w.size <= MAX_CONSENT_WORDS
+        val doubt = w.zipWithNext().any { (a, b) -> (a == "не" && (b == "знаю" || b.startsWith("уверен"))) || (a == "может" && b == "быть") }
+        if (short && doubt) return true
+        if (w[0] in yes) return true
+        if (!short) return false
+        return w.withIndex().any { (i, x) -> x in yes && !(x in negatable && i > 0 && w[i - 1] == "не") }
     }
 
-    private const val MAX_CONSENT_WORDS = 5
+    /**
+     * The answer to Text 1 starts with «нет» (or «да нет»): the person said there are no such
+     * thoughts. From this turn on the pack carries `checked` (ревью 10, П4).
+     */
+    fun saysNo(text: String): Boolean {
+        val w = words(text)
+        if (w.isEmpty() || consent(text) || declines(text)) return false
+        return w[0] in negations || (w.size >= 2 && w[0] == "да" && w[1] == "нет")
+    }
+
+    /** A bare «нет» (≤ 3 words): shown, but not sent to the model, which answers the line before. */
+    fun denial(text: String): Boolean = saysNo(text) && words(text).size <= MAX_DENIAL_WORDS
+
+    private val declines = listOf(
+        Regex("(?iU)не\\s+(хочу|буду|готов\\p{L}*)\\s+(отвечать|говорить|об этом)"),
+        Regex("(?iU)не\\s+(твое|ваше)\\s+дело"),
+        Regex("(?iU)(без комментариев|пропущу|пропустим|не скажу)"),
+    )
+
+    /** «не хочу отвечать», «не твоё дело»: `SafetyAnswer.DECLINE` (level 1) for the metrics of block 9. */
+    fun declines(text: String): Boolean = !consent(text) && declines.any { it.containsMatchIn(text.replace('ё', 'е')) }
+
+    private const val MAX_CONSENT_WORDS = 8
+    private const val MAX_DENIAL_WORDS = 3
 }
 
-/** Why an answer was replaced, for the metrics of block 9 — never the words. */
 /**
  * Why an answer was replaced, for the metrics of block 9 — never the words. [ED_CARE] — the food
  * care of A07 §5 is on; [FOOD_HIDDEN] — only a restriction of the bus (e.g. HIDE_WEIGHT) hides it.
@@ -103,9 +135,9 @@ sealed interface GuardResult {
  *
  * - `ED_CARE` or a food/weight restriction of the bus: no calories, body weight, dieting.
  * - Doses: no number with a unit of a dose (мг, мкг, МЕ, ЕД, mg, mcg, IU), no count of tablets,
- *   capsules or dragées, no мл or grams next to a supplement or a medicine (креатин, омега,
- *   магний, мелатонин, витамин, кофеин, сироп, капли…) — doses are with the doctor. Grams of food
- *   alone are not a dose.
+ *   capsules, dragées, drops, ampoules or shots, no amount (мл, г, единицы, пакетики, ложки) right
+ *   next to a supplement or a medicine (креатин, омега, магний, инсулин, сироп…) — doses are with
+ *   the doctor. Grams of food and ml of water are not a dose.
  * - Diagnosis: no «у тебя <болезнь>», «это точно <болезнь>», «диагноз: …».
  *
  * Черновик — пороги и строки ждут ревью Агентов 3 и 10.
@@ -114,14 +146,20 @@ object ResponseGuard {
     private val dose = Regex("(?iU)\\d+([.,]\\d+)?\\s?(мг|мкг|ме|ед|мл/кг|mg|mcg|µg|iu)(?!\\p{L})")
 
     private val pills = Regex(
-        "(?iU)(?<!\\p{L})(\\d+([.,]\\d+)?|одн\\p{L}*|дв\\p{L}*|тр\\p{L}*|четыр\\p{L}*|пол|половин[уа])\\s?(-?х\\s)?(таблет|капсул|драже|пакетик|саше)",
+        "(?iU)(?<!\\p{L})(\\d+([.,]\\d+)?|один|одн\\p{L}*|дв\\p{L}*|тр\\p{L}*|четыр\\p{L}*|пят\\p{L}*|шест\\p{L}*|сем\\p{L}*|восем\\p{L}*|девят\\p{L}*|десят\\p{L}*|пол|половин[уа])\\s?(-?х\\s)?(таблет|капсул(?!\\p{L}*\\s+кофе)|драже|капел|кап(?!\\p{L})|ампул|укол|инъекц|впрыск)",
     )
 
-    /** An amount in мл or grams: a dose only next to a supplement or a medicine ([medicine]). */
-    private val amount = Regex("(?iU)\\d+([.,]\\d+)?\\s?(мл|ml|г|гр|грамм\\p{L}*|g)(?!\\p{L})")
+    private const val MED = "(креатин|омег|omega|магни|magnes|мелатонин|melatonin|витамин|vitamin|кофеин|caffeine|сироп|капл|препарат|лекарств|добавк|бад(?!\\p{L})|жиросжигат|предтрен|инсулин|insulin)"
+    private const val UNIT = "(мл|ml|г|гр|грамм\\p{L}*|g|единиц\\p{L}*|пакетик\\p{L}*|саше|ложк\\p{L}*|ложек)"
+    private const val NUM = "\\d+([.,]\\d+)?(\\s?[–-]\\s?\\d+([.,]\\d+)?)?\\s?(\\p{L}+\\s)?"
 
-    private val medicine = Regex(
-        "(?iU)(?<!\\p{L})(креатин|омег|omega|магни|magnes|мелатонин|melatonin|витамин|vitamin|кофеин|caffeine|сироп|капл|препарат|лекарств|добавк|бад(?!\\p{L})|жиросжигат|предтрен)",
+    /**
+     * An amount right next to a supplement or a medicine: «5 г креатина», «креатин — по 3–5 г»,
+     * «10 единиц инсулина». Grams and ml of food or water elsewhere in the answer are not a dose.
+     */
+    private val supplement = Regex(
+        "(?iU)(?<![\\p{L}\\d])$NUM$UNIT(?!\\p{L})\\s+(\\p{L}+\\s+)?$MED" +
+            "|(?<!\\p{L})$MED\\p{L}*[^.!?\\n]{0,20}?(?<![\\p{L}\\d])$NUM$UNIT(?!\\p{L})",
     )
 
     private val diagnosis = Regex(
@@ -141,11 +179,7 @@ object ResponseGuard {
         }
     }
 
-    /** A dose of a medicine or a supplement: units of a dose, pills, or мл/grams near a medicine. */
+    /** A dose of a medicine or a supplement: units of a dose, pills and drops, or an amount next to a supplement. */
     fun namesDose(text: String): Boolean =
-        dose.containsMatchIn(text) ||
-            pills.containsMatchIn(text) ||
-            amount.findAll(text).any { m -> medicine.containsMatchIn(text.substring(maxOf(0, m.range.first - NEAR), minOf(text.length, m.range.last + 1 + NEAR))) }
-
-    private const val NEAR = 40
+        dose.containsMatchIn(text) || pills.containsMatchIn(text) || supplement.containsMatchIn(text)
 }

@@ -73,11 +73,31 @@ class MentorRulesTest {
     }
 
     @Test
-    fun `a short yes to the safety question is consent, a no or a new topic is not`() {
-        listOf("да", "Да.", "бывают", "есть", "иногда", "yes", "ну да, бывает").forEach { assertTrue(MentorGate.consent(it), it) }
-        listOf("нет", "да нет", "не бывает", "no", "давай лучше про тренировку завтра утром в зале", "").forEach {
-            assertFalse(MentorGate.consent(it), it)
-        }
+    fun `a yes or a doubt to the safety question is consent, a clear no or a new topic is not`() {
+        listOf(
+            "да", "Да.", "бывают", "да, но не часто", "не часто", "нет, но иногда бывает", "не знаю", "наверное",
+            "может быть", "не уверена", "ну есть немного", "иногда да", "да бывают иногда когда ночью не сплю и думаю", "yes",
+        ).forEach { assertTrue(MentorGate.consent(it), it) }
+        listOf(
+            "нет", "нет, просто устал", "не бывает", "нет, никогда", "да нет, всё нормально", "не, всё ок", "давай про сон",
+            "нет, просто начальник достал и я не высыпаюсь уже неделю", "",
+        ).forEach { assertFalse(MentorGate.consent(it), it) }
+    }
+
+    @Test
+    fun `a no to the safety question is checked, a bare no stays on the phone, a refusal is a decline`() {
+        listOf("нет", "Нет.", "нет, никогда", "да нет, всё нормально", "нет, просто устал на работе").forEach { assertTrue(MentorGate.saysNo(it), it) }
+        listOf("давай про сон", "да", "не знаю").forEach { assertFalse(MentorGate.saysNo(it), it) }
+        listOf("нет", "нет, никогда", "не, всё ок").forEach { assertTrue(MentorGate.denial(it), it) }
+        listOf("нет, просто устал на работе", "давай про сон").forEach { assertFalse(MentorGate.denial(it), it) }
+        listOf("не хочу отвечать", "Не твоё дело").forEach { assertTrue(MentorGate.declines(it), it) }
+        assertFalse(MentorGate.declines("нет"))
+        assertFalse(MentorGate.saysNo("не хочу отвечать"))
+    }
+
+    @Test
+    fun `checked goes to the pack as a neutral flag`() {
+        assertEquals(listOf("gentle", "checked"), ContextPackBuilder.build(PackInputs(gentle = true, checked = true)).flags)
     }
 
     @Test
@@ -115,12 +135,31 @@ class MentorRulesTest {
             "Омега-3: 2 г в день.",
             "Сироп от кашля 10 мл три раза.",
             "Мелатонин 3 мг.",
+            "10 единиц инсулина перед едой",
+            "по 5 капель на ночь",
+            "20 капель валерьянки",
+            "1 ампулу",
+            "Креатин моногидрат: по 3–5 г в день",
+            "Омега-3 — 2 г в сутки",
+            "5 г креатина",
+            "10 мл сиропа",
+            "две таблетки ибупрофена",
+            "2 столовые ложки сиропа",
+            "пять таблеток",
         ).forEach { assertEquals(GuardResult.Replaced(GuardReason.DOSE), ResponseGuard.check(it, emptySet(), false), it) }
         listOf(
             "150 г курицы на обед и рис.",
             "Выпей 500 мл воды после тренировки.",
             "Две еды до тренировки, отдых 90 с.",
             "Присед 3×8 по 60 кг.",
+            "Съешь 150 г творога — там есть и белок, и магний.",
+            "100 г лосося дают омега-3 и витамин D.",
+            "500 мл воды без добавок, можно пару капель лимона.",
+            "1,5 л воды в день.",
+            "Один пакетик чая с мятой перед сном.",
+            "3 единицы алкоголя в неделю — много",
+            "30 г протеина после тренировки",
+            "Две капсулы кофе до обеда — и хватит.",
         ).forEach { assertIs<GuardResult.Pass>(ResponseGuard.check(it, emptySet(), false), it) }
     }
 
@@ -168,13 +207,15 @@ class MentorRulesTest {
     }
 
     @Test
-    fun `after the model's crisis marker the last words of the person never go out again`() {
+    fun `after the model's crisis marker the whole last turn of the person never goes out again`() {
         val s = MentorSession()
         s.add(ChatLine(Speaker.PERSON, "а", 1))
         s.add(ChatLine(Speaker.MENTOR, "б", 2))
-        s.add(ChatLine(Speaker.PERSON, "в", 3))
+        s.add(ChatLine(Speaker.PERSON, "X", 3))
+        s.add(ChatLine(Speaker.MENTOR, "Нет связи", 4, local = true))
+        s.add(ChatLine(Speaker.PERSON, "Y", 5))
         s.localizeLastPerson()
         assertEquals(listOf("а", "б"), s.window().map { it.text })
-        assertEquals(3, s.lines.size)
+        assertEquals(5, s.lines.size)
     }
 }

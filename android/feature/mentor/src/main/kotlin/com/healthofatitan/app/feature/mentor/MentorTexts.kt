@@ -28,6 +28,10 @@ object MentorTexts {
     /** One line under the header on the first visit (A62 block 6 §6: disclosure in the introduction). */
     const val DISCLOSURE = "Винс — ИИ-наставник HoT: всегда честно скажет, что знает, а чего нет. Не врач и не психотерапевт."
 
+    /** [DISCLOSURE] with the name of the chosen character (ревью 16). */
+    fun disclosure(persona: MentorPersona): String =
+        "${name(persona)} — ИИ-наставник HoT: всегда честно скажет, что знает, а чего нет. Не врач и не психотерапевт."
+
     /** М6 ревью 08.11: always under the name, on the chat screen only. */
     const val SUBTITLE = "ИИ-наставник"
 
@@ -51,8 +55,8 @@ object MentorTexts {
      */
     fun emergency(persona: MentorPersona): String = form(
         persona,
-        "Похоже, это может быть срочно. Если это происходит сейчас — звони 112 или 911. Не садись за руль и не оставайся один. Тренировки — на паузе, пока врач не разрешит.",
-        "Похоже, это может быть срочно. Если это происходит сейчас — звоните 112 или 911. Не садитесь за руль и не оставайтесь одни. Тренировки — на паузе, пока врач не разрешит.",
+        "Похоже, это может быть срочно. Если это происходит сейчас — звони 112 или 911. Не садись за руль и попроси кого-нибудь побыть рядом. Тренировки отложи, пока врач не разрешит.",
+        "Похоже, это может быть срочно. Если это происходит сейчас — звоните 112 или 911. Не садитесь за руль и попросите кого-нибудь побыть рядом. Тренировки отложите, пока врач не разрешит.",
     )
 
     /** М2: Text 1 of A07 §4.3, once per conversation after CrisisGuard level 1. Ждёт ревью Агента 10. */
@@ -91,7 +95,8 @@ object MentorTexts {
         "На это я не отвечу. Если вам сейчас тяжело — «Помощь» рядом: 112 и 911. О чём поговорим?",
     )
 
-    const val NOT_CONFIGURED = "Винс ещё не подключён к серверу ИИ. Как только ключ будет на месте, я заговорю."
+    fun notConfigured(persona: MentorPersona): String =
+        "${name(persona)} ещё не подключён к серверу ИИ. Как только ключ будет на месте, я заговорю."
 
     fun needsLogin(persona: MentorPersona): String = form(
         persona,

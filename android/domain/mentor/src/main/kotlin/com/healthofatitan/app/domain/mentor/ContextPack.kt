@@ -8,7 +8,7 @@ package com.healthofatitan.app.domain.mentor
  *
  * In this slice:
  *  - always: the address form, the restriction codes of the safety bus (consumer MENTOR) and the
- *    neutral flags `food_gentle`, `gentle_plus`, `gentle` — never the names of states (A07 §7.1,
+ *    neutral flags `food_gentle`, `gentle_plus`, `gentle`, `checked` — never the names of states (A07 §7.1,
  *    ревью 7 М7: «ed_care» names the disorder, so it does not leave the phone);
  *  - the last summaries of past conversations (phone-only chronicle, A62 §11 п. 2), filtered by
  *    [EdCareText] while food and weight are hidden;
@@ -31,6 +31,9 @@ data class ContextPack(
         /** The crisis window, only when the window talks (variant Б of [CrisisWindowMode]). */
         const val FLAG_GENTLE_PLUS = "gentle_plus"
         const val FLAG_GENTLE = "gentle"
+
+        /** The app asked Text 1 of A07 §4.3 and the person said «нет»: do not ask it again (ревью 10, П4). */
+        const val FLAG_CHECKED = "checked"
         const val MAX_SUMMARIES = 3
         const val MAX_SUMMARY_CHARS = 600
         const val MAX_ABOUT_CHARS = 1000
@@ -56,6 +59,8 @@ data class PackInputs(
     val recentCrisis: Boolean = false,
     /** STORM or GRIEF: the bus asks for a sober tone. */
     val gentle: Boolean = false,
+    /** The safety question was asked in this conversation and answered «нет». */
+    val checked: Boolean = false,
     /** Newest last. */
     val summaries: List<String> = emptyList(),
     val about: String? = null,
@@ -78,6 +83,7 @@ object ContextPackBuilder {
             if (inputs.edCare) add(ContextPack.FLAG_FOOD_GENTLE)
             if (inputs.recentCrisis) add(ContextPack.FLAG_GENTLE_PLUS)
             if (inputs.gentle) add(ContextPack.FLAG_GENTLE)
+            if (inputs.checked) add(ContextPack.FLAG_CHECKED)
         }
         return ContextPack(
             addressForm = inputs.addressForm.takeIf { it in setOf("n", "m", "f") } ?: "n",

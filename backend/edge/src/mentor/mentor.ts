@@ -32,7 +32,7 @@ const RESTRICTIONS = new Set([
   "SOBER", "HELP_FIRST", "NO_COACHING", "NO_PUSH", "HIDE_SKEWS", "NO_LOAD", "INTENSITY_CAP", "HIDE_CALORIES", "HIDE_NUTRIENTS",
   "HIDE_FOOD_TALK", "HIDE_WEIGHT", "HIDE_FOOD_WINDOWS", "HIDE_BODY_PHOTO", "NO_FITNESS_AGE", "PATH_GENTLE", "PATH_STANDS",
 ]);
-const FLAGS = new Set(["food_gentle", "gentle_plus", "gentle"]);
+const FLAGS = new Set(["food_gentle", "gentle_plus", "gentle", "checked"]);
 
 /** Output budget per tier. Thinking counts here too (adaptive thinking is on for these models). */
 const MAX_TOKENS: Record<Tier, number> = { light: 2000, mid: 3000, midplus: 4000, high: 8000 };

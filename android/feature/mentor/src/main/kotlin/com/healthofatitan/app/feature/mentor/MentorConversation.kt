@@ -119,8 +119,11 @@ class MentorConversation(
     /** The highest CrisisGuard level (0–1) sent in this conversation: Opus and no day limit stay. */
     private var sessionLevel = 0
 
-    /** The full crisis card of the window was shown in this conversation (М10). */
+    /** The full crisis card was shown in this conversation (М10, П6): the window then says less. */
     private var windowCardShown = false
+
+    /** Text 1 was answered «нет»: the pack carries `checked` to the end of the conversation (П4). */
+    private var checked = false
 
     private val state = MutableStateFlow(MentorUi())
     val ui: StateFlow<MentorUi> = state.asStateFlow()
@@ -135,6 +138,7 @@ class MentorConversation(
         sessionGentle = false
         sessionLevel = 0
         windowCardShown = false
+        checked = false
         local(Speaker.MENTOR, MentorTexts.greeting(persona))
         state.value = MentorUi(persona = persona, lines = listOf(UiLine(Speaker.MENTOR, MentorTexts.greeting(persona))))
     }
@@ -151,17 +155,28 @@ class MentorConversation(
         val assessment = assess(text)
         val s = setup()
         persona = s.persona
+        // A bare «нет» to Text 1: shown, not sent; the model answers the line of level 1 (П4).
+        var bareNo = false
         if (awaitingAnswer) {
             awaitingAnswer = false
             if (assessment.level < CrisisLevel.PASSIVE && MentorGate.consent(text)) {
-                // «Да» to Text 1: level 2 (A07 §4.3). The answer is not sent to the model.
+                // «Да» (or doubt) to Text 1: level 2 (A07 §4.3). Neither the answer nor the line of
+                // level 1 before it goes to the model again — together they are a disclosure.
                 val yes = CrisisGuard.answer(SafetyAnswer.YES)
                 logCrisis(yes)
                 session.markCrisis()
+                session.localizeLastPerson()
                 local(Speaker.PERSON, text)
                 show(UiLine(Speaker.PERSON, text))
                 crisisCard(open = yes.level.autoShowHelp)
                 return
+            }
+            if (MentorGate.declines(text)) {
+                // «Не хочу отвечать»: level 1 for the metrics of block 9; the talk goes on, gentle.
+                logCrisis(CrisisGuard.answer(SafetyAnswer.DECLINE))
+            } else if (MentorGate.saysNo(text)) {
+                checked = true
+                bareNo = MentorGate.denial(text)
             }
             // «Нет» or another topic: the talk goes on, gentle (sessionGentle is already on).
         }
@@ -181,7 +196,6 @@ class MentorConversation(
                 local(Speaker.PERSON, text)
                 show(UiLine(Speaker.PERSON, text))
                 if (!windowCardShown) {
-                    windowCardShown = true
                     crisisCard(open = false)
                 } else {
                     notice(MentorTexts.window(persona), talk = true)
@@ -205,7 +219,7 @@ class MentorConversation(
                         return
                     }
                 }
-                session.add(ChatLine(Speaker.PERSON, text, clock()))
+                session.add(ChatLine(Speaker.PERSON, text, clock(), local = bareNo))
                 show(UiLine(Speaker.PERSON, text))
                 state.update { it.copy(sending = true) }
                 val pack = pack(s, bus, decision.care)
@@ -264,7 +278,7 @@ class MentorConversation(
                 state.update { it.copy(helpVisible = true) }
             }
             MentorReply.Refused -> notice(MentorTexts.refused(persona), talk = true)
-            is MentorReply.NotConfigured -> notice(MentorTexts.NOT_CONFIGURED)
+            is MentorReply.NotConfigured -> notice(MentorTexts.notConfigured(persona))
             MentorReply.NeedsLogin -> notice(MentorTexts.needsLogin(persona))
             is MentorReply.Limit -> notice(if (reply.month) MentorTexts.MONTH_LIMIT else MentorTexts.DAY_LIMIT)
             MentorReply.Busy -> notice(MentorTexts.busy(persona))
@@ -298,12 +312,14 @@ class MentorConversation(
             // gentle_plus → NO_COACHING + SOBER: only variant Б sends messages of the window out.
             recentCrisis = care || bus.crisis,
             gentle = bus.gentle || sessionGentle,
+            checked = checked,
             summaries = memory.summaries.value.map { it.text },
             consents = s.consents,
         ),
     )
 
     private fun crisisCard(open: Boolean) {
+        windowCardShown = true
         show(UiLine(Speaker.MENTOR, MentorTexts.CRISIS, LineKind.CRISIS))
         state.update { it.copy(crisis = true, helpVisible = true, openHelp = it.openHelp || open) }
     }

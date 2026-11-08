@@ -62,12 +62,18 @@ class MentorSession(
     }
 
     /**
-     * The model saw a risk in the last words of the person (`[[SOS]]`): from now on they stay on
-     * the screen but never go to the model again (A62 §4 §6), like a crisis caught on the phone.
+     * The model saw a risk in the last turn of the person (`[[SOS]]`), or the person said «да» to
+     * Text 1: the last turn of the person — every non-local line after the last answer of the
+     * model, since [window] merges them — stays on the screen but never goes to the model again
+     * (A62 §4 §6), like a crisis caught on the phone.
      */
     fun localizeLastPerson() {
-        val i = _lines.indexOfLast { it.speaker == Speaker.PERSON && !it.local }
-        if (i >= 0) _lines[i] = _lines[i].copy(local = true)
+        for (i in _lines.indices.reversed()) {
+            val l = _lines[i]
+            if (l.local) continue
+            if (l.speaker == Speaker.MENTOR) break
+            _lines[i] = l.copy(local = true)
+        }
     }
 
     val personTurns: Int get() = _lines.count { it.speaker == Speaker.PERSON && !it.local }

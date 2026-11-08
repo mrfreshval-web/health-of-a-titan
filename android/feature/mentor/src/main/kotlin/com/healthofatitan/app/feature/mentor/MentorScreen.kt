@@ -154,7 +154,7 @@ fun MentorScreen(ui: MentorUi, summaries: List<TalkSummary>, actions: MentorActi
         Header(ui, actions, onMemory = { memoryOpen = true })
         if (firstVisit) {
             Text(
-                MentorTexts.DISCLOSURE,
+                MentorTexts.disclosure(ui.persona),
                 style = MaterialTheme.typography.bodySmall,
                 color = HotThemeTokens.colors.textTertiary,
                 modifier = Modifier.padding(horizontal = HotSpacing.edge, vertical = 4.dp),

@@ -5,8 +5,13 @@ import com.healthofatitan.app.core.model.profile.UserConstraints
 import com.healthofatitan.app.domain.safety.Restriction
 import com.healthofatitan.app.domain.safety.SafetyConsumer
 import com.healthofatitan.app.domain.safety.SafetyState
+import com.healthofatitan.app.domain.training.DayMode
+import com.healthofatitan.app.domain.training.TrainingDecision
+import com.healthofatitan.app.domain.training.TrainingEngine
 import com.healthofatitan.app.domain.training.TrainingFlag
+import com.healthofatitan.app.domain.training.TrainingLibrary
 import com.healthofatitan.app.domain.training.TrainingProfile
+import com.healthofatitan.app.domain.training.TrainingRequest
 import com.healthofatitan.app.domain.training.TrainingRules
 
 /**
@@ -97,6 +102,13 @@ object TrainingSafety {
             flags = profileFlags(c, dict) + fromBus.flags,
         )
     }
+
+    /**
+     * S1b: the guard alone hides the program (the gates of A40 §4.2 step 1 do not read the day mode),
+     * so «Сегодня» drops the step «тренировка» from the day's candidates.
+     */
+    fun hides(lib: TrainingLibrary, guard: TrainingGuard): Boolean =
+        TrainingEngine(lib).plan(TrainingRequest(mode = DayMode.STEADY, codes = guard.codes, flags = guard.flags)) is TrainingDecision.Hidden
 
     private fun rank(status: String): Int = STATUS_ORDER.indexOf(status).let { if (it < 0) 0 else it }
 

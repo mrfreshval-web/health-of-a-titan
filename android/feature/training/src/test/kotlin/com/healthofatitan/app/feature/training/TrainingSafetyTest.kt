@@ -25,6 +25,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
 import java.io.File
 import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -136,5 +137,22 @@ class TrainingSafetyTest {
     fun `without the dictionary a non-empty profile is read the safe way`() {
         val p = TrainingSafety.profile(UserConstraints(injuries = setOf("knee_injury")), null)
         assertTrue(TrainingSafety.GENTLE_CODE in p.codes(lib.rules))
+    }
+
+    @Test
+    fun `Today hides the training step exactly when the screen hides the program`() {
+        val crisis = SafetyProjector.project(listOf(JournalEvent(1, SafetyEvents.CRISIS, "3", 1_000L)), 2_000L)
+        val hidden = listOf(
+            UserConstraints(lifeStage = setOf("pregnancy")) to SafetyState.NORMAL,
+            UserConstraints(lifeStage = setOf("postpartum_6m")) to SafetyState.NORMAL,
+            UserConstraints.NONE to crisis,
+        )
+        for ((c, state) in hidden) {
+            assertTrue(TrainingSafety.hides(lib, TrainingSafety.guard(c, dict, state, lib.rules)), "$c / $state")
+        }
+        val open = listOf(UserConstraints.NONE, UserConstraints(injuries = setOf("knee_injury")), UserConstraints(lifeStage = setOf("lactation")))
+        for (c in open) {
+            assertFalse(TrainingSafety.hides(lib, TrainingSafety.guard(c, dict, SafetyState.NORMAL, lib.rules)), "$c")
+        }
     }
 }

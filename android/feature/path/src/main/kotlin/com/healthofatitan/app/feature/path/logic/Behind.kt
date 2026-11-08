@@ -282,6 +282,7 @@ object BehindCopy {
     const val CHAPTER_TAKEN = "взята"
     const val NOTE_PRIDE = "Чем горжусь"
     const val NOTE_CARRY = "Что несу дальше"
+    const val NOTE_OWN = "Заметка"
     const val TRAINING = "Тренировка"
     const val TRAINING_WHOOP = "Тренировка · WHOOP"
     const val TRAINING_HOT = "Тренировка · HoT"
@@ -326,7 +327,7 @@ object BehindCopy {
     fun all(): List<String> = listOf(
         TITLE, SEARCH, MONTH, YEAR, ALL_TIME, F_TRAININGS, F_WEEKS, F_MILESTONES, F_NOTES, F_HARD, HARD_LATER, NO_DATA,
         A11Y_TRAININGS, A11Y_PAUSE, A11Y_EMPTY_MONTH, EMPTY, NOTHING_IN_FILTER, SEARCH_ALL, WENT_OTHERWISE, CHAPTER_STARTED,
-        CHAPTER_TAKEN, NOTE_PRIDE, NOTE_CARRY, TRAINING, TRAINING_WHOOP, TRAINING_HOT, DATA_WINDOW, LEGEND_NO_DATA, LEGEND_PAUSE,
+        CHAPTER_TAKEN, NOTE_PRIDE, NOTE_CARRY, NOTE_OWN, TRAINING, TRAINING_WHOOP, TRAINING_HOT, DATA_WINDOW, LEGEND_NO_DATA, LEGEND_PAUSE,
         PERIOD_PREV, PERIOD_NEXT, CLEAR, nothingFound("2026"), more(4), trainings(38), weeksWithGoals(3), milestones(2), chapters(1, true),
         chapters(3, false), released(5), week(45, LocalDate.of(2026, 11, 2)), milestone(1, "Силы на вечер"), chapter("Силы на вечер"),
     ) + RecordKind.entries.map(::group)

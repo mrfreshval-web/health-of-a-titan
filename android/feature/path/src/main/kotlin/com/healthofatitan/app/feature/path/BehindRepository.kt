@@ -2,9 +2,11 @@ package com.healthofatitan.app.feature.path
 
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.dao.DayDao
+import com.healthofatitan.app.core.database.dao.NoteDao
 import com.healthofatitan.app.core.database.dao.PathDao
 import com.healthofatitan.app.core.database.dao.TrainingLogDao
 import com.healthofatitan.app.core.database.dao.WeekDao
+import com.healthofatitan.app.core.database.entity.NoteEntity
 import com.healthofatitan.app.core.database.entity.PathGoalEntity
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.Regime
@@ -63,13 +65,19 @@ class BehindRepository @Inject constructor(
     private val weekDao: WeekDao,
     private val trainingDao: TrainingLogDao,
     private val pathDao: PathDao,
+    private val noteDao: NoteDao,
     private val plans: DayPlanRepository,
     private val bus: SafetyBus,
     private val clock: Clock,
 ) {
     private val user = HotDatabase.LOCAL_USER
 
-    private data class Inputs(val goals: List<Pair<PracticalGoal, PathGoalEntity>>, val todayMode: DayMode?, val safety: SafetyState)
+    private data class Inputs(
+        val goals: List<Pair<PracticalGoal, PathGoalEntity>>,
+        val todayMode: DayMode?,
+        val safety: SafetyState,
+        val notes: List<NoteEntity>,
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val data: Flow<BehindData> = combine(
@@ -81,9 +89,11 @@ class BehindRepository @Inject constructor(
         weekDao.observeFrames(user),
         plans.latest,
         bus.state,
-    ) { goals, _, plan, safety ->
+        // a note of «+» comes into the archive at once (A66 §2.4, §6.3)
+        noteDao.observe(user),
+    ) { goals, _, plan, safety, notes ->
         val today = LocalDate.now(clock)
-        Inputs(goals, plan?.takeIf { it.dayKey == today }?.regime?.toDayMode(), safety)
+        Inputs(goals, plan?.takeIf { it.dayKey == today }?.regime?.toDayMode(), safety, notes)
     }.mapLatest { load(it) }
 
     private suspend fun load(i: Inputs): BehindData {
@@ -97,6 +107,7 @@ class BehindRepository @Inject constructor(
             addAll(weeks(today))
             i.goals.forEach { (g, e) -> addAll(chapter(g, e, today)) }
             addAll(hardWeeks(days.values.toList(), today))
+            i.notes.forEach { n -> parse(n.dayKey)?.let { d -> add(BehindRecord(RecordKind.NOTE, d, BehindCopy.NOTE_OWN, n.text)) } }
         }
         val since = (days.keys + records.filter { it.kind != RecordKind.CHAPTER && it.kind != RecordKind.MILESTONE }.map { it.day }).minOrNull()
         return BehindData(

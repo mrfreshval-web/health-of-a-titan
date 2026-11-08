@@ -21,9 +21,56 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
 | `POST /whoop/access` | `Authorization: Bearer <сессия>` | свежий access-токен (≥ 5 мин жизни); `401 reauth_required`, если WHOOP отозвал вход |
 | `POST /whoop/disconnect` | сессия | отзыв доступа в WHOOP + стирание хранилища → `204` |
 | `POST /whoop/refresh` | — | **удалён** (404): refresh-токен телефону не выдаётся |
-| `/whoop/webhook`, `/push/*`, `/llm/*`, `/stt`, `/tts` | вебхук-HMAC / сессия + allowlist | заглушки `501` до своих срезов |
+| `POST /llm/mentor` | сессия + allowlist | **Винс v1** (A62, D-056): одна реплика разговора, см. ниже |
+| `/whoop/webhook`, `/push/*`, остальные `/llm/*`, `/stt`, `/tts` | вебхук-HMAC / сессия + allowlist | заглушки `501` до своих срезов |
 
 Без `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `TOKEN_ENC_KEY` или привязки `WHOOP_VAULT` маршруты WHOOP отвечают `503 not_configured`.
+
+## Аккаунт HoT (A65, D-062; срезы А1 и А2)
+
+| Маршрут | Доступ | Что делает |
+|---|---|---|
+| `POST /auth/nonce` | лимит по IP | одноразовый `nonce` (5 мин) для Google и миграции |
+| `POST /auth/google` | лимит по IP | ID-токен Google (подпись по JWKS, `aud`, `iss`, `exp`, `iat`, `nonce`) + ключ устройства → сессия; нет аккаунта → `404 no_account` и `signup_ticket` |
+| `POST /auth/signup` | лимит по IP | `signup_ticket` + код приглашения → новый аккаунт |
+| `POST /auth/refresh` | лимит по IP | ротация refresh, подпись ключом устройства; повтор старого refresh в 30 с — тот же ответ, позже — отзыв всей сессии |
+| `POST /auth/logout` · `/auth/logout-all` | access | выйти · выйти везде (`session_epoch++`) |
+| `POST /auth/migrate` | `Bearer hs1.…` + ключ устройства | старая сессия среза 1 → аккаунт с identity WHOOP; `hs1` гасится |
+| `POST /auth/invites` | access, только аккаунты основателя | код приглашения (26 символов, 14 дней) |
+
+- `POST /whoop/token` теперь возвращает сессию аккаунта (`access`, `refresh`, `account_id`, `identities`) и `whoop_access_token`. Новый пользователь WHOOP без аккаунта — `403 invite_required` (ничего не хранится, грант отозван); пользователь из `ALLOWED_WHOOP_USER_IDS` получает аккаунт сразу (переходный период).
+- Access — JWS EdDSA (Ed25519, `kid`), 15 мин, не хранится. Refresh `hr1.<sid>.<32 байта>`: в хранилище только HMAC с «перцем» (ключ из `TOKEN_ENC_KEY`), текущий и предыдущий.
+- Хранилище — Durable Object `AccountVault` за интерфейсом `AccountStore`; токены WHOOP — `WhoopVault` за `TokenVault` (перенос в РФ — срез Б1, A65 §7.2).
+- Секреты: `AUTH_SIGNING_KEY` (`node scripts/gen-signing-key.mjs | gh secret set AUTH_SIGNING_KEY`), `GOOGLE_WEB_CLIENT_ID`; при ротации ключа — `AUTH_SIGNING_KEY_PREVIOUS` на 15 минут. Без них маршруты `/auth/*` и `/whoop/token` отвечают `503 not_configured`.
+
+## Аккаунт: входы, устройства, удаление (A65 §2.3, §3.4, §6; срезы А3 и А5)
+
+| Маршрут | Доступ | Что делает |
+|---|---|---|
+| `GET /auth/account` | access + живая сессия | identity (без почты и имени), устройства (`id` — производный от `sid`, сам `sid` не уходит), `step_up_until` |
+| `POST /auth/devices/revoke {id}` | access + живая сессия | «Завершить» одно устройство своего аккаунта |
+| `POST /auth/reauth/google {id_token}` | access + живая сессия | step-up: свежий вход тем же Google (новый `nonce`) |
+| `POST /auth/link/google {id_token}` | access + живая сессия + step-up ≤ 10 мин | привязать Google; чужой — `409 identity_in_use`, второй Google — `409 provider_linked` |
+| `POST /auth/unlink {provider}` | то же | отвязать; последнюю — нельзя (`409 last_identity`); WHOOP → токены отозваны и стёрты |
+| `POST /auth/delete` | то же | удалить аккаунт: токены WHOOP отозваны, identity, сессии, приглашения — удалены; на месте сессий — только «надгробия» `sid`, и телефон на `/auth/refresh` получает `401 account_deleted` |
+| `GET /account/delete` | публично | статическая страница удаления для Google Play: без cookies и полей, вход Google (Identity Services) + `POST /account/delete {id_token}` |
+
+- WHOOP: `POST /whoop/authorize {code_challenge, intent}` и `POST /whoop/token {…, intent}`, `intent` = `login` (как было) · `link` · `reauth`. Для `link`/`reauth` нужен `Bearer` аккаунта, `state` подписан вместе с хэшем `account_id | sid` (код нельзя потратить из другой сессии). `link` нового WHOOP требует step-up уже на `authorize`; WHOOP чужого аккаунта — `409 identity_in_use`, его грант не трогаем.
+- Для веб-удаления в Google Cloud Console у Web client добавить адрес Worker в «Authorized JavaScript origins». Веб-вход WHOOP (https-redirect у WHOOP) — позже, Агент 9.
+
+## Винс: `POST /llm/mentor` (A62, D-056)
+
+Код — `src/mentor/` (`router.ts` — маршрутизация по теме, `prompt.ts` — системный промпт, `budget.ts` — деньги и `MentorMeter`, `mentor.ts` — обработчик). Клиент Anthropic — официальный `@anthropic-ai/sdk`.
+
+- **Запрос телефона:** `{v:1, task:"reply"|"summary", persona:"sensei"|"bro"|"butler", tier_floor, crisis_level, expert_topics, context:{address_form, restrictions, flags, summaries, about?}, messages:[{role, content}]}`. Неизвестные поля и коды отбрасываются; фото, данные WHOOP и Health Connect, причины `ED_CARE` в контракте не предусмотрены.
+- **Маршрут по цене ошибки темы (A62 §2):** болтовня и поддержка — `claude-haiku-5-5`; питание — Haiku; цели, стресс, «Работа», тренировки — `claude-sonnet-5-5`; симптомы, анализы, лекарства, боль и травма, беременность, сигналы РПП, психологическая тяжесть, режим «Здоровье» и тренировки при «уровне эксперта» — `claude-opus-5-5`. Лифт только вверх: телефон присылает `tier_floor` — высший уровень разговора. CrisisGuard уровня 1 — не ниже Sonnet. Классификатор Haiku — следующий шаг, словарь остаётся полом.
+- **Кризис:** `crisis_level ≥ 2` модель не видит никогда — ответ `{type:"crisis"}` без вызова и вне лимитов. Модель — второй слой: на риск для жизни она отвечает только `[[SOS]]`, Worker превращает это в `{type:"crisis", level:2}`, телефон открывает «Помощь» (112 · 911).
+- **Деньги (D-056):** `MentorMeter` (Durable Object на пользователя, миграция `v3-mentor-meter`) хранит только суммы в USD за день и месяц. Мягкий порог $0,40 в день — разговор на Haiku (темы высокого уровня остаются на Opus); жёсткий $1,50 в день и $10 в месяц — `429 {error:"budget_exhausted"}`; не больше 12 запросов в минуту. Дни и месяцы — по UTC.
+- **Кэш промпта:** неизменная часть промпта первой, затем характер и ContextPack с точками кэша. Opus и Sonnet — с серверным `fallbacks: "default"` (бета `server-side-fallback-2026-07-01`) на случай отказа модели.
+- **Ошибки:** нет `ANTHROPIC_API_KEY` или ключ отклонён → `503 {error:"not_configured", missing:"ANTHROPIC_API_KEY"}`; нет привязки `MENTOR_METER` → `503 … "MENTOR_METER"` (без счётчика денег модель не вызывается); модель вне `LLM_MODELS` → `503 … "LLM_MODELS"`.
+- **Логи:** как и везде — только `{m, s, ms}`; ни слов, ни тем, ни моделей.
+
+Системный промпт и тексты — **черновик, ждут ревью Агентов 3 и 10** (раскрытие ИИ — 7).
 
 ## Как хранится токен WHOOP (A18 И1.1a, A14 ADR-04)
 
@@ -45,7 +92,8 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
    - `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET` — из дашборда WHOOP;
    - `TOKEN_ENC_KEY` — `openssl rand -base64 32 | gh secret set TOKEN_ENC_KEY` (сохрани копию в менеджере паролей; при смене ключа все входы придётся повторить);
    - `ALLOWED_WHOOP_USER_IDS` — твой WHOOP ID (числа через запятую). Если не знаешь его: оставь пустым, войди в приложении — HoT покажет номер на экране «доступа пока нет», впиши и дождись деплоя;
-   - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — уже есть со среза 0.
+   - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` — уже есть со среза 0;
+   - `ANTHROPIC_API_KEY` — ключ Claude API для Винса (console.anthropic.com → API Keys); в консоли Anthropic поставь лимит расходов $30 в месяц на всё (A62 §2).
 3. **Деплой Worker:** после мержа в `main` workflow **Backend (hot-edge)** задеплоит Worker; адрес — `https://hot-edge.<account>.workers.dev` (виден в логе шага deploy и в дашборде Cloudflare). Проверка: `curl https://hot-edge.<account>.workers.dev/health`.
 4. **GitHub Variable** (Settings → Secrets and variables → Actions → **Variables**): `EDGE_BASE_URL` = адрес Worker из шага 3 (не секрет). Затем перезапустить Android CI на `main` и поставить новый APK.
 

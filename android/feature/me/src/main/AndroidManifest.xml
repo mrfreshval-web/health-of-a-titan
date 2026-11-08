@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- «Снять фото» for the avatar (A65 §2.4): the camera app writes one JPEG into the cache; it is
+             cropped, re-encoded without EXIF, sealed, and the cache file is deleted. No CAMERA permission. -->
+        <provider
+            android:name="com.healthofatitan.app.feature.me.profile.AvatarFileProvider"
+            android:authorities="${applicationId}.avatar"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/avatar_paths" />
+        </provider>
+    </application>
+</manifest>

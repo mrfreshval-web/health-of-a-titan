@@ -69,7 +69,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * «Сегодня» v3 (A46 v0.3 §4): the nine scenarios 4.1–4.9, «Почему так», a support and «Передышка»
+ * «Сегодня» v3 (A46 v0.3 §4; the top by mockup 05b, A66 §3): the nine scenarios 4.1–4.9, «Почему так», a support and «Передышка»
  * on the Pixel 9 Pro XL width; a tall screen so the whole scroll fits one picture. Placeholder
  * graphics until Agents 4 and 17. Opt-in (HOT_SCREENSHOTS).
  */
@@ -194,6 +194,15 @@ class TodayV3Screenshots {
 
     @Test
     fun noWhoop() = shoot("4.1-no-whoop") { Screen(TodayUiState(), null) }
+
+    /** Mockup 05b (A66 §3.2): Разгон, Заряд 68 above the norm, the haiku, «Сейчас» with its link. */
+    @Test
+    fun sunAxis05b() = shoot("05b-today-sun-axis") {
+        Screen(
+            TodayUiState(whoop = whoop(), metrics = metrics.copy(charge = facet(68.0)), glance = glance()),
+            day(at(9, 41), plan = plan(Regime.BOOST), marks = TodayMarks(water = 3, meals = setOf("breakfast")), dawn = true),
+        )
+    }
 
     @Test
     fun nightPending() = shoot("4.2-night-pending") {

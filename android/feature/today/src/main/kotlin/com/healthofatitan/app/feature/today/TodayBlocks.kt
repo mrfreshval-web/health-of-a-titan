@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -61,14 +60,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.HotCard
-import com.healthofatitan.app.core.ui.component.HotMode
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSecondaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
-import com.healthofatitan.app.core.ui.component.ModeWord
-import com.healthofatitan.app.core.ui.component.TitanLights
-import com.healthofatitan.app.core.ui.component.TitanScene
+import com.healthofatitan.app.core.ui.component.MetricTile
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.core.ui.theme.Titanium
@@ -149,93 +145,96 @@ private fun BlockTitle(title: String, hint: String? = null) {
 // ---------------------------------------------------------------- «Я сегодня»
 
 /**
- * «Я сегодня» (A46 §2.2): the Titan with the word of the mode, the haiku of «Рассвет» all day,
- * three numbers (Заряд against the norm 50, the night against the need, «ты» of the morning) and
- * «почему так». The sober screen (SAF-01, crisis, CARE) has no Titan and no haiku.
+ * The top of «Сегодня» by mockup 05b (A66 §3.2): the scene (sky of the mode, the sun of Заряд on
+ * the axis of the Titan, the glow of the columns), the haiku of «Рассвет» all day (T-07) and the
+ * three tiles «Заряд · Ночь · Ты». A tap on the scene opens «Почему так». The sober screen (SAF-01,
+ * crisis, CARE) has no scene, no haiku and no tiles (A66 §3.8).
  */
 @Composable
-fun BlockMe(view: TodayView, onOpen: () -> Unit) {
+fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {}) {
     val me = view.me
-    val mode = me.mode?.hotMode()
-    HotCard(
-        cornice = true,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(TodayBlock.ME.tag)
-            .clickable(role = Role.Button, onClickLabel = TodayCopy.WHY_TITLE, onClick = onOpen),
-    ) {
-        BlockTitle(TodayCopy.BLOCK_ME)
-        Spacer(Modifier.height(12.dp))
-        if (me.showTitan) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(112.dp).clearAndSetSemantics { }) {
-                    TitanScene(
-                        modifier = Modifier.fillMaxSize(),
-                        light = if (mode != null) TitanLights.of(mode) else TitanLights.default(),
-                        ring = { if (mode == null) 0f else 1f },
-                        ringDashed = mode == HotMode.BEREZHNO,
-                    )
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    if (mode != null) {
-                        ModeWord(mode, style = HotType.numeral, glyphSize = 28.dp, gap = 10.dp)
-                        // S2: without WHOOP the mode is the default day and self-report
-                        if (me.estimate) HotOverline(TodayCopy.ESTIMATE, modifier = Modifier.testTag(ME_ESTIMATE_TAG))
-                    }
-                    me.lead?.let { Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface) }
-                }
-            }
-        } else {
+    if (!me.showTitan) {
+        HotCard(
+            cornice = true,
+            modifier = Modifier
+                .padding(horizontal = TODAY_EDGE)
+                .fillMaxWidth()
+                .testTag(TodayBlock.ME.tag)
+                .clickable(role = Role.Button, onClickLabel = TodayCopy.WHY_TITLE, onClick = onOpen),
+        ) {
             me.lead?.let { Text(it, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface) }
+            Spacer(Modifier.height(4.dp))
+            HotTextButton(TodayCopy.WHY_LINK, onClick = onOpen, modifier = Modifier.testTag(ME_WHY_TAG))
+        }
+        return
+    }
+    Column(Modifier.fillMaxWidth().testTag(TodayBlock.ME.tag), horizontalAlignment = Alignment.CenterHorizontally) {
+        TodayScene(
+            mode = me.mode?.hotMode(),
+            charge = me.charge,
+            dayShare = view.dayShare,
+            estimate = me.estimate,
+            spoken = view.sceneSpoken,
+            onOpen = onOpen,
+        )
+        me.lead?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = TODAY_EDGE, vertical = 4.dp),
+            )
         }
         me.haiku?.let { lines ->
-            Spacer(Modifier.height(12.dp))
-            Column(Modifier.testTag(ME_HAIKU_TAG)) {
-                lines.forEach { Text(it, style = HotType.quote, color = MaterialTheme.colorScheme.onSurface) }
+            // A66 §3.2: three lines, Cormorant italic 18/22, Steel, centred on the ground
+            Column(
+                Modifier.padding(horizontal = TODAY_EDGE).testTag(ME_HAIKU_TAG).semantics(mergeDescendants = true) { },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                lines.forEach {
+                    Text(
+                        it,
+                        style = HotType.haikuCard.copy(lineHeight = 22.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
-        val numbers = listOfNotNull(
-            me.charge?.let { Triple(TodayCopy.CHARGE, it.toString(), TodayCopy.CHARGE_NORM) },
-            me.night?.let { Triple(TodayCopy.NIGHT, it, me.need?.let(TodayCopy::need)) },
-            me.self?.let { Triple(TodayCopy.YOU, "$it / 5", TodayCopy.YOU_CAPTION) },
-        )
-        if (numbers.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth().testTag(ME_NUMBERS_TAG), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                numbers.forEach { (label, value, caption) -> MeNumber(label, value, caption, Modifier.weight(1f)) }
+        if (view.tiles.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = TODAY_EDGE).testTag(ME_NUMBERS_TAG),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                view.tiles.forEach { tile ->
+                    MetricTile(
+                        label = tile.label,
+                        value = tile.shown,
+                        word = tile.word,
+                        arc = tile.arc,
+                        band = tile.band,
+                        spoken = tile.spoken,
+                        onClick = { onRoute(tile.route) },
+                        onClickLabel = if (tile.route == HotRoute.WHY) TodayCopy.WHY_TITLE else null,
+                        modifier = Modifier.weight(1f).testTag(ME_TILE_TAG + tile.kind.name.lowercase()),
+                    )
+                }
             }
         }
         me.calibration?.let {
-            Spacer(Modifier.height(10.dp))
-            HotOverline(it, modifier = Modifier.testTag(ME_CALIBRATION_TAG))
+            Spacer(Modifier.height(8.dp))
+            HotOverline(it, modifier = Modifier.padding(horizontal = TODAY_EDGE).testTag(ME_CALIBRATION_TAG))
         }
-        Spacer(Modifier.height(4.dp))
-        HotTextButton(TodayCopy.WHY_LINK, onClick = onOpen, modifier = Modifier.testTag(ME_WHY_TAG))
     }
 }
 
 const val ME_HAIKU_TAG = "me_haiku"
 const val ME_NUMBERS_TAG = "me_numbers"
+const val ME_TILE_TAG = "me_tile_"
 const val ME_CALIBRATION_TAG = "me_calibration"
 const val ME_ESTIMATE_TAG = "me_estimate"
-
-@Composable
-private fun MeNumber(label: String, value: String, caption: String?, modifier: Modifier) {
-    Column(modifier.semantics(mergeDescendants = true) { }) {
-        HotOverline(label)
-        Text(value, style = HotType.ringValue, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false)
-        if (caption != null) {
-            Text(
-                caption,
-                style = MaterialTheme.typography.bodySmall,
-                color = HotThemeTokens.colors.textTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
 
 // ---------------------------------------------------------------- «Опоры»
 
@@ -356,54 +355,73 @@ internal fun taskTap(task: DayTask): TaskTap = when (task.kind) {
     else -> task.route?.let { TaskTap.Route(it) } ?: TaskTap.Unfold
 }
 
+/** What a task does on a tap, a mark and «Не сегодня»; shared by «Сейчас» and the rows under it. */
+internal class TaskHandlers(val onTap: () -> Unit, val onDone: () -> Unit, val onNotToday: (() -> Unit)?)
+
+internal fun taskHandlers(task: DayTask, today: LocalDate, actions: DayActions, marks: DayMarks): TaskHandlers = TaskHandlers(
+    onTap = {
+        when (val tap = taskTap(task)) {
+            is TaskTap.Route -> actions.onOpen(tap.route)
+            TaskTap.Connect -> actions.onConnectWhoop()
+            TaskTap.Help -> actions.onOpenHelp()
+            TaskTap.StartSmall -> {
+                actions.onStartSmall()
+                actions.onTaskDone(today, task, true)
+            }
+            TaskTap.Unfold -> Unit
+        }
+    },
+    onDone = {
+        val now = !task.done
+        actions.onTaskDone(today, task, now)
+        marks.show(today, task.id, task.title, marked = now) { actions.onTaskDone(today, task, !now) }
+    },
+    onNotToday = if (TaskRules.movable(task) && !task.done) {
+        {
+            actions.onTaskToWeek(TaskRules.notToday(task, today))
+            marks.show(today, task.id, task.title, marked = false, text = TodayCopy.BACK_TO_WEEK) { actions.onTaskBack(today, task.id) }
+        }
+    } else {
+        null
+    },
+)
+
+const val TASKS_MORE_TAG = "today_tasks_more"
+
 /**
- * «Дела дня» (A46 §2.4): 1–3 tasks (2 in Бережно), the first with ▶. A tap opens the task, a swipe
- * to the right marks it with «Отменить» for 5 s, a swipe to the left (or «Не сегодня») sends it
- * back to its week goal — never to tomorrow (T-08).
+ * «Дела дня» as «Сейчас» (A66 §3.4, A46 §2.4): the first open task in one card with ▶ and the line
+ * of its link to the week and the Path; «ещё N дела ›» unfolds the rest in place. A tap opens a
+ * task, a swipe to the right marks it with «Отменить» for 5 s, a swipe to the left (or «Не
+ * сегодня») sends it back to its week goal — never to tomorrow (T-08). Only «Сейчас» has ▶ (T-02).
  */
 @Composable
 fun BlockTasks(view: TodayView, today: LocalDate, actions: DayActions, marks: DayMarks) {
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(TodayBlock.TASKS.tag)) {
-        BlockTitle(TodayCopy.BLOCK_TASKS)
-        Spacer(Modifier.height(10.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            view.tasks.forEachIndexed { i, task ->
-                TaskRow(
-                    task = task,
-                    playable = TaskRules.playable(view.tasks, i),
-                    onTap = {
-                        when (val tap = taskTap(task)) {
-                            is TaskTap.Route -> actions.onOpen(tap.route)
-                            TaskTap.Connect -> actions.onConnectWhoop()
-                            TaskTap.Help -> actions.onOpenHelp()
-                            TaskTap.StartSmall -> {
-                                actions.onStartSmall()
-                                actions.onTaskDone(today, task, true)
-                            }
-                            TaskTap.Unfold -> Unit
-                        }
-                    },
-                    onDone = {
-                        val now = !task.done
-                        actions.onTaskDone(today, task, now)
-                        marks.show(today, task.id, task.title, marked = now) { actions.onTaskDone(today, task, !now) }
-                    },
-                    onNotToday = if (TaskRules.movable(task) && !task.done) {
-                        {
-                            actions.onTaskToWeek(TaskRules.notToday(task, today))
-                            marks.show(today, task.id, task.title, marked = false, text = TodayCopy.BACK_TO_WEEK) { actions.onTaskBack(today, task.id) }
-                        }
-                    } else {
-                        null
-                    },
-                )
+    val pick = view.now
+    var open by rememberSaveable(today) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().testTag(TodayBlock.TASKS.tag)) {
+        pick.now?.let { task ->
+            val h = taskHandlers(task, today, actions, marks)
+            NowCard(task, pick.link, view.me.mode?.hotMode(), h.onTap, h.onDone, h.onNotToday)
+        }
+        if (pick.rest.isNotEmpty()) {
+            val folded = pick.now != null
+            if (folded) {
+                MoreLink(if (open) TodayTopCopy.LESS else TodayTopCopy.more(pick.rest.size), open) { open = !open }
+            }
+            if (open || !folded) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pick.rest.forEach { task ->
+                        val h = taskHandlers(task, today, actions, marks)
+                        TaskRow(task = task, playable = false, onTap = h.onTap, onDone = h.onDone, onNotToday = h.onNotToday)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TaskRow(task: DayTask, playable: Boolean, onTap: () -> Unit, onDone: () -> Unit, onNotToday: (() -> Unit)?) {
+internal fun TaskRow(task: DayTask, playable: Boolean, onTap: () -> Unit, onDone: () -> Unit, onNotToday: (() -> Unit)?) {
     val tokens = HotThemeTokens.colors
     val scope = rememberCoroutineScope()
     val drag = remember(task.id) { Animatable(0f) }

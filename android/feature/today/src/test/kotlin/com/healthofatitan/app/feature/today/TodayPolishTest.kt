@@ -33,6 +33,7 @@ import com.healthofatitan.app.domain.today.TaskKind
 import com.healthofatitan.app.domain.today.TaskMove
 import com.healthofatitan.app.domain.today.TodayBlock
 import com.healthofatitan.app.domain.today.TodayCopy
+import com.healthofatitan.app.domain.today.TodayLayout
 import com.healthofatitan.app.domain.today.WhyBuilder
 import com.healthofatitan.app.domain.today.WhyInput
 import com.healthofatitan.app.integration.whoop.WhoopGlance
@@ -97,10 +98,12 @@ class TodayPolishTest {
     fun `T-01 the four blocks stand in one order morning, day and evening`() {
         listOf(7, 13, 21).forEach { hour ->
             val view = todayView(TodayUiState(whoop = whoop), day(today.atTime(hour, 5)))
-            assertEquals(TodayBlock.entries.toList(), view.blocks)
+            // A66 §3.2 (mockup 05b): the scene, «Сейчас» with the tasks, the day, the rhythm
+            assertEquals(listOf(TodayBlock.ME, TodayBlock.TASKS, TodayBlock.SUPPORTS, TodayBlock.RHYTHM), view.blocks)
         }
         compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day()) } }
-        val tops = TodayBlock.entries.map { compose.onNodeWithTag(it.tag).fetchSemanticsNode().boundsInRoot.top }
+        // positionInRoot, not boundsInRoot: the scene pushes «Ритм дня» below the fold, where bounds clip to 0
+        val tops = TodayLayout.ORDER.map { compose.onNodeWithTag(it.tag).fetchSemanticsNode().positionInRoot.y }
         assertEquals(tops.sorted(), tops)
     }
 
@@ -195,6 +198,8 @@ class TodayPolishTest {
                 TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day(), actions = DayActions(onTaskDone = { _, _, d -> done += d }))
             }
         }
+        // «focus» is folded under «Сейчас» (A66 §3.4): «ещё 1 дело ›» unfolds it in place
+        compose.onNodeWithTag(TASKS_MORE_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(TASK_TAG + "focus").performScrollTo().performTouchInput { swipeRight() }
         assertEquals(listOf(true), done)
         compose.onNodeWithTag(DAY_UNDO_TAG).assertExists()
@@ -216,6 +221,7 @@ class TodayPolishTest {
                 )
             }
         }
+        compose.onNodeWithTag(TASKS_MORE_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(TASK_TAG + "focus").performScrollTo().performTouchInput { swipeLeft() }
         assertEquals(1, moves.size)
         assertEquals("work-focus", moves.single().weekGoalId)

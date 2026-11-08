@@ -25,6 +25,8 @@ export interface Env {
   HOT_KV?: KVNamespace;
   /** Durable Object: the single owner of each user's WHOOP refresh token (D-025). */
   WHOOP_VAULT?: DurableObjectNamespace;
+  /** Durable Object: the money meter of Винс, one per user (A62 §2, D-056). */
+  MENTOR_METER?: DurableObjectNamespace;
   /** Workers rate limiting binding for the unauthenticated OAuth routes (optional). */
   RATE_LIMITER?: RateLimit;
 }

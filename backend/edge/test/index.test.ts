@@ -175,7 +175,7 @@ describe("session routes", () => {
     expect((await handle(post("/whoop/access", undefined, session), env)).status).toBe(401);
   });
 
-  const appPaths = ROUTES.filter((r) => r.auth === "app").map((r) => (r.path.endsWith("/") ? `${r.path}anthropic/v1/messages` : r.path));
+  const appPaths = ROUTES.filter((r) => r.auth === "app" && !r.implemented).map((r) => (r.path.endsWith("/") ? `${r.path}anthropic/v1/messages` : r.path));
 
   it.each(appPaths)("AppAuth endpoint %s needs a valid session, then is a 501 stub", async (path) => {
     const { env, whoop } = makeEnv();

@@ -4,9 +4,12 @@ import type { Env } from "./env";
 import { isValidChallenge, issueState, verifyState } from "./oauth-state";
 import { isValidUserId, sessionHash, sessionUserId } from "./session";
 import type { AccessResult } from "./vault";
+import { MentorMeter, type BudgetState } from "./mentor/budget";
+import { mentorTurn, parseMentorRequest, type Meter } from "./mentor/mentor";
 import { authorizeUrl, DEFAULT_REDIRECT_URI, WHOOP_AUTHORIZE_URL, WHOOP_SCOPES, WhoopClient, WhoopError } from "./whoop";
 
 export { WhoopVault } from "./vault";
+export { MentorMeter };
 
 export const VERSION = "0.1.0";
 
@@ -40,6 +43,8 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/whoop/webhook", auth: "webhook-hmac", slice: "3" },
   { method: "POST", path: "/push/register", auth: "app", slice: "3" },
   { method: "POST", path: "/push/ack", auth: "app", slice: "3" },
+  // Винс v1 (A62, D-056): one turn of the conversation, routed by topic, with the money meter.
+  { method: "POST", path: "/llm/mentor", auth: "app", slice: "5a", implemented: true },
   { method: "POST", path: "/llm/", auth: "app", slice: "5a" }, // /llm/<provider>/…, e.g. /llm/anthropic/v1/messages
   { method: "POST", path: "/stt", auth: "app", slice: "5b" },
   { method: "POST", path: "/tts", auth: "app", slice: "5b" },
@@ -199,6 +204,44 @@ async function whoopDisconnect(request: Request, env: Env): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Винс (A62): /llm/mentor
+
+/** Larger than the WHOOP bodies: a conversation window plus the ContextPack (A62 §4). */
+const MAX_MENTOR_BYTES = 64 * 1024;
+
+function meterFor(env: Env, userId: string): Meter | null {
+  const ns = env.MENTOR_METER;
+  if (!ns) return null;
+  const stub = ns.get(ns.idFromName(`mentor-user:${userId}`));
+  const call = async (op: string, body: unknown): Promise<BudgetState> => {
+    const res = await stub.fetch(`https://meter/${op}`, { method: "POST", body: JSON.stringify(body) });
+    return ((await res.json()) as { state: BudgetState }).state;
+  };
+  return { reserve: () => call("reserve", {}), charge: (usd) => call("charge", { usd }) };
+}
+
+async function mentor(request: Request, env: Env, userId: string, http?: typeof fetch): Promise<Response> {
+  const length = Number(request.headers.get("Content-Length") ?? "0");
+  if (length > MAX_MENTOR_BYTES) return json(413, { error: "too_long" });
+  const text = await request.text().catch(() => "");
+  if (text.length > MAX_MENTOR_BYTES) return json(413, { error: "too_long" });
+  let body: Record<string, unknown> | null = null;
+  try {
+    const value: unknown = JSON.parse(text || "{}");
+    body = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  } catch {
+    body = null;
+  }
+  const parsed = parseMentorRequest(body);
+  if (!parsed.ok) return json(400, { error: parsed.error });
+  const meter = meterFor(env, userId);
+  // Without the meter there is no money limit: refuse rather than spend without a ceiling (D-056).
+  if (!meter) return json(503, { error: "not_configured", missing: "MENTOR_METER" });
+  const result = await mentorTurn(parsed.value, env, { meter, fetch: http });
+  return json(result.status, result.body);
+}
+
+// ---------------------------------------------------------------------------------------------
 
 export interface HandleOptions {
   /** Outbound fetch to WHOOP (tests). */
@@ -246,6 +289,7 @@ export async function handle(request: Request, env: Env, options: HandleOptions 
       if (!auth) return unauthorized();
       const { userId } = await auth.vault.call<{ userId: string | null }>("verify", { sessionHash: auth.hash });
       if (!userId) return unauthorized();
+      if (route.path === "/llm/mentor") return await mentor(request, env, userId, options.fetch);
     }
   } catch (e) {
     if (e instanceof ConfigError) return notConfigured();

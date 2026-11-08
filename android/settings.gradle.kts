@@ -65,3 +65,5 @@ include(":feature:checkin")
 include(":domain:today")
 // «Единый Титан» (D-051, A60 §3): the safety bus SafetyState over the event journal.
 include(":domain:safety")
+// Винс v1 (A62, D-056): the conversation, the ContextPack, the checks of the answer.
+include(":domain:mentor")

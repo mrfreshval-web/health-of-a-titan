@@ -42,6 +42,21 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
 - Хранилище — Durable Object `AccountVault` за интерфейсом `AccountStore`; токены WHOOP — `WhoopVault` за `TokenVault` (перенос в РФ — срез Б1, A65 §7.2).
 - Секреты: `AUTH_SIGNING_KEY` (`node scripts/gen-signing-key.mjs | gh secret set AUTH_SIGNING_KEY`), `GOOGLE_WEB_CLIENT_ID`; при ротации ключа — `AUTH_SIGNING_KEY_PREVIOUS` на 15 минут. Без них маршруты `/auth/*` и `/whoop/token` отвечают `503 not_configured`.
 
+## Аккаунт: входы, устройства, удаление (A65 §2.3, §3.4, §6; срезы А3 и А5)
+
+| Маршрут | Доступ | Что делает |
+|---|---|---|
+| `GET /auth/account` | access + живая сессия | identity (без почты и имени), устройства (`id` — производный от `sid`, сам `sid` не уходит), `step_up_until` |
+| `POST /auth/devices/revoke {id}` | access + живая сессия | «Завершить» одно устройство своего аккаунта |
+| `POST /auth/reauth/google {id_token}` | access + живая сессия | step-up: свежий вход тем же Google (новый `nonce`) |
+| `POST /auth/link/google {id_token}` | access + живая сессия + step-up ≤ 10 мин | привязать Google; чужой — `409 identity_in_use`, второй Google — `409 provider_linked` |
+| `POST /auth/unlink {provider}` | то же | отвязать; последнюю — нельзя (`409 last_identity`); WHOOP → токены отозваны и стёрты |
+| `POST /auth/delete` | то же | удалить аккаунт: токены WHOOP отозваны, identity, сессии, приглашения — удалены; на месте сессий — только «надгробия» `sid`, и телефон на `/auth/refresh` получает `401 account_deleted` |
+| `GET /account/delete` | публично | статическая страница удаления для Google Play: без cookies и полей, вход Google (Identity Services) + `POST /account/delete {id_token}` |
+
+- WHOOP: `POST /whoop/authorize {code_challenge, intent}` и `POST /whoop/token {…, intent}`, `intent` = `login` (как было) · `link` · `reauth`. Для `link`/`reauth` нужен `Bearer` аккаунта, `state` подписан вместе с хэшем `account_id | sid` (код нельзя потратить из другой сессии). `link` нового WHOOP требует step-up уже на `authorize`; WHOOP чужого аккаунта — `409 identity_in_use`, его грант не трогаем.
+- Для веб-удаления в Google Cloud Console у Web client добавить адрес Worker в «Authorized JavaScript origins». Веб-вход WHOOP (https-redirect у WHOOP) — позже, Агент 9.
+
 ## Как хранится токен WHOOP (A18 И1.1a, A14 ADR-04)
 
 - **Durable Object `WhoopVault`**, один на WHOOP `user_id` (`idFromName`), SQLite-хранилище (миграция `v1-whoop-vault`).

@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(libs.androidx.activity.compose)
 
+    testImplementation(project(":core:security"))
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.compose.ui.test.junit4)

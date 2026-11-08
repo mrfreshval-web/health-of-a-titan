@@ -13,7 +13,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 
 /** What the Google sheet gave back. Name and picture stay on the phone (A65 §2.1, §2.4). */
 sealed interface GoogleIdResult {
-    data class Ok(val idToken: String, val displayName: String?, val pictureUri: String?) : GoogleIdResult
+    /** [email] stays on the phone and only as a mask (A65 §2.4); [displayName] is the given name when Google has one. */
+    data class Ok(val idToken: String, val displayName: String?, val pictureUri: String?, val email: String? = null) : GoogleIdResult
 
     data object Cancelled : GoogleIdResult
 
@@ -49,7 +50,7 @@ class CredentialManagerGoogleIdSource(private val config: AccountConfig) : Googl
             val credential = CredentialManager.create(activityContext).getCredential(activityContext, request).credential
             if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val google = GoogleIdTokenCredential.createFrom(credential.data)
-                GoogleIdResult.Ok(google.idToken, google.displayName, google.profilePictureUri?.toString())
+                GoogleIdResult.Ok(google.idToken, google.givenName ?: google.displayName, google.profilePictureUri?.toString(), google.id)
             } else {
                 GoogleIdResult.Failed
             }

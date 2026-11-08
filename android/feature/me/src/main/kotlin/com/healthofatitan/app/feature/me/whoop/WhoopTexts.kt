@@ -79,6 +79,9 @@ object WhoopTexts {
         WhoopNote.NEEDS_NETWORK_TO_DISCONNECT -> "Нужна связь. Ничего не удалено."
         WhoopNote.DISCONNECTED -> "WHOOP отключён, токены удалены."
         WhoopNote.OTHER_ACCOUNT -> "Этот WHOOP привязан к другому аккаунту HoT. Здесь ничего не изменилось."
+        WhoopNote.STEP_UP -> "Чтобы привязать WHOOP, нужно подтвердить вход. Открой «Настройки › Аккаунт» и нажми «Привязать WHOOP»."
+        WhoopNote.PROVIDER_LINKED -> "К аккаунту уже привязан другой WHOOP. Сначала отвяжи его в «Настройки › Аккаунт»."
+        WhoopNote.SIGNED_OUT -> "Сессия HoT закончилась. Войди снова."
     }
 
     /** Y7: «Синхронизировано в 14:32», «… вчера в 14:32»; before the first sync — «Загружаю…». */

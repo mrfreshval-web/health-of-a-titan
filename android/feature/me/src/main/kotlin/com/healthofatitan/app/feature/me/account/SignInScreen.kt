@@ -50,6 +50,8 @@ const val SIGN_IN_INVITE_TAG = "sign_in_invite"
 const val SIGN_IN_CREATE_TAG = "sign_in_create"
 const val SIGN_IN_HELP_TAG = "sign_in_help"
 const val SIGN_IN_NOTE_TAG = "sign_in_note"
+const val SIGN_IN_OWNER_WIPE_TAG = "sign_in_owner_wipe"
+const val SIGN_IN_OWNER_CANCEL_TAG = "sign_in_owner_cancel"
 
 /** Callbacks of «Вход»; no-ops in previews and tests. */
 data class SignInActions(
@@ -58,6 +60,8 @@ data class SignInActions(
     val submitInvite: (String) -> Unit = {},
     val back: () -> Unit = {},
     val help: () -> Unit = {},
+    val ownerWipe: () -> Unit = {},
+    val ownerCancel: () -> Unit = {},
 )
 
 /** Stateful entry: ViewModel, Credential Manager and the AppAuth browser step for WHOOP. */
@@ -81,6 +85,8 @@ fun SignInRoute(onHelp: () -> Unit, modifier: Modifier = Modifier, viewModel: Si
             submitInvite = viewModel::submitInvite,
             back = viewModel::backToChoice,
             help = onHelp,
+            ownerWipe = viewModel::wipeForOtherOwner,
+            ownerCancel = viewModel::cancelOtherOwner,
         ),
         modifier = modifier,
     )
@@ -105,7 +111,9 @@ fun SignInScreen(state: SignInUiState, actions: SignInActions, modifier: Modifie
             verticalArrangement = Arrangement.Center,
         ) {
             HotCard(cornice = true, modifier = Modifier.fillMaxWidth()) {
-                if (state.needsInvite) {
+                if (state.otherOwner) {
+                    OwnerStep(state, actions)
+                } else if (state.needsInvite) {
                     InviteStep(state, actions, busy)
                 } else {
                     ChooseStep(state, actions, busy)
@@ -153,6 +161,25 @@ private fun ChooseStep(state: SignInUiState, actions: SignInActions, busy: Boole
     }
     Spacer(Modifier.height(10.dp))
     Text(SignInTexts.PRIVACY, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** A65 §2.3: another account's data is on the phone; nothing is wiped before this choice. */
+@Composable
+private fun OwnerStep(state: SignInUiState, actions: SignInActions) {
+    val wiping = state.phase == SignInPhase.WIPE
+    Text(SignInTexts.OWNER_TITLE, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    Spacer(Modifier.height(8.dp))
+    Text(SignInTexts.OWNER_BODY, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(16.dp))
+    HotSecondaryButton(
+        SignInTexts.OWNER_WIPE,
+        onClick = actions.ownerWipe,
+        enabled = !wiping,
+        loading = wiping,
+        modifier = Modifier.fillMaxWidth().testTag(SIGN_IN_OWNER_WIPE_TAG),
+    )
+    Spacer(Modifier.height(4.dp))
+    HotTextButton(SignInTexts.OWNER_CANCEL, onClick = actions.ownerCancel, enabled = !wiping, modifier = Modifier.testTag(SIGN_IN_OWNER_CANCEL_TAG))
 }
 
 @Composable

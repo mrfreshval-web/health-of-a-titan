@@ -3,7 +3,9 @@ package com.healthofatitan.app.text
 import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.feature.checkin.CheckinTexts
+import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.account.SignInTexts
+import com.healthofatitan.app.feature.me.profile.AccountProfileTexts
 import com.healthofatitan.app.feature.me.consent.AgeGateTexts
 import com.healthofatitan.app.feature.nutrition.ConsentWithdrawTexts
 import com.healthofatitan.app.feature.today.DailyTexts
@@ -70,7 +72,10 @@ class GenderNeutralTextsTest {
             // The withdrawal of S4 and the one question about ED_CARE (D-058): neutral in every form.
             ConsentWithdrawTexts.ALL.mapIndexed { i, g -> "ConsentWithdrawTexts.$i" to g.of(address) } +
             // «Вход» (A65, D-062) stands before the address form is chosen too: neutral.
-            SignInTexts.ALL.mapIndexed { i, s -> "SignInTexts.$i" to s }
+            SignInTexts.ALL.mapIndexed { i, s -> "SignInTexts.$i" to s } +
+            // «Аккаунт» and the account part of «Профиль» (A65 §2.3, §2.4, §6): neutral only.
+            AccountTexts.ALL.mapIndexed { i, g -> "AccountTexts.$i" to g.of(address) } +
+            AccountProfileTexts.ALL.mapIndexed { i, g -> "AccountProfileTexts.$i" to g.of(address) }
 
     @Test
     fun `the dictionary bans both forms and keeps whole words`() {

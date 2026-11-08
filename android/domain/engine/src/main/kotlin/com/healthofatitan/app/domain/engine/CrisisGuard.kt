@@ -84,8 +84,15 @@ object CrisisGuard {
 
     private class Trigger(val level: CrisisLevel, val reason: CrisisReason, val pattern: Regex)
 
-    /** Unicode word classes: `\w` and `\b` must match Cyrillic. */
-    private fun rx(pattern: String): Regex = Regex("(?U)$pattern")
+    /**
+     * Unicode word classes: `\w` and `\b` must match Cyrillic. The JVM needs the `(?U)` flag for
+     * that; Android's regex (ICU) is Unicode-aware by itself and rejects the flag with a
+     * PatternSyntaxException, which used to crash the app on the first letter of any free text
+     * (08.11: «вылетает, как только начинаю печатать цель»). The flag is added only where it compiles.
+     */
+    internal val unicodeFlag: String = if (runCatching { Regex("(?U)\\w") }.isSuccess) "(?U)" else ""
+
+    private fun rx(pattern: String): Regex = Regex(unicodeFlag + pattern)
 
     private fun t(level: CrisisLevel, reason: CrisisReason, vararg patterns: String): List<Trigger> =
         patterns.map { Trigger(level, reason, rx(it)) }

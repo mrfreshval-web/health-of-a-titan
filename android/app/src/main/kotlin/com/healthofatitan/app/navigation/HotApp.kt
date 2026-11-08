@@ -78,6 +78,8 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.note.NoteCopy
+import com.healthofatitan.app.feature.path.note.noteScreen
 import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate
 import com.healthofatitan.app.feature.path.pathRitualScreen
 import com.healthofatitan.app.feature.path.pathScreen
@@ -336,6 +338,7 @@ fun HotApp(
                 )
                 pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
                 behindScreen()
+                noteScreen(onDone = back, onOpenHelp = { navController.openSos() })
                 meScreen(
                     onOpenWhoop = { open(HotRoute.WHOOP) },
                     onOpenHelp = { navController.openSos() },
@@ -463,6 +466,7 @@ private val NESTED = mapOf(
     HotRoute.WHY to NestedScreen(HotTab.TODAY, TodayCopy.WHY_TITLE, TodayCopy.BLOCK_ME),
     HotRoute.SUPPORT to NestedScreen(HotTab.TODAY, TodayCopy.BLOCK_SUPPORTS, TodayCopy.BLOCK_SUPPORTS),
     HotRoute.ARSENAL to NestedScreen(HotTab.TODAY, TodayCopy.ARSENAL, null),
+    HotRoute.NOTE to NestedScreen(HotTab.TODAY, NoteCopy.TITLE, null),
 )
 
 private fun NavHostController.openTab(route: String) {

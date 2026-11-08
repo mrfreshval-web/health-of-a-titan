@@ -7,6 +7,7 @@ import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.EventLogDao
+import com.healthofatitan.app.core.database.dao.NoteDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.PathDao
@@ -17,6 +18,7 @@ import com.healthofatitan.app.core.database.entity.ConsentRecordEntity
 import com.healthofatitan.app.core.database.entity.DawnLogEntity
 import com.healthofatitan.app.core.database.entity.DayPlanEntity
 import com.healthofatitan.app.core.database.entity.EventLogEntity
+import com.healthofatitan.app.core.database.entity.NoteEntity
 import com.healthofatitan.app.core.database.entity.EveningCheckEntity
 import com.healthofatitan.app.core.database.entity.MetricDailyEntity
 import com.healthofatitan.app.core.database.entity.NutritionEveningEntity
@@ -100,8 +102,9 @@ import kotlin.reflect.KClass
         PathMarkEntity::class,
         PersonProfileEntity::class,
         EventLogEntity::class,
+        NoteEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class HotDatabase : RoomDatabase() {
@@ -129,6 +132,8 @@ abstract class HotDatabase : RoomDatabase() {
     abstract fun personProfileDao(): PersonProfileDao
 
     abstract fun eventLogDao(): EventLogDao
+
+    abstract fun noteDao(): NoteDao
 
     companion object {
         const val FILE_NAME = "hot.db"
@@ -176,6 +181,7 @@ abstract class HotDatabase : RoomDatabase() {
             PathMarkEntity::class,
             PersonProfileEntity::class,
             EventLogEntity::class,
+            NoteEntity::class,
         )
     }
 }

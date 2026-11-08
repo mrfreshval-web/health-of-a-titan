@@ -16,6 +16,7 @@ import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.EventLogDao
+import com.healthofatitan.app.core.database.dao.NoteDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.CheckinDao
@@ -104,6 +105,10 @@ object DatabaseModule {
     /** The event journal (A58 §8): the safety bus reads it. */
     @Provides
     fun provideEventLogDao(db: HotDatabase): EventLogDao = db.eventLogDao()
+
+    /** Notes of «+» (A66 §2.4). */
+    @Provides
+    fun provideNoteDao(db: HotDatabase): NoteDao = db.noteDao()
 
     /** The gate 18+ (R-13, A61 §1.3): `ConsentRecord age18`. */
     @Provides

@@ -131,19 +131,17 @@ internal data class PlusTile(val title: String, val sub: String, val route: Stri
 
 /** Texts of «+» (A66 §2.4, draft for Agents 16 and 10). */
 internal object PlusCopy {
-    const val A11Y = "Добавить: еда, тренировка, питьё, самочувствие, передышка"
+    const val A11Y = "Добавить: еда, тренировка, питьё, самочувствие, передышка, заметка"
     const val ARSENAL = "Арсенал: упражнения · практики · тарелки ›"
 
-    /**
-     * The tiles. «Заметка» of A66 §2.4 waits for the notes of «За плечами» (A66 §6): there is no
-     * store for a note yet, and a tile that leads nowhere is worse than no tile.
-     */
+    /** The six tiles of A66 §2.4. */
     val tiles = listOf(
         PlusTile("Еда", "фото · план", HotRoute.NUTRITION_DAY, R.drawable.core_ui_ic_today),
         PlusTile("Тренировка", "начать", HotRoute.TRAINING, R.drawable.core_ui_ic_path),
         PlusTile("Питьё", "+ стакан", HotRoute.support("water"), R.drawable.core_ui_ic_week),
         PlusTile("Как ты", "отметить", HotRoute.CHECKIN, R.drawable.core_ui_ic_me),
         PlusTile("Передышка", "2 мин", HotRoute.BREATHER, R.drawable.core_ui_ic_behind),
+        PlusTile("Заметка", "своими словами", HotRoute.NOTE, R.drawable.core_ui_ic_path),
     )
 }
 

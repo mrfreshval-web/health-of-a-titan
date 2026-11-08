@@ -74,7 +74,7 @@ class Migration13To14Test {
         val db = open(name)
         try {
             db.openHelper.writableDatabase // runs 13 → 14 and validates the schema
-            assertEquals(15, db.openHelper.readableDatabase.version)
+            assertEquals(16, db.openHelper.readableDatabase.version)
             val store = ProfileSettingsStore(db.personProfileDao()) { 99L }
             assertEquals(ProfileSettings(AddressForm.NEUTRAL, null, SexForCalc.FEMALE), store.current())
             assertEquals(1990, db.personProfileDao().get("typed")?.birthYear)

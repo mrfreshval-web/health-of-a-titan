@@ -109,6 +109,9 @@ object HotRoute {
     /** «Передышка» (A49 §4, D-043): only by the person's own tap; full screen. */
     const val BREATHER = "breather"
 
+    /** «Заметка» of «+» (A66 §2.4): the person's words about the day, kept on the phone. */
+    const val NOTE = "note"
+
     /** «Арсенал» of «За плечами» (A47 §6, D-043), opened from «Сегодня». A placeholder in this slice. */
     const val ARSENAL = "arsenal"
 

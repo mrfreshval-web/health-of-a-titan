@@ -8,7 +8,7 @@
 
 | Часть | Где |
 |---|---|
-| Версии — только в каталоге | `gradle/libs.versions.toml` (Gradle 9.8.2, AGP 9.5.0, Kotlin 2.4.21, KSP 2.3.13, Compose BOM 2026.09.00, Hilt 2.60.1, Room 2.8.5, SQLCipher 4.20.0, Tink 1.24.0, core-splashscreen 1.2.0) |
+| Версии — только в каталоге | `gradle/libs.versions.toml` (Gradle 9.8.2, AGP 9.5.0, Kotlin 2.4.21, KSP 2.3.12 (не 2.3.13: google/ksp#3286), Compose BOM 2026.09.00, Hilt 2.60.1, Room 2.8.5, SQLCipher 4.20.0, Tink 1.24.0, core-splashscreen 1.2.0) |
 | Convention-плагины | `build-logic/convention`: `hot.android.application`, `hot.android.library`, `hot.android.feature`, `hot.jvm.library`, `hot.hilt`, `hot.room`, `hot.content` |
 | Правила модулей | `./gradlew checkModuleGraph`: feature ↛ feature, domain только чистый Kotlin, integration ↛ feature, core ↛ feature/domain/integration |
 | Навигация | `:app` — 4 вкладки «Сегодня · Наставник · Неделя · Я» + маршрут `sos` вне вкладок; кнопка SOS в верхней панели каждой вкладки; плитка быстрых настроек «HoT SOS»; ярлык SOS на иконке |

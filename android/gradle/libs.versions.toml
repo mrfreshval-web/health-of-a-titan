@@ -4,7 +4,10 @@
 [versions]
 agp = "9.5.0"
 kotlin = "2.4.21"
-ksp = "2.3.13"
+# KSP stays on 2.3.12: 2.3.13 loses library symbols when several KSP tasks run at once in one
+# Gradle daemon (google/ksp#3286) — flaky "could not be resolved" / Dagger MissingBinding in CI.
+# Upgrade only to a release that contains the fix for #3286.
+ksp = "2.3.12"
 composeBom = "2026.09.00"
 hilt = "2.60.1"
 androidxHilt = "1.4.0"

@@ -8,6 +8,8 @@ import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.account.AccountProfileStore
+import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
 import com.healthofatitan.app.integration.whoop.EdgeClient
@@ -19,6 +21,7 @@ import com.healthofatitan.app.integration.whoop.WhoopAccessTokens
 import com.healthofatitan.app.integration.whoop.WhoopApi
 import com.healthofatitan.app.integration.whoop.WhoopConnection
 import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
+import com.healthofatitan.app.integration.whoop.WhoopProfileImport
 import com.healthofatitan.app.integration.whoop.WhoopSyncScheduler
 import com.healthofatitan.app.integration.whoop.WhoopSyncer
 import com.healthofatitan.app.integration.whoop.day.CrisisSignals
@@ -76,8 +79,8 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideAccessTokens(edge: EdgeClient, store: WhoopCredentialStore, clock: Clock): WhoopAccessTokens =
-        WhoopAccessTokens(edge, store, clock)
+    fun provideAccessTokens(edge: EdgeClient, store: WhoopCredentialStore, clock: Clock, account: AccountSession): WhoopAccessTokens =
+        WhoopAccessTokens(edge, store, clock, account)
 
     @Provides
     @Singleton
@@ -108,10 +111,19 @@ object WhoopModule {
         scheduler: WhoopSyncScheduler,
         dao: MetricDao,
         clock: Clock,
+        account: AccountSession,
+        profileImport: WhoopProfileImport,
     ): WhoopConnection = WhoopConnection(
         config, edge, store, tokens, syncer, scheduler, dao, clock,
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        account = account,
+        profileImport = profileImport,
     )
+
+    /** First name, height and max pulse from WHOOP into the account profile (A65 §2.4). */
+    @Provides
+    @Singleton
+    fun provideWhoopProfileImport(api: WhoopApi, profile: AccountProfileStore): WhoopProfileImport = WhoopProfileImport(api, profile)
 
     /** A09 §7a: tomorrow's alarm sets tonight's bedtime; reading it needs no permission. */
     @Provides

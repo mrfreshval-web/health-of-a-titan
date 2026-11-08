@@ -45,6 +45,9 @@ jobs:
       # Not a secret: the Worker address (Settings → Secrets and variables → Actions → Variables).
       # Empty → the app builds and says «сервер HoT не настроен» on the WHOOP screen.
       EDGE_BASE_URL: ${{ vars.EDGE_BASE_URL }}
+      # Not a secret: the Google OAuth Web client id for «Войти через Google» (A65 §8). Empty → the
+      # button says Google is not set up in this build.
+      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     defaults:
       run:
         working-directory: android
@@ -77,7 +80,7 @@ jobs:
         run: ./gradlew :domain:engine:test --tests '*CrisisGuardTest*' :domain:engine:crisisGuardCoverage --stacktrace
 
       - name: Unit tests (JVM + Robolectric)
-        run: ./gradlew :core:model:test :domain:metrics:test :domain:engine:test :domain:path:test :domain:nutrition:test :domain:training:test :domain:checkin:test :domain:today:test :domain:safety:test testDebugUnitTest --stacktrace
+        run: ./gradlew :core:model:test :domain:metrics:test :domain:engine:test :domain:path:test :domain:nutrition:test :domain:training:test :domain:checkin:test :domain:today:test :domain:safety:test :domain:mentor:test testDebugUnitTest --stacktrace
 
       - name: Lint
         run: ./gradlew :app:lintDebug --stacktrace

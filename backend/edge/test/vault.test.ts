@@ -36,7 +36,7 @@ function loginTokens(whoop: FakeWhoop, now: number): WhoopTokens {
 describe("WhoopVault", () => {
   it("stores tokens only sealed and the session only as a hash", async () => {
     const { vault, storage, whoop, clock } = setup();
-    const session = await vault.connect("4242", loginTokens(whoop, clock.now()));
+    const session = (await vault.connect("4242", loginTokens(whoop, clock.now()), true))!;
     const dump = storage.dump();
     expect(dump).not.toContain("whoop-refresh-0");
     expect(dump).not.toContain("whoop-access-0");
@@ -46,7 +46,7 @@ describe("WhoopVault", () => {
 
   it("returns the cached access token while it is fresh", async () => {
     const { vault, whoop, clock } = setup();
-    const session = await vault.connect("4242", loginTokens(whoop, clock.now()));
+    const session = (await vault.connect("4242", loginTokens(whoop, clock.now()), true))!;
     const r = await vault.access(await sessionHash(session));
     expect(r).toEqual({ status: "ok", accessToken: "whoop-access-0", expiresAt: clock.now() + 3600_000 });
     expect(whoop.tokenCalls).toHaveLength(0);
@@ -54,7 +54,7 @@ describe("WhoopVault", () => {
 
   it("refreshes once for many concurrent callers (single-flight) and keeps the rotated token", async () => {
     const { vault, whoop, clock } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(3600_000 - ACCESS_MIN_TTL_MS + 1); // inside the refresh margin
     whoop.delayMs = 20;
     const results = await Promise.all(Array.from({ length: 5 }, () => vault.access(hash)));
@@ -72,7 +72,7 @@ describe("WhoopVault", () => {
 
   it("a late caller does not spend an already rotated refresh token", async () => {
     const { vault, whoop, clock } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(3600_000);
     await vault.access(hash);
     await vault.access(hash);
@@ -81,7 +81,7 @@ describe("WhoopVault", () => {
 
   it("wipes the vault when WHOOP says invalid_grant", async () => {
     const { vault, whoop, clock, storage } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(3600_000);
     whoop.failNext = "invalid_grant";
     expect(await vault.access(hash)).toEqual({ status: "reauth_required" });
@@ -91,7 +91,7 @@ describe("WhoopVault", () => {
 
   it("keeps the tokens when WHOOP is down or rejects our client", async () => {
     const { vault, whoop, clock, storage } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(3600_000);
     whoop.failNext = "down";
     expect(await vault.access(hash)).toEqual({ status: "unavailable" });
@@ -103,7 +103,7 @@ describe("WhoopVault", () => {
 
   it("rejects a wrong session and a removed user", async () => {
     const { vault, whoop, clock, env } = setup();
-    const session = await vault.connect("4242", loginTokens(whoop, clock.now()));
+    const session = (await vault.connect("4242", loginTokens(whoop, clock.now()), true))!;
     expect(await vault.access(await sessionHash(session + "x"))).toEqual({ status: "unauthorized" });
     env.ALLOWED_WHOOP_USER_IDS = "";
     expect(await vault.access(await sessionHash(session))).toEqual({ status: "not_allowed" });
@@ -112,15 +112,15 @@ describe("WhoopVault", () => {
 
   it("a new login replaces the old session", async () => {
     const { vault, whoop, clock } = setup();
-    const first = await vault.connect("4242", loginTokens(whoop, clock.now()));
-    const second = await vault.connect("4242", loginTokens(whoop, clock.now()));
+    const first = (await vault.connect("4242", loginTokens(whoop, clock.now()), true))!;
+    const second = (await vault.connect("4242", loginTokens(whoop, clock.now()), true))!;
     expect(await vault.access(await sessionHash(first))).toEqual({ status: "unauthorized" });
     expect(await vault.access(await sessionHash(second))).toMatchObject({ status: "ok" });
   });
 
   it("disconnect revokes at WHOOP and wipes everything", async () => {
     const { vault, whoop, clock, storage } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     expect(await vault.disconnect(hash)).toBe(true);
     expect(whoop.revoked).toEqual(["whoop-access-0"]);
     expect(storage.map.size).toBe(0);
@@ -129,7 +129,7 @@ describe("WhoopVault", () => {
 
   it("disconnect with an expired access token refreshes first, then revokes", async () => {
     const { vault, whoop, clock, storage } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(2 * 3600_000);
     expect(await vault.disconnect(hash)).toBe(true);
     expect(whoop.revoked).toEqual(["whoop-access-1"]);
@@ -139,7 +139,7 @@ describe("WhoopVault", () => {
   it("never logs", async () => {
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
     const { vault, whoop, clock } = setup();
-    const hash = await sessionHash(await vault.connect("4242", loginTokens(whoop, clock.now())));
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
     clock.advance(3600_000);
     await vault.access(hash);
     whoop.failNext = "invalid_grant";
@@ -149,6 +149,29 @@ describe("WhoopVault", () => {
       expect(s).not.toHaveBeenCalled();
       s.mockRestore();
     }
+  });
+
+  it("account mode (A65): no legacy session at all; an empty hash never matches", async () => {
+    const { vault, whoop, clock } = setup({ ALLOWED_WHOOP_USER_IDS: "" });
+    expect(await vault.connect("4242", loginTokens(whoop, clock.now()))).toBeNull();
+    expect(await vault.access("")).toEqual({ status: "unauthorized" });
+    expect(await vault.legacyCheck("")).toBeNull();
+    // the account path needs no allowlist: invites replace it
+    expect(await vault.accountAccess()).toMatchObject({ status: "ok", accessToken: "whoop-access-0" });
+    expect(await vault.accountDisconnect()).toBe(true);
+    expect(whoop.revoked).toEqual(["whoop-access-0"]);
+    expect(await vault.accountAccess()).toEqual({ status: "reauth_required" });
+  });
+
+  it("migration (A65 §3.5): hs1 is checked, then retired; the tokens stay", async () => {
+    const { vault, whoop, clock } = setup();
+    const hash = await sessionHash((await vault.connect("4242", loginTokens(whoop, clock.now()), true))!);
+    expect(await vault.legacyCheck(hash)).toBe("4242");
+    expect(await vault.legacyCheck(hash + "x")).toBeNull();
+    expect(await vault.legacyRetire(hash)).toBe(true);
+    expect(await vault.legacyCheck(hash)).toBeNull();
+    expect(await vault.access(hash)).toEqual({ status: "unauthorized" });
+    expect(await vault.accountAccess()).toMatchObject({ status: "ok" });
   });
 
   it("answers misconfigured without TOKEN_ENC_KEY", async () => {

@@ -52,4 +52,16 @@ class UnifiedConsentStoreTest {
         UnifiedConsentStore(dao, now = { 5_000L }).accept()
         assertEquals(1, dao.rows.value.count { it.consentId == ProfileStore.CONSENT_ID })
     }
+
+    @Test
+    fun `a tick on an older text asks again`() = runBlocking {
+        val dao = FakeConsentDao()
+        dao.insert(ConsentRecordEntity(userId = HotDatabase.LOCAL_USER, consentId = UnifiedConsentStore.CONSENT_ID, consentVersion = UnifiedConsentStore.VERSION - 1, granted = true, tsUtcMs = 1, tzOffsetMin = 0))
+        val store = UnifiedConsentStore(dao, now = { 5_000L })
+        assertEquals(ConsentGate.ASK, store.gate.first())
+
+        store.accept()
+
+        assertEquals(ConsentGate.GRANTED, store.gate.first())
+    }
 }

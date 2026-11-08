@@ -153,8 +153,9 @@ private fun BlockTitle(title: String, hint: String? = null) {
 /**
  * The top of «Сегодня», variant B «Тише» (A66 v0.5 §3.2а): the scene (sky of the mode, the sun of
  * Заряд on the axis of the Titan, the quiet glow of the columns, the mode word under the feet), the
- * haiku of «Рассвет» all day (T-07) under it and the three tiles «Заряд · Ночь · Ты» without cards. A tap on the scene opens «Почему так». The sober screen (SAF-01,
- * crisis, CARE) has no scene, no haiku and no tiles (A66 §3.8).
+ * haiku of «Рассвет» all day (T-07) under it and the three tiles «Заряд · Ночь · Ты» without
+ * cards. A tap on the scene opens «Почему так». The sober screen (SAF-01, crisis, CARE) has no
+ * scene, no haiku and no tiles (A66 §3.8).
  */
 @Composable
 fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {}) {

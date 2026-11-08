@@ -109,6 +109,8 @@ data class DataFacts(
     val historyDays: Int = 60,
     val coverage: Double = 1.0,
     val whoopToday: Boolean = true,
+    /** S2: WHOOP is not connected at all; the MANUAL day then says so instead of «ещё не посчитал». */
+    val whoopConnected: Boolean = true,
 )
 
 /**

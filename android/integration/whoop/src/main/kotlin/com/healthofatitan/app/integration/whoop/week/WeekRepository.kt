@@ -58,7 +58,12 @@ import com.healthofatitan.app.domain.today.week.FitnessInput
 import com.healthofatitan.app.domain.today.week.FitnessMilestones
 import com.healthofatitan.app.domain.today.week.LastWeek
 import com.healthofatitan.app.domain.today.week.MilestoneInputs
+import com.healthofatitan.app.domain.today.week.BehindSeen
+import com.healthofatitan.app.domain.today.week.GoalDays
+import com.healthofatitan.app.domain.today.week.NightsSeen
 import com.healthofatitan.app.domain.today.week.PathWeek
+import com.healthofatitan.app.domain.today.week.WeekCare
+import com.healthofatitan.app.domain.today.week.WeekFace
 import com.healthofatitan.app.domain.today.week.Pattern
 import com.healthofatitan.app.domain.today.week.PatternTexts
 import com.healthofatitan.app.domain.today.week.PlanStatus
@@ -174,6 +179,16 @@ data class WeekScreenState(
     /** «Что значит эта поза» on the first two Sundays (A53 §3.1). */
     val poseCaption: String? = null,
     val fitnessOptedIn: Boolean = false,
+    /** The goal of the Path as the week sees it: no goal turns the tab into «Назови цель» (A66 §0.3). */
+    val path: PathWeek = PathWeek.NoGoal,
+    /** The days each goal of the week was done, by goal id (the dots of A66 §4.3). */
+    val goalDays: Map<String, GoalDays> = emptyMap(),
+    /** Care before structure (A66 §0.3): sickness, crisis, StormNet keep the week without a Path as it is. */
+    val care: WeekCare = WeekCare(),
+    val kind: WeekKind = WeekKind.NORMAL,
+    /** «Что видно уже сейчас» without a Path: the nights of the last 7 days and the workouts behind. */
+    val nights: NightsSeen? = null,
+    val behind: BehindSeen? = null,
 )
 
 /** A day of the week for the read-only tap on its column (A52 §2.1). */
@@ -367,7 +382,16 @@ class WeekRepository(
     private fun doneStatus(s: String) = s != ItemStatus.OPEN.name
 
     /** The progress of each goal of the week of [monday] up to [until], counted from what is stored and WHOOP memory. */
-    private suspend fun withProgressOf(monday: LocalDate, plan: WeekPlan, g: WhoopGlance?, until: LocalDate): WeekPlan {
+    private suspend fun withProgressOf(monday: LocalDate, plan: WeekPlan, g: WhoopGlance?, until: LocalDate): WeekPlan =
+        withProgressOf(plan, countGoals(monday, plan, g, until))
+
+    private fun withProgressOf(plan: WeekPlan, counted: Map<String, Counted>): WeekPlan =
+        WeekPlan(plan.weekStart, plan.goals.map { it.copy(progress = counted[it.id]?.progress ?: 0) })
+
+    /** The progress of a goal and the days it was done (the dots of A66 §4.3). */
+    private data class Counted(val progress: Int, val days: GoalDays)
+
+    private suspend fun countGoals(monday: LocalDate, plan: WeekPlan, g: WhoopGlance?, until: LocalDate): Map<String, Counted> {
         val days = (0..6).map { monday.plusDays(it.toLong()) }.filter { !it.isAfter(until) }
         val keys = days.map { it.toString() }
         val doneMarks = runCatching { todayDao.since(user, monday.toString(), TodayMarkEntity.KIND_TASK_DONE) }.getOrDefault(emptyList())
@@ -379,21 +403,26 @@ class WeekRepository(
         val whoopDays = g?.days.orEmpty().filter { it.day in days }
         val sleepMetric = runCatching { metricDao.series(user, Metrics.SLP.id, Metrics.SLP.version, monday.toString()) }.getOrDefault(emptyList())
             .filter { it.dayKey in keys }
-        val goals = plan.goals.map { goal ->
-            val progress = when (goal.id) {
-                WeekGoalRules.ID_TRAINING -> (sessions.map { it.dayKey }.toSet() + itemDays(DayEngine.Ids.TRAINING) + markDays(WeekGoalRules.taskId(goal.id), DayEngine.Ids.TRAINING)).size
-                WeekGoalRules.ID_FOCUS -> (itemDays(DayEngine.Ids.FOCUS) + markDays(WeekGoalRules.taskId(goal.id), DayEngine.Ids.FOCUS)).size
-                WeekGoalRules.ID_ZONES -> whoopDays.sumOf { d -> d.workouts.sumOf { it.activeMinutes } }
+        fun Set<String>.dates(): Set<LocalDate> = mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
+        fun marked(set: Set<String>) = Counted(set.size, GoalDays(set.dates()))
+        return plan.goals.associate { goal ->
+            goal.id to when (goal.id) {
+                WeekGoalRules.ID_TRAINING -> marked(sessions.map { it.dayKey }.toSet() + itemDays(DayEngine.Ids.TRAINING) + markDays(WeekGoalRules.taskId(goal.id), DayEngine.Ids.TRAINING))
+                WeekGoalRules.ID_FOCUS -> marked(itemDays(DayEngine.Ids.FOCUS) + markDays(WeekGoalRules.taskId(goal.id), DayEngine.Ids.FOCUS))
+                WeekGoalRules.ID_ZONES -> Counted(
+                    whoopDays.sumOf { d -> d.workouts.sumOf { it.activeMinutes } },
+                    GoalDays(whoopDays.filter { d -> d.workouts.sumOf { it.activeMinutes } > 0 }.map { it.day }.toSet(), known = whoopDays.map { it.day }.toSet()),
+                )
                 WeekGoalRules.ID_SLEEP -> if (whoopDays.any { it.sleepHours != null }) {
-                    whoopDays.count { d -> d.sleepHours != null && d.sleepHours >= (d.needHours ?: SLEEP_FALLBACK_H) }
+                    val met = whoopDays.filter { d -> d.sleepHours != null && d.sleepHours >= (d.needHours ?: SLEEP_FALLBACK_H) }.map { it.day }.toSet()
+                    Counted(met.size, GoalDays(met, known = whoopDays.filter { it.sleepHours != null }.map { it.day }.toSet()))
                 } else {
-                    sleepMetric.count { (it.value ?: 0.0) >= SLEEP_FALLBACK_H }
+                    val met = sleepMetric.filter { (it.value ?: 0.0) >= SLEEP_FALLBACK_H }.map { it.dayKey }.toSet().dates()
+                    Counted(met.size, GoalDays(met, known = sleepMetric.filter { it.value != null }.map { it.dayKey }.toSet().dates()))
                 }
-                else -> markDays(WeekGoalRules.taskId(goal.id)).size
+                else -> marked(markDays(WeekGoalRules.taskId(goal.id)))
             }
-            goal.copy(progress = progress)
         }
-        return WeekPlan(monday, goals)
     }
 
     private suspend fun chargeInNorm(from: LocalDate, to: LocalDate): Boolean {
@@ -506,7 +535,9 @@ class WeekRepository(
         val today = now.toLocalDate()
         val monday = CalendarWeek.start(today)
         val (rawPlan, status) = ensurePlan(monday)
-        val plan = withProgressOf(monday, rawPlan, g, today)
+        val counted = countGoals(monday, rawPlan, g, today)
+        val plan = withProgressOf(rawPlan, counted)
+        val pathNow = pathWeek()
         val stored = weekDao.scores(user, monday.toString(), monday.plusDays(6).toString()).associateBy { it.dayKey }
         val days = (0..6).map { monday.plusDays(it.toLong()) }.filter { !it.isAfter(today) }
             .map { dayData(it, now, g, stored[it.toString()]) }
@@ -614,7 +645,41 @@ class WeekRepository(
             bodyInputs = inputs,
             poseCaption = TitanOfWeek.poseCaption(view.titan, frames.count { it.revealedAt != null && it.weekStart < monday.toString() }),
             fitnessOptedIn = optedIn,
+            path = pathNow,
+            goalDays = counted.mapValues { it.value.days },
+            care = WeekCare(sick = sickNow, crisis = input.crisis, storm = storm),
+            kind = kind,
+            nights = nightsSeen(g, today),
+            behind = behindSeen(g, today),
         )
+    }
+
+    // ── «Что видно уже сейчас» without a Path (A66 §0.3, mockup 09) ──────────────────────────────
+
+    /** The nights of the last 7 days: WHOOP memory, else the stored HoT sleep metric (hours). */
+    private suspend fun nightsSeen(g: WhoopGlance?, today: LocalDate): NightsSeen? {
+        val from = today.minusDays(6)
+        val whoop = g?.days.orEmpty().filter { !it.day.isBefore(from) && !it.day.isAfter(today) }.mapNotNull { it.sleepHours }
+        if (whoop.isNotEmpty()) return WeekFace.nights(whoop)
+        val stored = runCatching { metricDao.series(user, Metrics.SLP.id, Metrics.SLP.version, from.toString()) }.getOrDefault(emptyList())
+            .filter { it.dayKey <= today.toString() }.mapNotNull { it.value }
+        return WeekFace.nights(stored)
+    }
+
+    /**
+     * Workouts of the last 90 days: WHOOP memory over its window (the days it covers), else the
+     * sessions HoT logged. Nothing known — no line.
+     */
+    private suspend fun behindSeen(g: WhoopGlance?, today: LocalDate): BehindSeen? {
+        val from = today.minusDays(BEHIND_DAYS - 1L)
+        val window = g?.days.orEmpty().filter { !it.day.isBefore(from) && !it.day.isAfter(today) }
+        val whoop = window.sumOf { it.workouts.size }
+        if (whoop > 0) {
+            val span = ChronoUnit.DAYS.between(window.minOf { it.day }, today).toInt() + 1
+            return WeekFace.behind(whoop, span.coerceIn(1, BEHIND_DAYS))
+        }
+        val logged = runCatching { dayDao.sessions(user, from.toString()) }.getOrDefault(emptyList()).count { it.dayKey <= today.toString() }
+        return WeekFace.behind(logged, BEHIND_DAYS)
     }
 
     // ── «Эксперимент недели» (A53 §3.2, D-050) ───────────────────────────────────────────────────
@@ -940,6 +1005,9 @@ class WeekRepository(
     companion object {
         const val TICK_MS = 60_000L
         const val SLEEP_FALLBACK_H = 7.0
+
+        /** «За плечами: N тренировок за 90 дней» (A66 §0.3). */
+        const val BEHIND_DAYS = 90
         const val MINUTES_IN_DAY = 24 * 60
         const val MAX_TITLE = 60
         const val MAX_TEXT = 280

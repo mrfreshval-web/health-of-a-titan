@@ -82,6 +82,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var ageGate: AgeGateStore
 
+    /** The gate as the screen reads it: a journal that cannot be read means «ask». */
+    private val ageGateState: Flow<AgeGate> by lazy { ageGate.gate.catch { emit(AgeGate.ASK) } }
+
     /** State cards (A44, D-036): which morning screen is due. */
     @Inject
     lateinit var checkin: CheckinRepository
@@ -154,7 +157,7 @@ class MainActivity : ComponentActivity() {
                 val ritual by rassvet.collectAsStateWithLifecycle(Pair<RassvetStep?, RassvetStep?>(null, null))
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
                 val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
-                val gate by ageGate.gate.catch { emit(AgeGate.ASK) }.collectAsStateWithLifecycle(AgeGate.LOADING)
+                val gate by ageGateState.collectAsStateWithLifecycle(AgeGate.LOADING)
                 CompositionLocalProvider(LocalAddressForm provides addressForm) {
                     HotApp(
                         pendingRoute = pendingRoute,

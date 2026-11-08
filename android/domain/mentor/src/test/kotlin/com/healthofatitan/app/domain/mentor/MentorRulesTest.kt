@@ -65,8 +65,8 @@ class MentorRulesTest {
     }
 
     @Test
-    fun `the crisis window is CARD_ONCE until the founder decides, variant B is gentle talk on level 1`() {
-        assertEquals(CrisisWindowMode.CARD_ONCE, MentorPolicy.CRISIS_WINDOW_MODE)
+    fun `the crisis window is gentle talk by the founder's choice (D-063), level 2 still never goes out`() {
+        assertEquals(CrisisWindowMode.GENTLE_TALK, MentorPolicy.CRISIS_WINDOW_MODE)
         val b = CrisisWindowMode.GENTLE_TALK
         assertEquals(InputDecision.Send(1, care = true), MentorGate.before("привет", { 0 }, crisisActive = true, mode = b))
         assertEquals(InputDecision.Sos(2), MentorGate.before("…", { 2 }, crisisActive = true, mode = b))

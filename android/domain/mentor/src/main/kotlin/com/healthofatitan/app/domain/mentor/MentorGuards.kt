@@ -2,18 +2,18 @@ package com.healthofatitan.app.domain.mentor
 
 /**
  * What a message inside the crisis window (SafetyBus: CrisisGuard ≥ 2 within 72 h) does. The two
- * variants of the review of Агенты 3/10/7/16 (08.11), until the founder chooses:
+ * variants of the review of Агенты 3/10/7/16 (08.11); the founder chose [GENTLE_TALK] (D-063):
  *
- * - [CARD_ONCE] (временно, по умолчанию): no model; the full crisis card once per conversation, then a
+ * - [CARD_ONCE] (вариант А, fallback): no model; the full crisis card once per conversation, then a
  *   short local line with «Помощь». Nothing of the window reaches the model.
- * - [GENTLE_TALK] (вариант Б): the message goes to the model on the high tier (Opus) with
+ * - [GENTLE_TALK] (вариант Б, D-063): the message goes to the model on the high tier (Opus) with
  *   `gentle_plus` → NO_COACHING and SOBER in the prompt; a message of level ≥ 2 never goes out.
  */
 enum class CrisisWindowMode { CARD_ONCE, GENTLE_TALK }
 
 /** The one switch of the crisis window (variant А/Б): change [CRISIS_WINDOW_MODE] only here. */
 object MentorPolicy {
-    val CRISIS_WINDOW_MODE: CrisisWindowMode = CrisisWindowMode.CARD_ONCE
+    val CRISIS_WINDOW_MODE: CrisisWindowMode = CrisisWindowMode.GENTLE_TALK
 }
 
 /**

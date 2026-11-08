@@ -10,7 +10,9 @@ import com.healthofatitan.app.core.account.AccountCredentialStore
 import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.account.AuthApi
 import com.healthofatitan.app.core.account.CredentialManagerGoogleIdSource
+import com.healthofatitan.app.core.account.DataOwnerStore
 import com.healthofatitan.app.core.account.DeviceKey
+import com.healthofatitan.app.core.account.FileDataOwnerStore
 import com.healthofatitan.app.core.account.EncryptedAccountCredentialStore
 import com.healthofatitan.app.core.account.GoogleIdSource
 import com.healthofatitan.app.core.account.KeystoreDeviceKey
@@ -47,8 +49,14 @@ object AccountModule {
 
     @Provides
     @Singleton
-    fun provideAccountSession(api: AuthApi, store: AccountCredentialStore, key: DeviceKey): AccountSession =
-        AccountSession(api, store, key, Clock.systemUTC(), deviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim())
+    fun provideAccountSession(api: AuthApi, store: AccountCredentialStore, key: DeviceKey, owner: DataOwnerStore): AccountSession =
+        AccountSession(api, store, key, Clock.systemUTC(), deviceName = "${Build.MANUFACTURER} ${Build.MODEL}".trim(), owner = owner)
+
+    /** Whose data is on the phone (A65 §2.3): survives a sign-out, removed only by the wipe. */
+    @Provides
+    @Singleton
+    fun provideDataOwner(@ApplicationContext context: Context): DataOwnerStore =
+        FileDataOwnerStore(File(context.noBackupFilesDir, FileDataOwnerStore.FILE))
 
     @Provides
     @Singleton

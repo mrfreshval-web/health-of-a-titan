@@ -140,17 +140,19 @@ export async function authUnlink(ctx: AuthContext, request: Request, body: Recor
  * (slice А6) do not exist yet; when they do, their objects are deleted here too. Google gave us
  * no tokens, so there is nothing to revoke there.
  */
-export async function deleteAccount(ctx: AuthContext, account: Account): Promise<Identity[] | null> {
-  const whoop = account.identities.find((i) => i.provider === "whoop");
+export async function deleteAccount(ctx: AuthContext, accountId: string): Promise<Identity[] | null> {
+  const identities = await ctx.store.deleteAccount(accountId, nowMs(ctx));
+  // The account is gone first; then its WHOOP grant is revoked (best effort) and its tokens wiped.
+  const whoop = identities?.find((i) => i.provider === "whoop");
   if (whoop && ctx.vault) await ctx.vault.disconnect(whoop.subject);
-  return ctx.store.deleteAccount(account.id, nowMs(ctx));
+  return identities;
 }
 
 export async function authDelete(ctx: AuthContext, request: Request): Promise<Response> {
   const caller = await liveCaller(ctx, request);
   if (!caller) return unauthorized();
   if (!isFresh(ctx, caller.session)) return stepUpRequired();
-  await deleteAccount(ctx, caller.account);
+  await deleteAccount(ctx, caller.account.id);
   return json(200, { deleted: true });
 }
 
@@ -162,10 +164,9 @@ export async function authDelete(ctx: AuthContext, request: Request): Promise<Re
 export async function webDelete(ctx: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const google = await freshGoogle(ctx, body.id_token);
   if (google instanceof Response) return google;
+  // No session and no «login» line in the audit: the account is found by its Google identity only.
   const owner = await ctx.store.ownerOf("google", google.sub);
   if (!owner) return json(404, { error: "no_account" });
-  const login = await ctx.store.login({ provider: "google", subject: google.sub, now: nowMs(ctx) });
-  if (login.status !== "ok") return json(404, { error: "no_account" });
-  await deleteAccount(ctx, login.account);
+  if (!(await deleteAccount(ctx, owner))) return json(404, { error: "no_account" });
   return json(200, { deleted: true });
 }

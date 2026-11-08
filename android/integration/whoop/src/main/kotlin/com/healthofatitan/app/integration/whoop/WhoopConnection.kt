@@ -54,6 +54,9 @@ sealed interface LoginOutcome {
      */
     data object OtherAccount : LoginOutcome
 
+    /** Signed out, this WHOOP's account is not the owner of the data on the phone (A65 §2.3). */
+    data object OtherOwner : LoginOutcome
+
     /** The account already has another WHOOP: unlink it in «Аккаунт» first. */
     data object ProviderLinked : LoginOutcome
 
@@ -191,7 +194,8 @@ class WhoopConnection(
                     account.discard(result.account)
                     return LoginOutcome.OtherAccount
                 }
-                account.establish(result.account)
+                // Another account owns the data on the phone: nothing is kept until «Стереть и войти» (A65 §2.3).
+                if (!account.establish(result.account)) return LoginOutcome.OtherOwner
                 connected(result.whoopUserId, result.accessToken, result.expiresAt)
                 LoginOutcome.Connected
             }

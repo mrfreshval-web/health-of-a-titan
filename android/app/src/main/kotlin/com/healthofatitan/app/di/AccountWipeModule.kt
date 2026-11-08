@@ -3,6 +3,7 @@ package com.healthofatitan.app.di
 import android.app.ActivityManager
 import android.content.Context
 import com.healthofatitan.app.core.account.AccountProfileStore
+import com.healthofatitan.app.core.account.DataOwnerStore
 import com.healthofatitan.app.core.account.DeviceKey
 import com.healthofatitan.app.core.account.LocalDataWiper
 import com.healthofatitan.app.core.security.DatabaseKeyProvider
@@ -30,9 +31,11 @@ object AccountWipeModule {
         databaseKey: DatabaseKeyProvider,
         deviceKey: DeviceKey,
         profile: AccountProfileStore,
+        owner: DataOwnerStore,
     ): LocalDataWiper = LocalDataWiper {
         withContext(Dispatchers.IO) {
             runCatching { profile.clear() }
+            runCatching { owner.clear() }
             runCatching { deviceKey.reset() }
             runCatching { databaseKey.destroy() }
             // Kills the process: the database, Tink keysets, prefs, files and caches are gone.

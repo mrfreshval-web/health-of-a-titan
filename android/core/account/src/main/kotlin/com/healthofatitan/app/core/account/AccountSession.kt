@@ -26,6 +26,12 @@ sealed interface AccountAccess {
 sealed interface SignInOutcome {
     data object SignedIn : SignInOutcome
 
+    /**
+     * The account is fine, but the phone keeps the data of another HoT account (A65 §2.3). Nothing
+     * was kept yet: «Стереть и войти» or «Отмена» ([AccountSession.otherOwner]).
+     */
+    data object OtherOwner : SignInOutcome
+
     /** Google is fine, but there is no HoT account: invite or «Войти через WHOOP». */
     data class NeedsInvite(val signupTicket: String) : SignInOutcome
 
@@ -92,8 +98,24 @@ class AccountSession(
     private val key: DeviceKey,
     private val clock: Clock,
     private val deviceName: String,
+    /** Whose data is on the phone: survives a sign-out, only the wipe removes it. */
+    private val owner: DataOwnerStore = InMemoryDataOwnerStore(),
 ) {
     private val mutex = Mutex()
+
+    init {
+        // Installs of slices А1–А2 had no owner yet: the account signed in now is the owner.
+        if (owner.get() == null) store.credentials.value?.let { owner.set(it.accountId) }
+    }
+
+    private val otherOwnerState = MutableStateFlow<AccountTokens?>(null)
+
+    /**
+     * A sign-in into another account than the owner of the data on the phone: held here, not
+     * kept, until the person chooses «Стереть и войти» or «Отмена» (A65 §2.3).
+     */
+    private val otherOwnerFlag = MutableStateFlow(false)
+    val otherOwner: StateFlow<Boolean> = otherOwnerFlag.asStateFlow()
 
     @Volatile
     private var cached: Pair<String, Long>? = null // access token, expiresAt epoch ms
@@ -114,11 +136,40 @@ class AccountSession(
     /** Proof of possession of the device key over [binding] (nonce, OAuth state or ticket). */
     fun proof(binding: String): DeviceProof = DeviceProof(key.publicKey(), key.sign(loginMessage(binding)), deviceName)
 
-    /** Keeps a fresh session from any sign-in route (Google, WHOOP, migration). */
-    fun establish(tokens: AccountTokens) {
+    /**
+     * Keeps a fresh session from a sign-in route (Google, WHOOP, migration) — only when the data on
+     * the phone is this account's (or nobody's). Another owner: nothing is kept, the session waits
+     * in [otherOwner], and the result is false.
+     */
+    fun establish(tokens: AccountTokens): Boolean {
+        val current = owner.get()
+        if (current != null && current != tokens.accountId) {
+            otherOwnerState.value = tokens
+            otherOwnerFlag.value = true
+            return false
+        }
+        if (current == null) owner.set(tokens.accountId)
+        keep(tokens)
+        return true
+    }
+
+    private fun keep(tokens: AccountTokens) {
         store.save(AccountCredentials.of(tokens))
         cached = tokens.access to tokens.accessExpiresAt
     }
+
+    /** «Отмена» on «На телефоне данные другого аккаунта»: the new session is ended, the phone stays as it was. */
+    suspend fun cancelOtherOwner() {
+        otherOwnerState.value?.let { discard(it) }
+        otherOwnerState.value = null
+        otherOwnerFlag.value = false
+    }
+
+    /**
+     * «Стереть и войти», before the wipe: the held session is ended on the server too (the wipe
+     * takes its refresh token with everything else); after the restart the person signs in again.
+     */
+    suspend fun endOtherOwnerBeforeWipe() = cancelOtherOwner()
 
     /**
      * A valid access token. [stale] is a token the Worker just refused: it is dropped first.
@@ -131,7 +182,7 @@ class AccountSession(
         val ts = clock.millis() / 1000
         when (val r = api.refresh(creds.refresh, ts, key.sign(refreshMessage(creds.refresh, ts)))) {
             is RefreshResult.Ok -> {
-                establish(r.tokens)
+                keep(r.tokens)
                 AccountAccess.Ok(r.tokens.access)
             }
             RefreshResult.SignedOut -> {
@@ -153,10 +204,7 @@ class AccountSession(
     /** «Войти через Google», step 2: the ID token Credential Manager returned for [nonce]. */
     suspend fun completeGoogle(idToken: String, nonce: String, invite: String? = null): SignInOutcome = guarded {
         when (val r = api.google(idToken, proof(nonce), invite)) {
-            is GoogleLoginResult.Ok -> {
-                establish(r.tokens)
-                SignInOutcome.SignedIn
-            }
+            is GoogleLoginResult.Ok -> if (establish(r.tokens)) SignInOutcome.SignedIn else SignInOutcome.OtherOwner
             is GoogleLoginResult.NoAccount -> SignInOutcome.NeedsInvite(r.signupTicket)
             is GoogleLoginResult.InviteInvalid -> SignInOutcome.InviteInvalid(r.signupTicket)
             GoogleLoginResult.Rejected -> SignInOutcome.Rejected
@@ -166,10 +214,7 @@ class AccountSession(
     /** A new account for the Google identity of [signupTicket] with an invite code. */
     suspend fun signup(signupTicket: String, invite: String): SignInOutcome = guarded {
         when (val r = api.signup(signupTicket, invite, proof(signupTicket))) {
-            is SignupResult.Ok -> {
-                establish(r.tokens)
-                SignInOutcome.SignedIn
-            }
+            is SignupResult.Ok -> if (establish(r.tokens)) SignInOutcome.SignedIn else SignInOutcome.OtherOwner
             SignupResult.InviteInvalid -> SignInOutcome.InviteInvalid(signupTicket)
             SignupResult.AccountExists, SignupResult.Rejected -> SignInOutcome.Rejected
         }

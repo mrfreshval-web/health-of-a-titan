@@ -38,6 +38,9 @@ sealed interface AccountConfirm {
 
     data object SignOutAll : AccountConfirm
 
+    /** «Выйти и стереть телефон» (review 2026-11-08 А-1). */
+    data object Wipe : AccountConfirm
+
     data class Unlink(val provider: String) : AccountConfirm
 
     data class EndDevice(val id: String, val name: String) : AccountConfirm
@@ -281,23 +284,40 @@ class AccountViewModel @Inject constructor(
     }
 
     /**
-     * «Выйти» (and «Войти в тот аккаунт» after `identity_in_use`): the server ends this session,
-     * the phone is wiped — one account per install (A65 §2.3).
+     * «Выйти»: the server ends this session. Whether the phone is wiped is [SignOutPolicy]: by
+     * default the data stays, sealed; signing in to another account asks first (A65 §2.3).
      */
-    fun signOut() {
+    fun signOut() = leave(wipe = SignOutPolicy.WIPES)
+
+    /** «Выйти и стереть телефон»: the session ends and the phone is wiped. */
+    fun signOutAndWipe() = leave(wipe = true)
+
+    private fun leave(wipe: Boolean) {
         local.update { it.copy(busy = true, confirm = null, inUse = null) }
         viewModelScope.launch {
             account.logout()
-            wiper.wipe()
+            if (wipe) wiper.wipe()
         }
     }
 
-    /** «Выйти везде»: needs the server; then this phone is wiped too. */
+    /**
+     * «Войти в тот аккаунт» after `identity_in_use`: a sign-out, then «Вход» asks about the data
+     * of this account (the owner check). In variant 2 the wipe question comes first.
+     */
+    fun switchAccount() {
+        if (SignOutPolicy.WIPES) local.update { it.copy(inUse = null, confirm = AccountConfirm.Wipe) } else signOut()
+    }
+
+    /** «Выйти везде»: needs the server; the phone is wiped only in variant 2 of [SignOutPolicy]. */
     fun signOutAll() {
         if (local.value.busy) return
         local.update { it.copy(busy = true, confirm = null) }
         viewModelScope.launch {
-            if (account.logoutAll()) wiper.wipe() else note(AccountNote.OFFLINE)
+            if (account.logoutAll()) {
+                if (SignOutPolicy.WIPES) wiper.wipe()
+            } else {
+                note(AccountNote.OFFLINE)
+            }
         }
     }
 

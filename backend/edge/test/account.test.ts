@@ -349,6 +349,21 @@ describe("deletion (A65 §6, slice А5)", () => {
     expect(dump).toContain("account.deleted");
   });
 
+  it("a tombstone lives past the last refresh token, then the answer is a plain invalid_grant", async () => {
+    const w = await world();
+    const f = await founder(w);
+    await w.call(post("/auth/link/google", { id_token: (await w.idToken("g-founder")).token }, f.access));
+    w.advance(11 * 60);
+    const next = (await (await w.refresh(f.refresh)).json()) as Session;
+    expect((await w.call(post("/auth/reauth/google", { id_token: (await w.idToken("g-founder")).token }, next.access))).status).toBe(200);
+    expect((await w.call(post("/auth/delete", undefined, next.access))).status).toBe(200);
+    w.advance((180 + 29) * 24 * 60 * 60);
+    expect(await (await w.refresh(next.refresh)).json()).toEqual({ error: "account_deleted" });
+    w.advance(2 * 24 * 60 * 60);
+    expect(await (await w.refresh(next.refresh)).json()).toEqual({ error: "invalid_grant" });
+    expect(w.accounts.storage.dump()).not.toContain("tomb:");
+  });
+
   it("the founder's used invite forgets the deleted account", async () => {
     const w = await world();
     const f = await founder(w);
@@ -393,8 +408,12 @@ describe("web page of deletion (Google Play)", () => {
     const f = await founder(w);
     const g = await googleAccount(w, f, "g-web");
     const { token } = await w.idToken("g-web");
+    const logins = (s: string) => s.split("login.google").length - 1;
+    const before = logins(w.accounts.storage.dump());
     const res = await w.call(post("/account/delete", { id_token: token }));
     expect(res.status).toBe(200);
+    // the page signs nobody in: no new session, no «login» line in the audit
+    expect(logins(w.accounts.storage.dump())).toBe(before);
     const r = await w.call(post("/auth/refresh", await w.device.refresh(g.refresh, w.now())));
     expect(r.status).toBe(401);
     const replay = await w.call(post("/account/delete", { id_token: token }));

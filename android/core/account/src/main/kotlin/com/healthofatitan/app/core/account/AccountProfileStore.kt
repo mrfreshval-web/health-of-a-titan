@@ -35,6 +35,10 @@ data class AccountProfile(
     val bodyAt: Long? = null,
     /** [AVATAR_NONE] (the Titan sign) · [AVATAR_GOOGLE] · [AVATAR_OWN]. */
     val avatar: String = AVATAR_NONE,
+    /** CrisisGuard level of the saved «О себе» (0–3): ≥ 1 keeps the quiet «Помощь» line under the field. */
+    val aboutLevel: Int = 0,
+    /** When «О себе» last wrote a safety event (and maybe opened «Помощь»): once, not on every save. */
+    val aboutAlertAt: Long? = null,
 ) {
     /** «Валентин, верно?»: a name came from Google or WHOOP and the person has not answered yet. */
     val asksName: Boolean get() = name != null && !nameConfirmed
@@ -177,6 +181,9 @@ class AccountProfileStore(
         }
         aboutState.value = value
     }
+
+    /** The CrisisGuard level of the saved «О себе» and the time of its last safety event (A65 §5.2). */
+    fun setAboutLevel(level: Int, alertAt: Long?) = update { it.copy(aboutLevel = level.coerceIn(0, 3), aboutAlertAt = alertAt) }
 
     /** The person's own photo (already cropped, scaled and re-encoded without EXIF). */
     @Synchronized

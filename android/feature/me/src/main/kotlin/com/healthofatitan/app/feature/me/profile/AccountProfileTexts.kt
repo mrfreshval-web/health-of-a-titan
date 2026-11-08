@@ -36,13 +36,26 @@ object AccountProfileTexts {
     val ABOUT_CLEAR = G("Очистить")
     val ABOUT_SAVED = G("Сохранено.")
     val ABOUT_NOTE = G("Текст хранится только на телефоне, зашифрован отдельно от остального.")
-    val ABOUT_MENTOR = G("Давать «О себе» Винсу")
-    val ABOUT_MENTOR_NOTE = G("Пока выключено, «О себе» не уходит ни Винсу, ни в Claude. Можно выключить в любой момент.")
+    val ABOUT_HELP = G("Если сейчас тяжело — «Помощь» рядом: 112 · 911.")
+    val ABOUT_MENTOR = G("Передавать «О себе» Винсу")
+    val ABOUT_MENTOR_OFF = G("Выключено: «О себе» остаётся только на телефоне.")
+    val ABOUT_MENTOR_ON = G("Включено: Винс видит «О себе» в разговорах. Выключить можно в любой момент — тогда текст больше никуда не уходит.")
+    val ABOUT_MENTOR_CONSENT_TITLE = G("Передавать «О себе» Винсу?")
+
+    /** The text of the consent `about_mentor` v1 (AboutMentorConsentStore.CONSENT_VERSION). */
+    val ABOUT_MENTOR_CONSENT_BODY = G(
+        "Чтобы Винс учитывал сказанное, в каждом разговоре текст «О себе» целиком уходит в Claude (Anthropic, США). " +
+            "В тексте могут быть сведения о здоровье: это согласие на их передачу только для разговоров с Винсом. " +
+            "Выключить можно здесь же в любой момент.",
+    )
+    val ABOUT_MENTOR_ALLOW = G("Разрешить")
+    val ABOUT_MENTOR_LATER = G("Не сейчас")
 
     val ALL: List<G> = listOf(
         SECTION, NAME, nameAsk("Валентин"), NAME_YES, NAME_EDIT, NAME_SAVE, NAME_EMPTY, googleLine("v•••@gmail.com"),
         PHOTO_GALLERY, PHOTO_CAMERA, PHOTO_DELETE, PHOTO_FAILED, PHOTO_NOTE, AVATAR_DESCRIPTION,
         BODY, height(182), maxPulse(190), BODY_NONE,
-        ABOUT, ABOUT_HINT, aboutCount(0, 500), ABOUT_SAVE, ABOUT_CLEAR, ABOUT_SAVED, ABOUT_NOTE, ABOUT_MENTOR, ABOUT_MENTOR_NOTE,
+        ABOUT, ABOUT_HINT, aboutCount(0, 500), ABOUT_SAVE, ABOUT_CLEAR, ABOUT_SAVED, ABOUT_NOTE, ABOUT_HELP, ABOUT_MENTOR, ABOUT_MENTOR_OFF, ABOUT_MENTOR_ON,
+        ABOUT_MENTOR_CONSENT_TITLE, ABOUT_MENTOR_CONSENT_BODY, ABOUT_MENTOR_ALLOW, ABOUT_MENTOR_LATER,
     )
 }

@@ -18,7 +18,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -51,10 +57,6 @@ import com.healthofatitan.app.core.ui.component.HotSecondaryButton
 import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.text.text
-import com.healthofatitan.app.domain.engine.CrisisAssessment
-import com.healthofatitan.app.domain.engine.CrisisGuard
-import com.healthofatitan.app.domain.engine.CrisisLevel
-import com.healthofatitan.app.domain.engine.CrisisSource
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +77,8 @@ const val PROFILE_NAME_FIELD_TAG = "profile_name_field"
 const val PROFILE_ABOUT_FIELD_TAG = "profile_about_field"
 const val PROFILE_ABOUT_SAVE_TAG = "profile_about_save"
 const val PROFILE_ABOUT_MENTOR_TAG = "profile_about_mentor"
+const val PROFILE_ABOUT_MENTOR_ALLOW_TAG = "profile_about_mentor_allow"
+const val PROFILE_ABOUT_HELP_TAG = "profile_about_help"
 
 /** What the account part of «Профиль» shows (A65 §2.4). */
 data class AccountProfileUi(
@@ -92,7 +96,10 @@ class AccountProfileActions(
     val onDeletePhoto: () -> Unit = {},
     /** «Сохранить» of «О себе» (CrisisGuard runs in the ViewModel). */
     val onAbout: (String) -> Unit = {},
+    /** Only `false` goes straight through; `true` is written after «Разрешить» in the consent dialog. */
     val onAboutMentor: (Boolean) -> Unit = {},
+    /** The quiet line «Если сейчас тяжело — «Помощь» рядом». */
+    val onOpenHelp: () -> Unit = {},
 )
 
 /**
@@ -104,8 +111,10 @@ class AccountProfileActions(
 class AccountProfileViewModel @Inject constructor(
     private val store: AccountProfileStore,
     private val consent: AboutMentorConsentStore,
-    private val dailyLoop: DailyLoopRepository,
+    dailyLoop: DailyLoopRepository,
 ) : ViewModel() {
+    private val saver = AboutSaver(store, { a, source -> dailyLoop.logSafety(a, source) })
+
     val profile: StateFlow<AccountProfile> = store.profile
     val avatar: StateFlow<ByteArray?> = store.avatar
     val about: StateFlow<String> = store.about
@@ -135,16 +144,8 @@ class AccountProfileViewModel @Inject constructor(
         }
     }
 
-    /**
-     * «О себе» is saved whatever it says: CrisisGuard runs on the words (A07 §4), only the level is
-     * logged, never the text. Returns the assessment so the screen opens help at level ≥ 2.
-     */
-    suspend fun saveAbout(text: String): CrisisAssessment {
-        val assessment = CrisisGuard.assess(text)
-        withContext(Dispatchers.IO) { store.setAbout(text) }
-        if (assessment.level != CrisisLevel.NONE) runCatching { dailyLoop.logSafety(assessment, CrisisSource.JOURNAL) }
-        return assessment
-    }
+    /** «О себе» through [AboutSaver]: saved always; true when «Помощь» opens by itself (once). */
+    suspend fun saveAbout(text: String): Boolean = withContext(Dispatchers.IO) { saver.save(text).openHelp }
 
     private fun io(block: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) { runCatching(block) }
@@ -158,11 +159,17 @@ class AccountProfileViewModel @Inject constructor(
 /** Its own class: two `FileProvider` entries of one class would collide in the merged manifest. */
 class AvatarFileProvider : FileProvider()
 
+private fun cameraFile(context: Context): File = File(File(context.cacheDir, "avatar"), "camera.jpg")
+
 /** A cache file for the camera, shared through the FileProvider `${applicationId}.avatar`. */
 internal fun cameraTarget(context: Context): Uri {
-    val dir = File(context.cacheDir, "avatar").apply { mkdirs() }
-    val file = File(dir, "camera.jpg")
+    val file = cameraFile(context).apply { parentFile?.mkdirs() }
     return FileProvider.getUriForFile(context, context.packageName + AccountProfileViewModel.AVATAR_AUTHORITY_SUFFIX, file)
+}
+
+/** The raw camera JPEG (with EXIF, maybe GPS) never stays: gone after a cancel too. */
+internal fun discardCameraFile(context: Context) {
+    runCatching { cameraFile(context).delete() }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -179,8 +186,9 @@ fun ColumnScope.AccountProfileSection(
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val target = pendingCamera
         pendingCamera = null
-        if (ok && target != null) actions.onPhoto(target)
+        if (ok && target != null) actions.onPhoto(target) else discardCameraFile(context)
     }
+    var askConsent by rememberSaveable { mutableStateOf(false) }
     val p = ui.profile
 
     HotCard(modifier = Modifier.fillMaxWidth()) {
@@ -262,6 +270,20 @@ fun ColumnScope.AccountProfileSection(
                 }
             }
             if (aboutSaved) Text(AccountProfileTexts.ABOUT_SAVED.text(), style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
+            // A07 §4.3 level 1 and up: help stays one tap away, without a modal (review А-7).
+            if (p.aboutLevel >= 1) {
+                Text(
+                    AccountProfileTexts.ABOUT_HELP.text(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .clickable(role = Role.Button, onClick = actions.onOpenHelp)
+                        .wrapContentHeight()
+                        .testTag(PROFILE_ABOUT_HELP_TAG),
+                )
+            }
             Text(AccountProfileTexts.ABOUT_NOTE.text(), style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -270,11 +292,43 @@ fun ColumnScope.AccountProfileSection(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = ui.aboutMentor, onCheckedChange = actions.onAboutMentor, modifier = Modifier.testTag(PROFILE_ABOUT_MENTOR_TAG))
+                Switch(
+                    checked = ui.aboutMentor,
+                    // On asks first (consent text v1); off goes at once — as easy as giving it.
+                    onCheckedChange = { on -> if (on) askConsent = true else actions.onAboutMentor(false) },
+                    modifier = Modifier.testTag(PROFILE_ABOUT_MENTOR_TAG),
+                )
             }
-            Text(AccountProfileTexts.ABOUT_MENTOR_NOTE.text(), style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
+            Text(
+                (if (ui.aboutMentor) AccountProfileTexts.ABOUT_MENTOR_ON else AccountProfileTexts.ABOUT_MENTOR_OFF).text(),
+                style = MaterialTheme.typography.bodySmall,
+                color = HotThemeTokens.colors.textTertiary,
+            )
         }
     }
+    if (askConsent) {
+        AboutMentorConsent(
+            onAllow = {
+                askConsent = false
+                actions.onAboutMentor(true)
+            },
+            onLater = { askConsent = false },
+        )
+    }
+}
+
+/** The consent `about_mentor` v1 (A65 §5.2, review А-6): granted only by «Разрешить». */
+@Composable
+private fun AboutMentorConsent(onAllow: () -> Unit, onLater: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onLater,
+        title = { Text(AccountProfileTexts.ABOUT_MENTOR_CONSENT_TITLE.text()) },
+        text = { Text(AccountProfileTexts.ABOUT_MENTOR_CONSENT_BODY.text()) },
+        confirmButton = {
+            TextButton(onClick = onAllow, modifier = Modifier.testTag(PROFILE_ABOUT_MENTOR_ALLOW_TAG)) { Text(AccountProfileTexts.ABOUT_MENTOR_ALLOW.text()) }
+        },
+        dismissButton = { TextButton(onClick = onLater) { Text(AccountProfileTexts.ABOUT_MENTOR_LATER.text()) } },
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

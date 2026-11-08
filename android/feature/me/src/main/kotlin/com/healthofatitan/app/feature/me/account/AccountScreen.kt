@@ -49,6 +49,7 @@ import com.healthofatitan.app.integration.whoop.WhoopAuthFlow
 const val ACCOUNT_SCREEN_TAG = "screen_account"
 const val ACCOUNT_SIGN_OUT_TAG = "account_sign_out"
 const val ACCOUNT_SIGN_OUT_ALL_TAG = "account_sign_out_all"
+const val ACCOUNT_WIPE_TAG = "account_wipe"
 const val ACCOUNT_DELETE_TAG = "account_delete"
 const val ACCOUNT_DELETE_CONFIRM_TAG = "account_delete_confirm"
 const val ACCOUNT_NOTE_TAG = "account_note"
@@ -66,6 +67,7 @@ data class AccountActions(
     val endDevice: (DeviceDto) -> Unit = {},
     val signOut: () -> Unit = {},
     val signOutAll: () -> Unit = {},
+    val signOutAndWipe: () -> Unit = {},
     val openDelete: (Boolean) -> Unit = {},
     val delete: () -> Unit = {},
     val confirm: (AccountConfirm) -> Unit = {},
@@ -109,11 +111,12 @@ private fun AccountRoute(viewModel: AccountViewModel = hiltViewModel()) {
             endDevice = { viewModel.endDevice(it.id) },
             signOut = viewModel::signOut,
             signOutAll = viewModel::signOutAll,
+            signOutAndWipe = viewModel::signOutAndWipe,
             openDelete = viewModel::openDelete,
             delete = { viewModel.run(FreshAction.DELETE, context) },
             confirm = { viewModel.ask(it) },
             dismissConfirm = { viewModel.ask(null) },
-            switchAccount = viewModel::signOut,
+            switchAccount = viewModel::switchAccount,
             closeInUse = viewModel::closeInUse,
         ),
     )
@@ -170,7 +173,7 @@ private fun Overview(state: AccountUiState, actions: AccountActions) {
     HotCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             HotSecondaryButton(
-                AccountTexts.SIGN_OUT.text(),
+                AccountTexts.SIGN_OUT_BUTTON.text(),
                 onClick = { actions.confirm(AccountConfirm.SignOut) },
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth().testTag(ACCOUNT_SIGN_OUT_TAG),
@@ -181,6 +184,15 @@ private fun Overview(state: AccountUiState, actions: AccountActions) {
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth().testTag(ACCOUNT_SIGN_OUT_ALL_TAG),
             )
+            // Variant 1 of SignOutPolicy: the wipe is its own, plainly named action.
+            if (!SignOutPolicy.WIPES) {
+                HotTextButton(
+                    AccountTexts.WIPE.text(),
+                    onClick = { actions.confirm(AccountConfirm.Wipe) },
+                    enabled = !state.busy,
+                    modifier = Modifier.testTag(ACCOUNT_WIPE_TAG),
+                )
+            }
             HotTextButton(
                 AccountTexts.DELETE.text(),
                 onClick = { actions.openDelete(true) },
@@ -275,14 +287,26 @@ private fun Dialogs(state: AccountUiState, actions: AccountActions) {
     }
     val confirm = state.confirm ?: return
     val (title, body, yes) = when (confirm) {
-        AccountConfirm.SignOut -> Triple(AccountTexts.SIGN_OUT_TITLE.text(), AccountTexts.SIGN_OUT_BODY.text(), AccountTexts.SIGN_OUT.text() to actions.signOut)
-        AccountConfirm.SignOutAll -> Triple(AccountTexts.SIGN_OUT_ALL_TITLE.text(), AccountTexts.SIGN_OUT_ALL_BODY.text(), AccountTexts.SIGN_OUT_ALL.text() to actions.signOutAll)
-        is AccountConfirm.Unlink -> Triple(
-            (if (confirm.provider == AccountCredentials.PROVIDER_WHOOP) AccountTexts.WHOOP else AccountTexts.GOOGLE).text(),
-            AccountTexts.STEP_UP_NOTE.text(),
-            AccountTexts.UNLINK.text() to { actions.unlink(confirm.provider) },
+        AccountConfirm.SignOut -> Triple(
+            AccountTexts.SIGN_OUT_DIALOG_TITLE.text(),
+            AccountTexts.SIGN_OUT_BODY.text(),
+            AccountTexts.SIGN_OUT_CONFIRM.text() to actions.signOut,
         )
-        is AccountConfirm.EndDevice -> Triple(confirm.name, AccountTexts.END_SESSION.text(), AccountTexts.END_SESSION.text() to { actions.endDevice(DeviceDto(confirm.id, confirm.name)) })
+        AccountConfirm.Wipe -> Triple(AccountTexts.WIPE_TITLE.text(), AccountTexts.WIPE_BODY.text(), AccountTexts.WIPE_CONFIRM.text() to actions.signOutAndWipe)
+        AccountConfirm.SignOutAll -> Triple(AccountTexts.SIGN_OUT_ALL_TITLE.text(), AccountTexts.SIGN_OUT_ALL_BODY.text(), AccountTexts.SIGN_OUT_ALL.text() to actions.signOutAll)
+        is AccountConfirm.Unlink -> {
+            val whoop = confirm.provider == AccountCredentials.PROVIDER_WHOOP
+            Triple(
+                (if (whoop) AccountTexts.UNLINK_WHOOP_TITLE else AccountTexts.UNLINK_GOOGLE_TITLE).text(),
+                (if (whoop) AccountTexts.UNLINK_WHOOP_BODY else AccountTexts.UNLINK_GOOGLE_BODY).text(),
+                AccountTexts.UNLINK.text() to { actions.unlink(confirm.provider) },
+            )
+        }
+        is AccountConfirm.EndDevice -> Triple(
+            AccountTexts.endDeviceTitle(confirm.name).text(),
+            AccountTexts.END_SESSION_BODY.text(),
+            AccountTexts.END_SESSION.text() to { actions.endDevice(DeviceDto(confirm.id, confirm.name)) },
+        )
     }
     AlertDialog(
         onDismissRequest = actions.dismissConfirm,

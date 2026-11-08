@@ -14,7 +14,7 @@ import java.util.TimeZone
  * granting and withdrawing are equally simple and both are kept as history.
  *
  * This slice only keeps the flag. Reading it and passing the text is the work of Винс (the mentor
- * module); the text of the consent is Agent 7's to review (черновик).
+ * module). The text shown is `AccountProfileTexts.ABOUT_MENTOR_CONSENT_BODY` (v1, draft for Agent 7 and the lawyer).
  */
 class AboutMentorConsentStore(
     private val consentDao: ConsentDao,

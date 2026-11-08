@@ -134,4 +134,19 @@ class AccountProfileStoreTest {
         assertEquals("v•••@gmail.com", s.profile.value.googleEmailMask)
         assertNull(s.avatar.value, "no picture: the Titan sign stays")
     }
+
+    @Test
+    fun `a portrait avatar is cut higher than the centre, a landscape one in the middle`() {
+        assertEquals(0 to 100, AvatarImage.origin(300, 600))
+        assertEquals(150 to 0, AvatarImage.origin(600, 300))
+        assertEquals(0 to 0, AvatarImage.origin(400, 400))
+    }
+
+    @Test
+    fun `the CrisisGuard level of about is kept between 0 and 3`() {
+        val s = store()
+        s.setAboutLevel(5, 7L)
+        assertEquals(3, s.profile.value.aboutLevel)
+        assertEquals(7L, store().profile.value.aboutAlertAt)
+    }
 }

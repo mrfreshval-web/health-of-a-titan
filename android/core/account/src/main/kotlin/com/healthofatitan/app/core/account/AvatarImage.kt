@@ -29,14 +29,22 @@ object AvatarImage {
         encode(crop(bitmap))
     }.getOrNull()
 
-    /** The centre square, scaled to [SIDE]. */
+    /**
+     * A square scaled to [SIDE]: centred, but on a portrait photo it sits higher (a third of the
+     * spare height above it) — the face is usually in the upper part.
+     */
     fun crop(bitmap: Bitmap): Bitmap {
         val side = min(bitmap.width, bitmap.height)
-        val x = (bitmap.width - side) / 2
-        val y = (bitmap.height - side) / 2
+        val (x, y) = origin(bitmap.width, bitmap.height)
         val square = Bitmap.createBitmap(bitmap, x, y, side, side)
         val target = min(SIDE, max(side, 1))
         return if (side == target) square else Bitmap.createScaledBitmap(square, target, target, true)
+    }
+
+    /** The top-left corner of the square of [crop]. */
+    fun origin(width: Int, height: Int): Pair<Int, Int> {
+        val side = min(width, height)
+        return (width - side) / 2 to if (height > width) (height - side) / 3 else (height - side) / 2
     }
 
     fun encode(bitmap: Bitmap): ByteArray = ByteArrayOutputStream().use { out ->

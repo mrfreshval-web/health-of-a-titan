@@ -112,7 +112,7 @@ class WhoopViewModel @Inject constructor(
                         note = null
                         notAllowed = outcome.whoopUserId
                     }
-                    LoginOutcome.Rejected -> note = WhoopNote.REJECTED
+                    LoginOutcome.Rejected, LoginOutcome.OtherOwner -> note = WhoopNote.REJECTED
                     LoginOutcome.OtherAccount -> note = WhoopNote.OTHER_ACCOUNT
                     LoginOutcome.Offline -> note = WhoopNote.OFFLINE
                     LoginOutcome.NotConfigured -> note = WhoopNote.SERVER_NOT_READY

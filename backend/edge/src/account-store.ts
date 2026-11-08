@@ -109,6 +109,11 @@ export const ABSOLUTE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 export const REFRESH_GRACE_MS = 30 * 1000;
 export const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const AUDIT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+/**
+ * A tombstone outlives every refresh token of the deleted account (absolute TTL) with a margin;
+ * after that the phone hears a plain `401 invalid_grant` instead of `account_deleted`.
+ */
+export const TOMB_TTL_MS = ABSOLUTE_TTL_MS + 30 * 24 * 60 * 60 * 1000;
 /** Step-up (A65 §2.3): linking, unlinking and deletion need a proof of the person this fresh. */
 export const STEP_UP_WINDOW_MS = 10 * 60 * 1000;
 
@@ -150,8 +155,8 @@ export interface AccountStore {
   // Slice А5: deletion
   /** Deletes the account (identities, sessions, invites); returns the identities it had, or null. */
   deleteAccount(accountId: string, now: number): Promise<Identity[] | null>;
-  /** True when [sid] belonged to an account that was deleted. */
-  isTombstoned(sid: string): Promise<boolean>;
+  /** True when [sid] belonged to an account deleted less than [TOMB_TTL_MS] ago. */
+  isTombstoned(sid: string, now: number): Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -487,8 +492,14 @@ export class KvAccountStore implements AccountStore {
     });
   }
 
-  isTombstoned(sid: string): Promise<boolean> {
-    return this.serial(async () => (await this.kv.get<number>(K.tomb(sid))) !== undefined);
+  isTombstoned(sid: string, now: number): Promise<boolean> {
+    return this.serial(async () => {
+      const at = await this.kv.get<number>(K.tomb(sid));
+      if (at === undefined) return false;
+      if (now - at <= TOMB_TTL_MS) return true;
+      await this.kv.delete(K.tomb(sid));
+      return false;
+    });
   }
 
   private async writeAudit(event: AuditEvent, accountId: string | null, now: number): Promise<void> {
@@ -617,7 +628,7 @@ export class DurableAccountStore implements AccountStore {
   deleteAccount(accountId: string, now: number) {
     return this.call<Identity[] | null>("deleteAccount", accountId, now);
   }
-  isTombstoned(sid: string) {
-    return this.call<boolean>("isTombstoned", sid);
+  isTombstoned(sid: string, now: number) {
+    return this.call<boolean>("isTombstoned", sid, now);
   }
 }

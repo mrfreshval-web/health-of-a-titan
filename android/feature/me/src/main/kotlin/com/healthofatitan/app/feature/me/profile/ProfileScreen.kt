@@ -136,13 +136,14 @@ private fun ProfileRoute(
             onDeletePhoto = accountModel::deletePhoto,
             onAbout = { text ->
                 scope.launch {
-                    val assessment = accountModel.saveAbout(text)
+                    val openHelp = accountModel.saveAbout(text)
                     aboutSaved = true
                     // A07 §4.1: levels 2–3 open the help card (112 · 911) by themselves; saving is not blocked.
-                    if (assessment.level.autoShowHelp) onOpenHelp()
+                    if (openHelp) onOpenHelp()
                 }
             },
             onAboutMentor = accountModel::setAboutMentor,
+            onOpenHelp = onOpenHelp,
         )
     }
     ProfileScreen(loaded, viewModel::setAddress, viewModel::setBirthYear, viewModel::setSex) {

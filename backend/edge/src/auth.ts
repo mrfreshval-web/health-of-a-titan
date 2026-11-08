@@ -231,7 +231,7 @@ export async function authRefresh(ctx: AuthContext, body: Record<string, unknown
   if (!sid || typeof refresh !== "string" || typeof ts !== "number" || !Number.isInteger(ts)) return json(400, { error: "invalid_request" });
   if (Math.abs(ts - ctx.nowSeconds) > DEVICE_SIG_WINDOW_SECONDS) return json(400, { error: "clock_skew" });
   const live = await ctx.store.liveSession(sid, nowMs(ctx));
-  if (!live) return unauthorized((await ctx.store.isTombstoned(sid)) ? "account_deleted" : "invalid_grant");
+  if (!live) return unauthorized((await ctx.store.isTombstoned(sid, nowMs(ctx))) ? "account_deleted" : "invalid_grant");
   if (!(await verifyDeviceSignature(live.session.devicePub, await refreshMessage(refresh, ts), body.sig))) {
     return unauthorized("invalid_device_proof");
   }

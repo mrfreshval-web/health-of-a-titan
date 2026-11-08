@@ -149,7 +149,7 @@ class WhoopSyncerTest {
 
     private val log = InMemorySyncLogStore()
 
-    private fun syncer(dao: FakeMetricDao, store: WhoopCredentialStore = InMemoryWhoopCredentialStore(WhoopCredentials("hs1.4242.s", "4242"))): WhoopSyncer {
+    private fun syncer(dao: FakeMetricDao, store: WhoopCredentialStore = InMemoryWhoopCredentialStore(WhoopCredentials("4242", legacySession = "hs1.4242.s"))): WhoopSyncer {
         val http = OkHttpClient()
         val edge = EdgeClient(EdgeConfig(server.url("/").toString(), requireHttps = false), http, HotJson)
         val tokens = WhoopAccessTokens(edge, store, clock).apply { prime("at-old", now.toEpochMilli() + 3_600_000) }

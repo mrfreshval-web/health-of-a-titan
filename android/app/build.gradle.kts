@@ -28,6 +28,9 @@ android {
         // Not a secret: the Worker address (repository variable EDGE_BASE_URL). The WHOOP client id
         // comes from the Worker (/whoop/authorize), the client secret never leaves it (ADR-03).
         buildConfigField("String", "EDGE_BASE_URL", "\"${config("EDGE_BASE_URL").orEmpty()}\"")
+        // Not a secret either: the Google OAuth Web client id (A65 §8), the `aud` the Worker checks.
+        // Empty in CI and in builds without it: «Войти через Google» then says it is not set up.
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${config("GOOGLE_WEB_CLIENT_ID").orEmpty()}\"")
     }
 
     buildFeatures {
@@ -66,6 +69,7 @@ dependencies {
     implementation(project(":core:security"))
     implementation(project(":core:database"))
     implementation(project(":core:network"))
+    implementation(project(":core:account"))
     implementation(project(":integration:whoop"))
     implementation(project(":integration:healthconnect"))
     implementation(project(":feature:today"))

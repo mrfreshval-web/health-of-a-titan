@@ -35,6 +35,8 @@ import com.healthofatitan.app.core.ui.component.HotListRow
 import com.healthofatitan.app.core.ui.component.HotPendingCard
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.theme.HotType
+import com.healthofatitan.app.core.ui.text.text
+import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.whoop.WhoopActions
 import com.healthofatitan.app.feature.me.whoop.WhoopRoute
@@ -66,10 +68,12 @@ fun NavGraphBuilder.meScreen(
     rows: @Composable ColumnScope.() -> Unit = {},
     /** The card «Ты» (A61 §5.2, D-055): the profile. */
     onOpenProfile: () -> Unit = {},
+    /** «Аккаунт» (A65 §2.3): ways in, devices, sign out, delete. */
+    onOpenAccount: () -> Unit = {},
 ) {
     composable(route = HotRoute.ME) {
         if (stateful) {
-            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition, onOpenProfile, rows)
+            MeRoute(onOpenWhoop, onOpenHelp, onOpenMentor, onOpenNutrition, onOpenProfile, onOpenAccount, rows)
         } else {
             MeScreen(
                 whoop = null,
@@ -78,6 +82,7 @@ fun NavGraphBuilder.meScreen(
                 onOpenMentor = onOpenMentor,
                 onOpenNutrition = onOpenNutrition,
                 onOpenProfile = onOpenProfile,
+                onOpenAccount = onOpenAccount,
                 rows = rows,
             )
         }
@@ -96,6 +101,7 @@ const val ME_HELP_ROW_TAG = "me_help_row"
 const val ME_MENTOR_ROW_TAG = "me_mentor_row"
 const val ME_NUTRITION_ROW_TAG = "me_nutrition_row"
 const val ME_PROFILE_ROW_TAG = "me_profile_row"
+const val ME_ACCOUNT_ROW_TAG = "me_account_row"
 
 @HiltViewModel
 class MeViewModel @Inject constructor(connection: WhoopConnection, profile: ProfileSettingsStore) : ViewModel() {
@@ -113,6 +119,7 @@ private fun MeRoute(
     onOpenMentor: () -> Unit,
     onOpenNutrition: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenAccount: () -> Unit,
     rows: @Composable ColumnScope.() -> Unit,
     viewModel: MeViewModel = hiltViewModel(),
 ) {
@@ -125,6 +132,7 @@ private fun MeRoute(
         onOpenMentor = onOpenMentor,
         onOpenNutrition = onOpenNutrition,
         onOpenProfile = onOpenProfile,
+        onOpenAccount = onOpenAccount,
         profile = profile,
         rows = rows,
     )
@@ -141,6 +149,7 @@ fun MeScreen(
     onOpenProfile: () -> Unit = {},
     profile: ProfileSettings? = null,
     rows: @Composable ColumnScope.() -> Unit = {},
+    onOpenAccount: () -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -206,6 +215,16 @@ fun MeScreen(
                 caption = whoopCaption(whoop),
                 divider = false,
                 modifier = Modifier.testTag(ME_WHOOP_ROW_TAG),
+            )
+        }
+        // A65 §2.3: the account sits after the connections — ways in, devices, sign out, delete.
+        HotCard(modifier = Modifier.fillMaxWidth()) {
+            HotListRow(
+                title = AccountTexts.TITLE.text(),
+                onClick = onOpenAccount,
+                caption = AccountTexts.ROW_CAPTION.text(),
+                divider = false,
+                modifier = Modifier.testTag(ME_ACCOUNT_ROW_TAG),
             )
         }
         HotPendingCard(

@@ -39,11 +39,15 @@ import com.healthofatitan.app.core.database.dao.WeekDao
 import com.healthofatitan.app.integration.whoop.week.WeekPathBridge
 import com.healthofatitan.app.integration.whoop.week.WeekRepository
 import com.healthofatitan.app.integration.whoop.week.WeekSignals
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import com.healthofatitan.app.integration.whoop.day.TodayMarksRepository
 import com.healthofatitan.app.integration.whoop.day.TodayMorning
+import com.healthofatitan.app.integration.whoop.day.TrainingGate
 import com.healthofatitan.app.integration.whoop.day.WeekPlanSource
+import com.healthofatitan.app.integration.whoop.day.withoutTraining
 import com.healthofatitan.app.core.database.dao.TodayDao
 import dagger.Module
 import dagger.Provides
@@ -58,6 +62,7 @@ import java.io.File
 import okhttp3.OkHttpClient
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import javax.inject.Singleton
 
 @Module
@@ -218,11 +223,27 @@ object WhoopModule {
     /** Tasks of the day come from the week (A52 §2.2): the real source replaces the legacy one. */
     @Provides
     @Singleton
-    fun provideWeekPlan(week: WeekRepository): WeekPlanSource = week
+    fun provideWeekPlan(week: WeekRepository, gate: java.util.Optional<TrainingGate>): WeekPlanSource {
+        val g = gate.orElse(null) ?: return week
+        // S1b: a hidden training is not offered on «Сегодня»; an unreadable gate hides it (the strictest wins).
+        val hidden = g.hidden().catch { emit(true) }
+        return object : WeekPlanSource {
+            override fun week(day: LocalDate) = week.week(day)
+            override fun candidates(day: LocalDate) = combine(week.candidates(day), hidden) { tasks, h -> tasks.withoutTraining(h) }
+        }
+    }
 
     @Provides
     @Singleton
     fun provideTodayMorning(checkin: CheckinDao, dawn: DawnRepository): TodayMorning = TodayMorning(CheckinMorningSelf(checkin), dawn)
+}
+
+/** `:feature:training` binds the [TrainingGate] (S1b); without it «Сегодня» offers the training as before. */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class TrainingGateModule {
+    @dagger.BindsOptionalOf
+    abstract fun trainingGate(): TrainingGate
 }
 
 /** «Путь» (claude/path-v1) may bind a [WeekPathBridge]; until then the week runs without it (A57 §4.3). */

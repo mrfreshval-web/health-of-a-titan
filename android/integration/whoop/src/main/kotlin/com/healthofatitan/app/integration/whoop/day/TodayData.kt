@@ -5,6 +5,7 @@ import com.healthofatitan.app.core.database.dao.TodayDao
 import com.healthofatitan.app.core.database.entity.TodayMarkEntity
 import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.Safety
+import com.healthofatitan.app.domain.today.TaskKind
 import com.healthofatitan.app.domain.today.TaskMove
 import com.healthofatitan.app.domain.today.WeekPlan
 import kotlinx.coroutines.flow.Flow
@@ -90,6 +91,20 @@ interface WeekPlanSource {
     /** Candidates for the tasks of [day], each tied to a week goal ([DayTask.weekGoalId]). */
     fun candidates(day: LocalDate): Flow<List<DayTask>>
 }
+
+/**
+ * Whether the training of the day is hidden for this person right now (audit 08.11 S1b): a crisis
+ * on the safety bus, a profile with «к врачу» or no program (pregnancy). Bound by `:feature:training`
+ * from the same profile and bus the training screen reads, so «Сегодня» never offers a workout the
+ * training screen would hide.
+ */
+fun interface TrainingGate {
+    fun hidden(): Flow<Boolean>
+}
+
+/** The tasks of the day when the training is hidden: no workout task, from the plan or from the week. */
+fun List<DayTask>.withoutTraining(hidden: Boolean): List<DayTask> =
+    if (hidden) filter { it.kind != TaskKind.TRAINING } else this
 
 /** What overrides «Сегодня» today (A46 §4.8). :app binds it from the crisis log and the state cards. */
 fun interface TodaySafetySource {

@@ -41,6 +41,8 @@ import com.healthofatitan.app.feature.me.consent.AGE_GATE_BACK_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_CHECK_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_CONTINUE_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_HELP_TAG
+import com.healthofatitan.app.feature.me.consent.AGE_GATE_SAVE_FAILED_TAG
+import com.healthofatitan.app.feature.me.consent.LOADING_TIMEOUT_MS
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_TAG
 import com.healthofatitan.app.feature.me.consent.AGE_GATE_UNDER_TAG
 import com.healthofatitan.app.feature.me.ME_MENTOR_ROW_TAG
@@ -443,6 +445,32 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(SOS_SCREEN_TAG).assertExists()
         compose.onNodeWithTag(AGE_GATE_TAG).assertDoesNotExist()
         compose.onNodeWithTag(SOS_CALL_112_TAG).assertExists()
+    }
+
+    @Test
+    fun `R-13 while the consent journal loads help is on screen, then the question comes`() {
+        gate = AgeGate.LOADING
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme { HotApp(navController = nav, stateful = false, ageGate = gate) }
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithTag(AGE_GATE_HELP_TAG).assertExists()
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(TODAY_SCREEN_TAG).assertDoesNotExist()
+        compose.mainClock.advanceTimeBy(LOADING_TIMEOUT_MS + 500)
+        compose.mainClock.autoAdvance = true
+        compose.onNodeWithTag(AGE_GATE_CHECK_TAG).assertExists()
+    }
+
+    @Test
+    fun `R-13 a failed save says so`() {
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme { HotApp(navController = nav, stateful = false, ageGate = AgeGate.ASK, ageGateSaveFailed = true) }
+        }
+        compose.onNodeWithTag(AGE_GATE_SAVE_FAILED_TAG).assertExists()
     }
 
     @Test

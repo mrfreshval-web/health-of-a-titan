@@ -58,8 +58,8 @@ enum class Restriction {
  * 4. every consumer has a policy for every flag: the `when` below is exhaustive, so a new flag
  *    without a policy does not compile and CI fails (L-05).
  *
- * **Черновик, ждёт ревью Агентов 3, 10 и 12:** the rows of the flags without a producer in this
- * slice. The rows of the crisis (A07 §4.3) and of `ED_CARE` (A60 §3.4) follow the artifacts.
+ * Ревью Агента 3 · 2026-11-08; Агенты 10 и 12 — строки нагрузки. The rows of the crisis
+ * (A07 §4.3) and of `ED_CARE` (A60 §3.4, A63 §5.2) follow the artifacts.
  */
 object SafetyPolicy {
     private val STOP = setOf(Restriction.SOBER, Restriction.HELP_FIRST, Restriction.NO_COACHING, Restriction.NO_PUSH)
@@ -86,8 +86,10 @@ object SafetyPolicy {
     private fun today(flag: SafetyFlag): Set<Restriction> = when (flag) {
         SafetyFlag.EMERGENCY, SafetyFlag.CRISIS_L2, SafetyFlag.CRISIS_L3 -> STOP
         SafetyFlag.SICK -> setOf(Restriction.NO_LOAD)
-        SafetyFlag.PREGNANT, SafetyFlag.POSTPARTUM_12M -> setOf(Restriction.INTENSITY_CAP, Restriction.HIDE_WEIGHT)
-        SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT)
+        // Food windows are not a tool in pregnancy and lactation (review of Agent 3, П-1).
+        SafetyFlag.PREGNANT -> setOf(Restriction.INTENSITY_CAP, Restriction.HIDE_WEIGHT, Restriction.HIDE_FOOD_WINDOWS)
+        SafetyFlag.POSTPARTUM_12M -> setOf(Restriction.INTENSITY_CAP, Restriction.HIDE_WEIGHT)
+        SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT, Restriction.HIDE_FOOD_WINDOWS)
         SafetyFlag.ED_CARE -> ED_HIDDEN
         SafetyFlag.MEDS_HR, SafetyFlag.CHRONIC, SafetyFlag.INJURY, SafetyFlag.SCREEN_NOT_CLEARED -> setOf(Restriction.INTENSITY_CAP)
         SafetyFlag.STORM -> setOf(Restriction.SOBER)
@@ -99,15 +101,19 @@ object SafetyPolicy {
 
     private fun week(flag: SafetyFlag): Set<Restriction> = when (flag) {
         SafetyFlag.EMERGENCY, SafetyFlag.CRISIS_L2, SafetyFlag.CRISIS_L3 -> STOP + Restriction.HIDE_SKEWS + Restriction.NO_FITNESS_AGE
-        SafetyFlag.SICK, SafetyFlag.MEDS_HR, SafetyFlag.HEALTH_ANXIETY -> setOf(Restriction.NO_FITNESS_AGE)
-        SafetyFlag.PREGNANT, SafetyFlag.POSTPARTUM_12M -> setOf(Restriction.NO_FITNESS_AGE, Restriction.HIDE_WEIGHT)
-        SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT)
+        // The fitness age reads the resting pulse (HUNT, A52 §2.8): wrong with these (П-2).
+        SafetyFlag.SICK, SafetyFlag.MEDS_HR, SafetyFlag.MEDS_PSY, SafetyFlag.CHRONIC, SafetyFlag.ATYPICAL_PHYSIO,
+        SafetyFlag.HEALTH_ANXIETY,
+        -> setOf(Restriction.NO_FITNESS_AGE)
+        SafetyFlag.PREGNANT -> setOf(Restriction.NO_FITNESS_AGE, Restriction.HIDE_WEIGHT, Restriction.HIDE_FOOD_WINDOWS)
+        SafetyFlag.POSTPARTUM_12M -> setOf(Restriction.NO_FITNESS_AGE, Restriction.HIDE_WEIGHT)
+        SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT, Restriction.HIDE_FOOD_WINDOWS)
         SafetyFlag.ED_CARE -> ED_HIDDEN + Restriction.NO_FITNESS_AGE
         SafetyFlag.STORM -> setOf(Restriction.HIDE_SKEWS, Restriction.NO_FITNESS_AGE)
         SafetyFlag.GRIEF -> setOf(Restriction.SOBER, Restriction.NO_PUSH, Restriction.HIDE_SKEWS)
-        SafetyFlag.MENOPAUSE, SafetyFlag.MEDS_PSY, SafetyFlag.CHRONIC, SafetyFlag.INJURY, SafetyFlag.SCREEN_NOT_CLEARED,
+        SafetyFlag.MENOPAUSE, SafetyFlag.INJURY, SafetyFlag.SCREEN_NOT_CLEARED,
         SafetyFlag.AGE_65P, SafetyFlag.RETURN, SafetyFlag.LIGHT_WEEK, SafetyFlag.CALIBRATION, SafetyFlag.MANUAL,
-        SafetyFlag.ATYPICAL_PHYSIO, SafetyFlag.CYCLE,
+        SafetyFlag.CYCLE,
         -> emptySet()
     }
 
@@ -116,8 +122,10 @@ object SafetyPolicy {
         SafetyFlag.SICK -> setOf(Restriction.PATH_STANDS)
         SafetyFlag.GRIEF -> setOf(Restriction.SOBER, Restriction.PATH_STANDS)
         SafetyFlag.STORM, SafetyFlag.LIGHT_WEEK -> setOf(Restriction.PATH_GENTLE)
-        SafetyFlag.PREGNANT, SafetyFlag.POSTPARTUM_12M, SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT)
-        SafetyFlag.ED_CARE -> setOf(Restriction.HIDE_WEIGHT, Restriction.HIDE_BODY_PHOTO, Restriction.HIDE_CALORIES)
+        SafetyFlag.PREGNANT, SafetyFlag.LACTATING -> setOf(Restriction.HIDE_WEIGHT, Restriction.HIDE_FOOD_WINDOWS)
+        SafetyFlag.POSTPARTUM_12M -> setOf(Restriction.HIDE_WEIGHT)
+        // «Форма» and «Топливо» are hidden too, not only weight (A63 §5.2, П-2а)
+        SafetyFlag.ED_CARE -> ED_HIDDEN
         SafetyFlag.MENOPAUSE, SafetyFlag.MEDS_HR, SafetyFlag.MEDS_PSY, SafetyFlag.CHRONIC, SafetyFlag.INJURY,
         SafetyFlag.SCREEN_NOT_CLEARED, SafetyFlag.AGE_65P, SafetyFlag.RETURN, SafetyFlag.HEALTH_ANXIETY,
         SafetyFlag.CALIBRATION, SafetyFlag.MANUAL, SafetyFlag.ATYPICAL_PHYSIO, SafetyFlag.CYCLE,

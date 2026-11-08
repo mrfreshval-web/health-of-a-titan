@@ -29,7 +29,7 @@ object SafetyEventKinds {
     /**
      * The codes of the profile of specifics (A41, `medical_flags`) that start `ED_CARE`, and the
      * reason each stands for (A60 §3.4). Of several at once the longer cooldown wins (`body`).
-     * **Ждёт ревью Агента 3:** `underweight_reported` as `body`.
+     * `ed_signals` — самоотметка в анкете, не сигналы A19. Ревью Агента 3 · 2026-11-08: принято.
      */
     val ED_PROFILE_CODES: Map<String, String> = mapOf(
         "ed_history" to REASON_SELF_REPORT,

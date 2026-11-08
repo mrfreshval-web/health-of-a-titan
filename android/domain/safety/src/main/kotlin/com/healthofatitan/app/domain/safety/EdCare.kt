@@ -100,10 +100,9 @@ data class EdCareState(
             add(Restriction.HIDE_BODY_PHOTO)
             if (step < EdCareRules.STEP_FOOD_NO_NUMBERS) add(Restriction.HIDE_FOOD_TALK)
             if (EdCareReturn.PROTEIN !in returned) add(Restriction.HIDE_NUTRIENTS)
-            if (EdCareReturn.WEIGHT_TREND !in returned) {
-                add(Restriction.HIDE_WEIGHT)
-                add(Restriction.NO_FITNESS_AGE)
-            }
+            if (EdCareReturn.WEIGHT_TREND !in returned) add(Restriction.HIDE_WEIGHT)
+            // The fitness age is a number about the body: HUNT reads the waist too (A52 §2.8, П-3).
+            if (EdCareReturn.WEIGHT_TREND !in returned || EdCareReturn.FORM !in returned) add(Restriction.NO_FITNESS_AGE)
         }
     }
 

@@ -118,6 +118,32 @@ class SafetyBusRulesTest {
     }
 
     @Test
+    fun `after the exit the fitness age opens only with the weight trend and the form`() {
+        val enter = e(SafetyEvents.ED_CARE_ENTER, EdCareReason.SIGNALS.code)
+        val exit = e(SafetyEvents.ED_CARE_EXIT, at = t0 + 8 * day)
+        val step3 = e(SafetyEvents.ED_CARE_STEP, "3", t0 + 9 * day)
+        val weight = e(SafetyEvents.ED_CARE_RETURN, EdCareReturn.WEIGHT_TREND.code, t0 + 9 * day + 1)
+        val form = e(SafetyEvents.ED_CARE_RETURN, EdCareReturn.FORM.code, t0 + 9 * day + 2)
+        val weightOnly = project(enter, exit, step3, weight, now = t0 + 10 * day)
+        assertFalse(weightOnly.forbids(SafetyConsumer.WEEK, Restriction.HIDE_WEIGHT))
+        assertTrue(weightOnly.forbids(SafetyConsumer.WEEK, Restriction.NO_FITNESS_AGE), "the waist is not back yet")
+        val both = project(enter, exit, step3, weight, form, now = t0 + 10 * day)
+        assertFalse(both.forbids(SafetyConsumer.WEEK, Restriction.NO_FITNESS_AGE))
+        assertTrue(both.forbids(SafetyConsumer.WEEK, Restriction.HIDE_CALORIES))
+    }
+
+    @Test
+    fun `review of Agent 3 rows - food windows in pregnancy, fitness age with pulse changers, the path under ED_CARE`() {
+        listOf(SafetyFlag.PREGNANT, SafetyFlag.LACTATING).forEach { f ->
+            SafetyConsumer.entries.forEach { c -> assertTrue(Restriction.HIDE_FOOD_WINDOWS in SafetyPolicy.of(c, f), "$f $c") }
+        }
+        listOf(SafetyFlag.MEDS_PSY, SafetyFlag.CHRONIC, SafetyFlag.ATYPICAL_PHYSIO).forEach { f ->
+            assertTrue(Restriction.NO_FITNESS_AGE in SafetyPolicy.of(SafetyConsumer.WEEK, f), "$f")
+        }
+        assertEquals(SafetyPolicy.ED_HIDDEN, SafetyPolicy.of(SafetyConsumer.PATH, SafetyFlag.ED_CARE))
+    }
+
+    @Test
     fun `nothing is taken back before step 3, and a new entry closes everything again`() {
         val enter = e(SafetyEvents.ED_CARE_ENTER, EdCareReason.SIGNALS.code)
         val exit = e(SafetyEvents.ED_CARE_EXIT, at = t0 + 8 * day)

@@ -115,6 +115,9 @@ class MainActivity : ComponentActivity() {
 
     private var pendingRoute by mutableStateOf<String?>(null)
 
+    /** Writing `age18` failed: the gate shows «Не получилось сохранить» (review of Agent 10). */
+    private var ageSaveFailed by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -162,7 +165,11 @@ class MainActivity : ComponentActivity() {
                         onRassvetOffered = ::markRassvetOffered,
                         persona = mentorPrefs.persona,
                         ageGate = gate,
-                        onAdultConfirmed = { lifecycleScope.launch { runCatching { ageGate.confirmAdult() } } },
+                        onAdultConfirmed = {
+                            ageSaveFailed = false
+                            lifecycleScope.launch { ageSaveFailed = runCatching { ageGate.confirmAdult() }.isFailure }
+                        },
+                        ageGateSaveFailed = ageSaveFailed,
                     )
                 }
             }

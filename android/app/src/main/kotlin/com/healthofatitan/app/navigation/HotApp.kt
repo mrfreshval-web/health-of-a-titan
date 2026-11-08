@@ -136,6 +136,7 @@ fun RassvetStep.route(): String = when (this) {
  *   whole app and nothing of it can be seen or tapped; SOS is never behind it — the tile, the
  *   shortcut and «Помощь» on the gate open it over the gate. Tests start confirmed.
  * @param onAdultConfirmed «Мне есть 18 лет» was confirmed (written as `ConsentRecord age18`).
+ * @param ageGateSaveFailed writing `age18` failed: the gate asks to try again.
  */
 @Composable
 fun HotApp(
@@ -150,6 +151,7 @@ fun HotApp(
     persona: MentorPersona? = null,
     ageGate: AgeGate = AgeGate.CONFIRMED,
     onAdultConfirmed: () -> Unit = {},
+    ageGateSaveFailed: Boolean = false,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -342,6 +344,7 @@ fun HotApp(
                 onUnderChange = { underage = it },
                 onConfirm = onAdultConfirmed,
                 onHelp = { navController.openSos() },
+                saveFailed = ageGateSaveFailed,
             )
         }
     }

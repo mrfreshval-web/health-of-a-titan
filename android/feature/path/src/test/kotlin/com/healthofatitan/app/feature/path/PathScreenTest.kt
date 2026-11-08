@@ -88,6 +88,9 @@ class PathScreenTest {
     @Test
     fun `the slice has 17 talkback nodes and never names a colour`() {
         compose.setContent { HotTheme { PathScreen(PathUi(data(goal())), PathActions(), still = true) } }
+        // A66 §5.3: «Срез мира» lives one level down, under «Из чего состоит цель ›»
+        compose.onNodeWithTag("path_star", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag(PATH_PARTS_TAG).performScrollTo().performClick()
         val tags = listOf("path_star") + (SliceGeometry.ARCS + SliceGeometry.SLABS + SliceGeometry.CURRENTS).map(::partTag) +
             listOf("path_given", PATH_HORIZON_TAG)
         assertEquals(17, tags.size)
@@ -106,7 +109,9 @@ class PathScreenTest {
     @Test
     fun `a paused goal keeps the light and seats the titan of the horizon`() {
         compose.setContent { HotTheme { PathScreen(PathUi(data(goal(GoalStatus.PAUSED))), PathActions(), still = true) } }
+        // the milestone card keeps the light and shows no dates (A66 §5.4, В4)
         compose.onNodeWithText(PathCopy.PAUSED_TITLE).performScrollTo().assertExists()
+        compose.onNodeWithTag(PATH_PARTS_TAG).performScrollTo().performClick()
         compose.onNodeWithText(PathCopy.HORIZON_SEATED).performScrollTo().assertExists()
     }
 

@@ -5,6 +5,7 @@ import com.healthofatitan.app.core.ui.theme.PathColors
 import com.healthofatitan.app.domain.path.PathCopy
 import com.healthofatitan.app.domain.today.StopWords
 import com.healthofatitan.app.feature.path.logic.PathGiven
+import com.healthofatitan.app.feature.path.logic.PathV3Copy
 import org.junit.Test
 import java.io.File
 import kotlin.math.max
@@ -19,7 +20,7 @@ import kotlin.test.assertTrue
  */
 class PathRedLinesTest {
 
-    private val texts = PathCopy.all() + PathGiven.words()
+    private val texts = PathCopy.all() + PathGiven.words() + PathV3Copy.all()
 
     @Test
     fun `no stop word and no word of P-19 in any text of the path`() {

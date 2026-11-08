@@ -81,6 +81,7 @@ import com.healthofatitan.app.feature.mentor.MENTOR_MENU_TAG
 import com.healthofatitan.app.feature.mentor.MENTOR_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PATH_EMPTY_TAG
 import com.healthofatitan.app.feature.path.PATH_LOOK_BACK_TAG
+import com.healthofatitan.app.feature.path.PATH_PARTS_TAG
 import com.healthofatitan.app.feature.path.PATH_NAME_GOAL_TAG
 import com.healthofatitan.app.feature.path.PATH_SCREEN_TAG
 import com.healthofatitan.app.feature.path.PATH_SLICE_TAG
@@ -344,8 +345,10 @@ class HotAppNavigationTest {
     fun `path tab shows the slice of the world and names a goal in the ritual, help in one tap`() {
         launch()
         compose.onNodeWithTag(HotTab.PATH.testTag).performClick()
-        compose.onNodeWithTag(PATH_SLICE_TAG).assertExists()
         compose.onNodeWithTag(PATH_EMPTY_TAG).assertExists()
+        // A66 §5.3: the slice of the world is the second level, under «Из чего состоит цель ›»
+        compose.onNodeWithTag(PATH_PARTS_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(PATH_SLICE_TAG).assertExists()
         compose.onNodeWithTag(PATH_NAME_GOAL_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(RITUAL_SCREEN_TAG).assertExists()
         compose.onNodeWithTag(RITUAL_HELP_TAG).performClick()

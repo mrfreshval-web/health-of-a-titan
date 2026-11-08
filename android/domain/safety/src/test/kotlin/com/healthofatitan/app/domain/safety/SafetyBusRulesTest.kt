@@ -90,7 +90,7 @@ class SafetyBusRulesTest {
     }
 
     @Test
-    fun `self choice «Еда без цифр» opens the exit at once`() {
+    fun `self choice food without numbers opens the exit at once`() {
         val s = project(e(SafetyEvents.ED_CARE_ENTER, EdCareReason.SELF_CHOICE.code), e(SafetyEvents.ED_CARE_EXIT, at = t0 + 1), now = t0 + 2)
         assertFalse(s.edCare.active)
     }

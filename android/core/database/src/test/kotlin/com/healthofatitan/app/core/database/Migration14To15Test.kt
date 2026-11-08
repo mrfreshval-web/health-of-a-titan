@@ -98,7 +98,7 @@ class Migration14To15Test {
     }
 
     @Test
-    fun `marking ED_CARE in the profile writes one entry; unmarking writes no exit`() = runTest {
+    fun `marking ED_CARE in the profile writes one entry, unmarking writes no exit`() = runTest {
         val db = Room.inMemoryDatabaseBuilder(context, HotDatabase::class.java).allowMainThreadQueries().build()
         try {
             val store = ProfileStore(db.nutritionDao(), db.consentDao(), db.eventLogDao()) { 10L }

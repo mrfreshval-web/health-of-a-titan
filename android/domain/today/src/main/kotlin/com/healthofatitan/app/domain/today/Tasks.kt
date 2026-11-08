@@ -110,14 +110,24 @@ object TaskRules {
      * The 1–3 tasks of the day (T-02): scenario tasks first where A46 §4 asks for them; else the
      * candidates the week offers, open before done, without those sent back to the week today;
      * Бережно takes two and mini by default; nothing at all → «Собрать неделю».
+     *
+     * Without WHOOP (S2: [Scenario.NO_SOURCE], [Scenario.SELF]) the week's tasks come as usual and
+     * «Подключить» is the last of them, never the only one.
+     *
+     * @param healthConnect the phone's steps are already given: only WHOOP is left to connect
      */
-    fun pick(scenario: Scenario, mode: DayMode?, candidates: List<DayTask>, returnedToday: Set<String>): List<DayTask> {
+    fun pick(
+        scenario: Scenario,
+        mode: DayMode?,
+        candidates: List<DayTask>,
+        returnedToday: Set<String>,
+        healthConnect: Boolean = false,
+    ): List<DayTask> {
         val fixed: List<DayTask>? = when (scenario) {
             Scenario.SAFETY -> listOf(
                 DayTask("help", TaskKind.HELP, TodayCopy.TASK_HELP),
                 DayTask("doctor", TaskKind.DOCTOR, TodayCopy.TASK_DOCTOR),
             )
-            Scenario.NO_WHOOP -> listOf(DayTask("connect_whoop", TaskKind.CONNECT_WHOOP, TodayCopy.TASK_CONNECT_WHOOP))
             Scenario.RETURN -> listOf(DayTask("start_small", TaskKind.START_SMALL, TodayCopy.TASK_START_SMALL, why = TodayCopy.TASK_START_SMALL_WHY, mini = true))
             else -> null
         }
@@ -133,10 +143,23 @@ object TaskRules {
         } else {
             emptyList()
         }
-        val picked = (head + pool).take(limit(scenario, mode))
-        return picked.ifEmpty {
+        val tail = listOfNotNull(connect(scenario, healthConnect))
+        val picked = (head + pool).take(limit(scenario, mode) - tail.size).ifEmpty {
             listOf(DayTask("assemble_week", TaskKind.ASSEMBLE_WEEK, TodayCopy.TASK_ASSEMBLE_WEEK, why = TodayCopy.TASK_ASSEMBLE_WEEK_WHY))
         }
+        return picked + tail
+    }
+
+    const val CONNECT_ID = "connect_whoop"
+
+    /** «Подключить» without WHOOP (S2): one of the day's tasks, never a wall in front of them. */
+    private fun connect(scenario: Scenario, healthConnect: Boolean): DayTask? = when (scenario) {
+        Scenario.NO_SOURCE, Scenario.SELF -> DayTask(
+            CONNECT_ID,
+            TaskKind.CONNECT_WHOOP,
+            if (healthConnect) TodayCopy.TASK_CONNECT_WHOOP else TodayCopy.TASK_CONNECT_SOURCE,
+        )
+        else -> null
     }
 
     /** T-02: only the first task has ▶, and only while it is open. */

@@ -107,6 +107,8 @@ class DayPlanRepository(
     private val morningSelf: MorningSelfSource? = null,
     /** A61 §4.1, D-055: the address form of the profile «Я»; neutral until the person chose. */
     private val address: suspend () -> AddressForm = { AddressForm.NEUTRAL },
+    /** S2: WHOOP is connected. Without it there is no night to wait for: the MANUAL day comes at once. */
+    private val whoopConnected: suspend () -> Boolean = { true },
 ) {
     private val user = HotDatabase.LOCAL_USER
     private val mutex = Mutex()
@@ -116,12 +118,14 @@ class DayPlanRepository(
      * has not scored last night, or has scored the sleep but not yet the recovery: the plan and
      * the push are made from data, never from a guess (D-027). From 09:30 a night that is still
      * missing gives a default day with the MANUAL flag (A09 REG-05), rebuilt once WHOOP catches up.
+     * Without WHOOP (S2) nothing is awaited: the MANUAL day (Ровно at most) is built at once.
      */
     suspend fun refresh(): DayPlan? = mutex.withLock {
         val now = clock.instant()
         val today = LocalDate.now(clock)
         val yesterday = today.minusDays(1)
-        val early = LocalTime.now(clock).isBefore(MANUAL_FROM)
+        val whoop = runCatching { whoopConnected() }.getOrDefault(true)
+        val early = whoop && LocalTime.now(clock).isBefore(MANUAL_FROM)
         val rows = metricDao.metricsForDays(user, listOf(today.toString(), yesterday.toString()))
         fun row(day: LocalDate, ref: MetricRef): MetricDailyEntity? =
             rows.firstOrNull { it.dayKey == day.toString() && it.metricId == ref.id && it.metricVersion == ref.version }
@@ -187,7 +191,7 @@ class DayPlanRepository(
                 rrZ = row(today, Metrics.RR_Z)?.value,
                 rhrZStreakGe2 = rhrHigh,
             ),
-            data = DataFacts(baselineNights = baselineNights, historyDays = historyDays, coverage = ors?.coverage ?: 0.0, whoopToday = sleep != null),
+            data = DataFacts(baselineNights = baselineNights, historyDays = historyDays, coverage = ors?.coverage ?: 0.0, whoopToday = sleep != null, whoopConnected = whoop),
             yesterday = YesterdayFacts(
                 regime = yPlan?.let { p -> Regime.entries.firstOrNull { it.name == p.regime } },
                 signals = yPlan?.signals?.split(',')?.filter { it.isNotBlank() }?.toSet().orEmpty(),

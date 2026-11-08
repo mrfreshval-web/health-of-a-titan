@@ -250,7 +250,10 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
     val connected = whoop?.connected == true
     val plan: DayView? = day?.plan?.takeIf { day.planToday }
     val nightReady = plan != null && DayFlag.MANUAL !in plan.flags
-    val mode = plan?.regime?.dayMode()
+    // S2: without WHOOP the MANUAL day is shown too, its mode never above Ровно (A09 REG-05).
+    val mode = plan?.regime?.dayMode()?.let { if (connected) it else MeRules.withoutWhoop(it) }
+    val estimate = plan != null && DayFlag.MANUAL in plan.flags
+    val phone = day?.steps as? PhoneSteps.Ready
     val glance = state.glance
     val nowInstant = now.atZone(zone).toInstant()
     val workout = glance?.workout
@@ -267,6 +270,8 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
         returning = day?.returning == true,
         dawnDone = day?.dawnShown == true,
         workoutConfirmed = workoutConfirmed,
+        healthConnect = phone != null,
+        selfReported = day?.self != null,
     )
     val scenario = Scenarios.of(facts)
     val sleepHours = glance?.sleep?.takeIf { it.wakeDay == today }?.hours ?: state.metrics.sleepHours?.value?.takeIf { state.metrics.dayKey == today }
@@ -281,11 +286,11 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
             needMinutes = glance?.sleep?.takeIf { it.wakeDay == today }?.needHours?.let { (it * 60).roundToInt() },
             self = day?.self,
             baselineNights = whoop?.baselineNights ?: 0,
+            whoopConnected = connected,
         ),
     )
     // the cycle that runs today (it may have started yesterday evening)
     val cycle = glance?.cycle?.takeIf { !it.start.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }
-    val phone = day?.steps as? PhoneSteps.Ready
     val dinner = plan?.items?.firstOrNull { it.id == DayEngine.Ids.DINNER }?.let { it.endMin ?: it.startMin }
     val prep = plan?.let {
         SleepPrep(
@@ -315,7 +320,7 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
     )
     val done = marks?.done.orEmpty()
     val candidates = day?.candidates.orEmpty().map { if (it.id in done) it.copy(done = true) else it }
-    val tasks = TaskRules.pick(scenario, mode, candidates, marks?.toWeek.orEmpty())
+    val tasks = TaskRules.pick(scenario, mode, candidates, marks?.toWeek.orEmpty(), healthConnect = phone != null)
         .map { if (it.id in done) it.copy(done = true) else it }
     val rhythm = RhythmRules.build(
         RhythmInput(
@@ -325,6 +330,7 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
             dawnDone = day?.dawnShown == true,
             dayClosed = day?.eveningAnswered == today || (day?.eveningAnswered == today.minusDays(1) && now.hour < 4),
             sleep = if (plan != null) prep else null,
+            estimate = estimate,
         ),
     )
     return TodayView(scenario, Scenarios.light(scenario, now), me, supports, tasks, rhythm, TodayLayout.blocks(scenario, now))

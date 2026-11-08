@@ -21,6 +21,7 @@ import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.core.ui.theme.HotType
+import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.ItemKind
 import com.healthofatitan.app.domain.engine.ItemStatus
 import com.healthofatitan.app.domain.engine.Regime
@@ -105,12 +106,39 @@ class TodayPolishTest {
 
     @Test
     fun `scenarios follow the data`() {
-        assertEquals(Scenario.NO_WHOOP, todayView(TodayUiState(), null).scenario)
+        assertEquals(Scenario.NO_SOURCE, todayView(TodayUiState(), null).scenario)
         assertEquals(Scenario.DAY, todayView(TodayUiState(whoop = whoop), day()).scenario)
         assertEquals(Scenario.SAFETY, todayView(TodayUiState(whoop = whoop), day(safety = Safety.CRISIS)).scenario)
         assertEquals(Scenario.RETURN, todayView(TodayUiState(whoop = whoop), day().copy(returning = true)).scenario)
         val noWhoop = todayView(TodayUiState(), null)
-        assertEquals(listOf(TaskKind.CONNECT_WHOOP), noWhoop.tasks.map { it.kind })
+        assertEquals(TaskKind.CONNECT_WHOOP, noWhoop.tasks.last().kind)
+    }
+
+    /** S2: the MANUAL day without WHOOP is shown — the week's tasks, «Закрыть день», the mode as an estimate. */
+    private val manual = plan.copy(flags = setOf(DayFlag.MANUAL, DayFlag.DATA_LIMITED), regime = Regime.BOOST)
+
+    @Test
+    fun `S2 a day without WHOOP is lived by the MANUAL plan`() {
+        val noWhoop = TodayUiState(whoop = whoop.copy(connected = false, baselineNights = 0))
+        val morning = todayView(noWhoop, day().copy(plan = manual))
+        assertEquals(Scenario.NO_SOURCE, morning.scenario)
+        assertEquals(listOf(TaskKind.TRAINING, TaskKind.FOCUS, TaskKind.CONNECT_WHOOP), morning.tasks.map { it.kind })
+        assertEquals(TodayCopy.TASK_CONNECT_SOURCE, morning.tasks.last().title)
+        assertTrue(morning.rhythm.windows.isNotEmpty(), "the windows of the default day")
+        assertTrue(morning.rhythm.estimate)
+        assertNull(morning.me.mode, "4.1: the mode waits for a source")
+
+        val self = todayView(noWhoop, day().copy(plan = manual, self = 3))
+        assertEquals(Scenario.SELF, self.scenario)
+        assertEquals(com.healthofatitan.app.domain.today.DayMode.ROVNO, self.me.mode, "never above Ровно without WHOOP")
+        assertTrue(self.me.estimate)
+
+        val evening = day(today.atTime(20, 30)).copy(plan = manual)
+        assertEquals(today, evening.eveningFor, "«Закрыть день» is offered")
+        val eveningView = todayView(noWhoop, evening)
+        assertTrue(eveningView.rhythm.dots.first { it.ritual == com.healthofatitan.app.domain.today.Ritual.CLOSE_DAY }.active)
+
+        assertEquals(Scenario.SAFETY, todayView(noWhoop, day(safety = Safety.CRISIS).copy(plan = manual, self = 3)).scenario)
     }
 
     @Test

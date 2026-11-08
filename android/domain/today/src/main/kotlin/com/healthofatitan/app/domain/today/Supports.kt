@@ -166,7 +166,8 @@ object Supports {
 
     /** The five columns in their order (A46 §2.3). Never a red tone (T-04), always a source (T-11). */
     fun build(i: SupportsInput): List<SupportView> {
-        val noData = i.scenario == Scenario.NO_WHOOP
+        // No WHOOP (4.1, 4.1a): no strain; steps only from the phone's Health Connect.
+        val noData = i.scenario == Scenario.NO_SOURCE || i.scenario == Scenario.SELF
         val corridor = SupportNorms.effortCorridor(i.mode)
         val effortHidden = i.scenario == Scenario.SAFETY
         val strain = i.strain?.takeIf { !effortHidden && !noData }

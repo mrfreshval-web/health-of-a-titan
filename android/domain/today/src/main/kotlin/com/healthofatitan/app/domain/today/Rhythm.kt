@@ -47,6 +47,8 @@ data class RhythmView(
     val windows: List<BodyWindow>,
     /** Бережно (A46 §4.7): «Передышка» is lit. */
     val breatherLit: Boolean,
+    /** The windows come from a default day (MANUAL: no scored night or no WHOOP): «оценка». */
+    val estimate: Boolean = false,
 )
 
 data class RhythmInput(
@@ -56,22 +58,28 @@ data class RhythmInput(
     val dawnDone: Boolean = false,
     val dayClosed: Boolean = false,
     val sleep: SleepPrep? = null,
+    /** The plan behind [sleep] is the MANUAL default day (A09 REG-05). */
+    val estimate: Boolean = false,
 )
 
 object RhythmRules {
     const val CLOSE_DAY_FROM_HOUR = 18
 
+    /**
+     * The rituals of D-043 in every scenario, with or without WHOOP (S2): a day without the strap
+     * still has its «Рассвет» (the wake deck is the self-report) and its «Закрыть день».
+     */
     fun build(i: RhythmInput): RhythmView {
-        val rituals = if (i.scenario == Scenario.NO_WHOOP) listOf(Ritual.DAWN) else i.settings.enabled(i.now.toLocalDate())
+        val rituals = i.settings.enabled(i.now.toLocalDate())
         val evening = i.now.hour >= CLOSE_DAY_FROM_HOUR || i.now.hour < 4
         val dots = rituals.map { r ->
             when (r) {
-                Ritual.DAWN -> RitualDot(r, done = i.dawnDone, active = !i.dawnDone && i.scenario != Scenario.NO_WHOOP && !evening)
+                Ritual.DAWN -> RitualDot(r, done = i.dawnDone, active = !i.dawnDone && !evening)
                 Ritual.CLOSE_DAY -> RitualDot(r, done = i.dayClosed, active = evening && !i.dayClosed)
                 else -> RitualDot(r, done = false, active = false)
             }
         }
-        val windows = i.sleep?.takeIf { i.scenario != Scenario.NO_WHOOP }?.let { s ->
+        val windows = i.sleep?.let { s ->
             listOfNotNull(
                 BodyWindow(BodyWindowKind.COFFEE, s.caffeineUntilMin),
                 BodyWindow(BodyWindowKind.DINNER, s.dinnerUntilMin),
@@ -79,7 +87,7 @@ object RhythmRules {
                 s.bedtimeMin?.let { BodyWindow(BodyWindowKind.BEDTIME, it) },
             )
         }.orEmpty()
-        return RhythmView(dots, windows, breatherLit = i.scenario == Scenario.GENTLE)
+        return RhythmView(dots, windows, breatherLit = i.scenario == Scenario.GENTLE, estimate = i.estimate && windows.isNotEmpty())
     }
 }
 

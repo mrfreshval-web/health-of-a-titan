@@ -17,7 +17,8 @@ class TodayRulesTest {
     private fun at(h: Int, m: Int = 0) = day.atTime(h, m)
 
     private fun facts(s: Scenario, now: LocalDateTime = at(12, 40)): DayFacts = when (s) {
-        Scenario.NO_WHOOP -> DayFacts(now, whoopConnected = false, nightReady = false, mode = null)
+        Scenario.NO_SOURCE -> DayFacts(now, whoopConnected = false, nightReady = false, mode = DayMode.ROVNO)
+        Scenario.SELF -> DayFacts(now, whoopConnected = false, nightReady = false, mode = DayMode.ROVNO, healthConnect = true)
         Scenario.NIGHT_PENDING -> DayFacts(now, whoopConnected = true, nightReady = false, mode = null)
         Scenario.AFTER_DAWN -> DayFacts(at(8, 30), whoopConnected = true, nightReady = true, mode = DayMode.ROVNO, dawnDone = true)
         Scenario.DAY -> DayFacts(now, whoopConnected = true, nightReady = true, mode = DayMode.ROVNO, dawnDone = true)
@@ -32,7 +33,93 @@ class TodayRulesTest {
     fun `every scenario of section 4 is reachable`() {
         Scenario.entries.forEach { assertEquals(it, Scenarios.of(facts(it)), it.id) }
         assertEquals(Scenario.SAFETY, Scenarios.of(facts(Scenario.GENTLE).copy(safety = Safety.CRISIS)))
-        assertEquals(Scenario.SAFETY, Scenarios.of(facts(Scenario.NO_WHOOP).copy(safety = Safety.CARE)))
+        assertEquals(Scenario.SAFETY, Scenarios.of(facts(Scenario.NO_SOURCE).copy(safety = Safety.CARE)))
+    }
+
+    // ---------------------------------------------------------------- S2: a day without WHOOP
+
+    private val week = listOf(
+        DayTask("training", TaskKind.TRAINING, "Силовая · 45 мин", weekGoalId = "body-training", hasMini = true, route = "training"),
+        DayTask("focus", TaskKind.FOCUS, "Фокус-блоки", weekGoalId = "work-focus", hasMini = true),
+        DayTask("wg:sleep", TaskKind.REMINDER, "Отбой вовремя", weekGoalId = "sleep"),
+    )
+
+    @Test
+    fun `S2 without WHOOP the scenario follows Health Connect and self-report`() {
+        val bare = DayFacts(at(10), whoopConnected = false, nightReady = false, mode = DayMode.ROVNO)
+        assertEquals(Scenario.NO_SOURCE, Scenarios.of(bare))
+        assertEquals(Scenario.SELF, Scenarios.of(bare.copy(healthConnect = true)), "Health Connect only")
+        assertEquals(Scenario.SELF, Scenarios.of(bare.copy(selfReported = true)), "the wake deck only")
+        assertEquals(Scenario.SELF, Scenarios.of(bare.copy(healthConnect = true, now = at(21))), "the evening stays 4.1a")
+        assertEquals(Scenario.GENTLE, Scenarios.of(bare.copy(mode = DayMode.BEREZHNO, healthConnect = true)))
+        assertEquals(Scenario.RETURN, Scenarios.of(bare.copy(returning = true)))
+        assertEquals(DayLight.DARK, Scenarios.light(Scenario.NO_SOURCE, at(10)))
+        assertEquals(DayLight.MORNING, Scenarios.light(Scenario.SELF, at(10)))
+        // help still wins over a day without WHOOP
+        listOf(Safety.SAF_01, Safety.CRISIS, Safety.CARE).forEach { safety ->
+            assertEquals(Scenario.SAFETY, Scenarios.of(bare.copy(safety = safety)))
+            assertEquals(Scenario.SAFETY, Scenarios.of(bare.copy(safety = safety, healthConnect = true, selfReported = true)))
+        }
+        assertEquals(listOf(TaskKind.HELP, TaskKind.DOCTOR), TaskRules.pick(Scenario.SAFETY, DayMode.ROVNO, week, emptySet()).map { it.kind })
+    }
+
+    @Test
+    fun `S2 without WHOOP the week's tasks come, a workout among them, and connecting is one of them`() {
+        listOf(Scenario.NO_SOURCE, Scenario.SELF).forEach { s ->
+            val tasks = TaskRules.pick(s, DayMode.ROVNO, week, emptySet())
+            assertTrue(tasks.size in 2..TaskRules.MAX, "$s: $tasks")
+            assertTrue(tasks.any { it.weekGoalId != null }, "$s: at least one task of the week")
+            assertEquals(TaskKind.TRAINING, tasks.first().kind, "$s: the workout is there and plays")
+            assertTrue(TaskRules.playable(tasks, 0))
+            assertEquals(TaskKind.CONNECT_WHOOP, tasks.last().kind, "$s: connecting is the last task")
+            assertEquals(1, tasks.count { it.kind == TaskKind.CONNECT_WHOOP })
+        }
+        assertEquals(TodayCopy.TASK_CONNECT_SOURCE, TaskRules.pick(Scenario.NO_SOURCE, DayMode.ROVNO, week, emptySet()).last().title)
+        assertEquals(TodayCopy.TASK_CONNECT_WHOOP, TaskRules.pick(Scenario.SELF, DayMode.ROVNO, week, emptySet(), healthConnect = true).last().title)
+        // nothing from the week yet: «Собрать неделю» first, connecting after it
+        assertEquals(
+            listOf(TaskKind.ASSEMBLE_WEEK, TaskKind.CONNECT_WHOOP),
+            TaskRules.pick(Scenario.NO_SOURCE, null, emptyList(), emptySet()).map { it.kind },
+        )
+        // with WHOOP there is no connecting task
+        assertTrue(TaskRules.pick(Scenario.DAY, DayMode.ROVNO, week, emptySet()).none { it.kind == TaskKind.CONNECT_WHOOP })
+    }
+
+    @Test
+    fun `S2 without WHOOP the day can be closed in the evening and the windows are an estimate`() {
+        listOf(Scenario.NO_SOURCE, Scenario.SELF).forEach { s ->
+            val morning = RhythmRules.build(RhythmInput(at(9), s, sleep = SleepPrep(bedtimeMin = 23 * 60), estimate = true))
+            assertEquals(listOf(Ritual.DAWN, Ritual.CLOSE_DAY), morning.dots.map { it.ritual })
+            assertTrue(morning.dots.first().active, "$s: the wake deck is the self-report")
+            assertEquals(4, morning.windows.size)
+            assertTrue(morning.estimate)
+            val evening = RhythmRules.build(RhythmInput(at(20, 30), s, sleep = SleepPrep(bedtimeMin = 23 * 60), estimate = true))
+            assertTrue(evening.dots.first { it.ritual == Ritual.CLOSE_DAY }.active, "$s: «Закрыть день» in the evening")
+        }
+        assertFalse(RhythmRules.build(RhythmInput(at(9), Scenario.SELF, estimate = true)).estimate, "no windows, no mark")
+    }
+
+    @Test
+    fun `S2 without WHOOP the mode is never above Rovno and is marked as an estimate`() {
+        DayMode.entries.forEach { m ->
+            val me = MeRules.build(MeInput(Scenario.SELF, m, null, Safety.NONE, 70, 420, 460, 4, 0, whoopConnected = false))
+            assertNotNull(me.mode)
+            assertTrue(me.mode != DayMode.RAZGON, "$m → ${me.mode}")
+            assertTrue(me.estimate)
+            assertNull(me.charge, "Заряд is WHOOP's")
+            assertNull(me.night)
+            assertNull(me.calibration, "no «Учусь тебя» without WHOOP")
+            assertEquals(4, me.self)
+        }
+        assertEquals(DayMode.BEREZHNO, MeRules.build(MeInput(Scenario.GENTLE, DayMode.BEREZHNO, null, Safety.NONE, null, null, null, 2, 0, whoopConnected = false)).mode)
+        val unknown = MeRules.build(MeInput(Scenario.NO_SOURCE, DayMode.ROVNO, null, Safety.NONE, null, null, null, null, 0, whoopConnected = false))
+        assertNull(unknown.mode)
+        assertFalse(unknown.estimate)
+        assertEquals(TodayCopy.LEAD_NO_SOURCE, unknown.lead)
+        val sober = MeRules.build(MeInput(Scenario.SAFETY, DayMode.ROVNO, null, Safety.CRISIS, null, null, null, 3, 0, whoopConnected = false))
+        assertNull(sober.mode)
+        assertFalse(sober.showTitan)
+        assertFalse(MeRules.build(MeInput(Scenario.DAY, DayMode.RAZGON, null, Safety.NONE, 70, 408, 460, 4, 28)).estimate)
     }
 
     @Test
@@ -62,7 +149,7 @@ class TodayRulesTest {
         val gentle = TaskRules.pick(Scenario.GENTLE, DayMode.BEREZHNO, many, emptySet())
         assertTrue(gentle.all { it.mini }, "Бережно: mini by default")
         assertEquals(TaskKind.START_SMALL, TaskRules.pick(Scenario.RETURN, DayMode.ROVNO, many, emptySet()).single().kind)
-        assertEquals(TaskKind.CONNECT_WHOOP, TaskRules.pick(Scenario.NO_WHOOP, null, many, emptySet()).single().kind)
+        assertEquals(TaskKind.CONNECT_WHOOP, TaskRules.pick(Scenario.NO_SOURCE, null, many, emptySet()).last().kind)
         assertEquals(TaskKind.START_QUESTIONS, TaskRules.pick(Scenario.NIGHT_PENDING, null, many, emptySet()).first().kind)
         assertEquals(listOf(TaskKind.HELP, TaskKind.DOCTOR), TaskRules.pick(Scenario.SAFETY, DayMode.ROVNO, many, emptySet()).map { it.kind })
         assertTrue(TaskRules.playable(TaskRules.pick(Scenario.DAY, DayMode.ROVNO, many, emptySet()), 0))
@@ -205,7 +292,7 @@ class TodayRulesTest {
         assertTrue(evening.dots.first { it.ritual == Ritual.CLOSE_DAY }.active)
         assertEquals(Ritual.CLOSE_DAY, RitualSettings().workTodayIn)
         assertEquals(Ritual.TRANSITION, RitualSettings(transition = true).workTodayIn)
-        assertEquals(listOf(Ritual.DAWN), RhythmRules.build(RhythmInput(at(9), Scenario.NO_WHOOP)).dots.map { it.ritual })
+        assertEquals(listOf(Ritual.DAWN, Ritual.CLOSE_DAY), RhythmRules.build(RhythmInput(at(9), Scenario.NO_SOURCE)).dots.map { it.ritual })
         val sunday = LocalDate.of(2026, 11, 8)
         assertEquals(DayOfWeek.SUNDAY, sunday.dayOfWeek)
         assertTrue(Ritual.WEEK_ASSEMBLY in RitualSettings().enabled(sunday))

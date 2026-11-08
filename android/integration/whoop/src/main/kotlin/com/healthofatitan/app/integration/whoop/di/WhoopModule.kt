@@ -129,9 +129,11 @@ object WhoopModule {
         loop: DailyLoopRepository,
         checkin: CheckinDao,
         profile: ProfileSettingsStore,
+        store: WhoopCredentialStore,
     ): DayPlanRepository = DayPlanRepository(
         metricDao, dayDao, alarms, SystemZoneClock, loop, CheckinMorningSelf(checkin),
         address = { profile.current().addressForm },
+        whoopConnected = { store.credentials.value != null },
     )
 
     /** Return after a pause (A18 И4.4) and the crisis log without text (A07 §4.7). */

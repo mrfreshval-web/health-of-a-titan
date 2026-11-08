@@ -75,7 +75,15 @@ class TrainingSafetyTest {
 
     @Test
     fun `an empty profile and a calm bus change nothing`() {
-        assertEquals(TrainingGuard.NONE, TrainingSafety.guard(UserConstraints.NONE, dict, SafetyState.NORMAL, lib.rules))
+        val guard = TrainingSafety.guard(UserConstraints.NONE, dict, SafetyState.NORMAL, lib.rules)
+        // Only the tier gate of A40 §3 (no tap for Экстрим) stays: it never touches a Classic session.
+        assertEquals(setOf("extreme_not_consented"), guard.codes)
+        assertTrue(guard.flags.isEmpty())
+        val engine = TrainingEngine(lib)
+        assertEquals(
+            TrainingRequests.day(engine, strength, today, TrainingPlace.GYM, SoundLevel.DEFAULT).decision,
+            TrainingRequests.day(engine, strength, today, TrainingPlace.GYM, SoundLevel.DEFAULT, guard).decision,
+        )
     }
 
     @Test

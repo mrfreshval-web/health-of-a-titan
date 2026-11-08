@@ -3,7 +3,9 @@ package com.healthofatitan.app.core.database.di
 import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
 import com.healthofatitan.app.core.database.ProfileSettingsStore
@@ -12,6 +14,7 @@ import com.healthofatitan.app.core.database.dao.ConsentDao
 import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
+import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.CheckinDao
@@ -86,7 +89,7 @@ object DatabaseModule {
     /** The shared profile of specifics (S4): nutrition and training read the same store. */
     @Provides
     @Singleton
-    fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao())
+    fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao(), db.eventLogDao(), transaction = { block -> db.withTransaction { block() } })
 
     @Provides
     fun provideTrainingLogDao(db: HotDatabase): TrainingLogDao = db.trainingLogDao()
@@ -96,6 +99,15 @@ object DatabaseModule {
 
     @Provides
     fun provideWeekDao(db: HotDatabase): WeekDao = db.weekDao()
+
+    /** The event journal (A58 §8): the safety bus reads it. */
+    @Provides
+    fun provideEventLogDao(db: HotDatabase): EventLogDao = db.eventLogDao()
+
+    /** The gate 18+ (R-13, A61 §1.3): `ConsentRecord age18`. */
+    @Provides
+    @Singleton
+    fun provideAgeGate(db: HotDatabase): AgeGateStore = AgeGateStore(db.consentDao())
 
     @Provides
     fun providePersonProfileDao(db: HotDatabase): PersonProfileDao = db.personProfileDao()

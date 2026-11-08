@@ -10,6 +10,8 @@ android {
 // Titan of the horizon; and the mentor's character under the avatar.
 dependencies {
     implementation(project(":domain:path"))
+    // The safety bus (A60 §3): PathSafety reads SafetyState instead of the goal alone.
+    implementation(project(":domain:safety"))
     // The rig of the Titan: the horizon Titan is drawn in code on the day Titan's joints (A58-VP §2).
     implementation(project(":domain:training"))
     // CrisisGuard over every free text of the ritual (A07).
@@ -23,6 +25,7 @@ dependencies {
     // The stop dictionary of A39 for the texts of the path.
     testImplementation(project(":domain:today"))
     testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

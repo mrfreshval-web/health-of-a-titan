@@ -74,7 +74,6 @@ object NutritionTexts {
             "зашифрованными, не попадают в уведомления и аналитику. Удалить можно по разделам или всё сразу; " +
             "отзыв согласия удаляет всё."
     const val CONSENT_YES = "Даю согласие"
-    const val CONSENT_REVOKE = "отозвать согласие"
 
     fun consentDate(ms: Long): String =
         "согласие " + DateTimeFormatter.ofPattern("dd.MM", Locale.ROOT).format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))

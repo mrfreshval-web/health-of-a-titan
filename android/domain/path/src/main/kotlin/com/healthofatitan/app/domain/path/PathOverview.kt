@@ -59,7 +59,7 @@ object PathOverviewBuilder {
      * @param marks the marks taken so far per component (from `path_mark`)
      * @param transferred fires that moved to the person (never taken back, P-14)
      * @param heavy a hard week («Бережно» or StormNet): one hand, Water «держим»
-     * @param safety where the holds come from (D-051: one SafetyState later; the goal and the week now)
+     * @param safety where the holds come from (D-051: the safety bus in the app; the goal and the week by default)
      */
     fun build(
         today: LocalDate,

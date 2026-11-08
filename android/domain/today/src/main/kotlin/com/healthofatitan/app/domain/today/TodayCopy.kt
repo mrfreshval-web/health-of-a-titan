@@ -11,8 +11,11 @@ object TodayCopy {
 
     // Blocks (A46 §1).
     const val BLOCK_ME = "Я сегодня"
-    const val BLOCK_SUPPORTS = "Опоры"
-    const val BLOCK_SUPPORTS_HINT = "держу за тебя"
+    /**
+     * The block «День» replaced «Опоры» on «Сегодня» (A66 §3.5): the name stays the back label of the
+     * screens it opens (the food of the day, a support), so it is the new name now.
+     */
+    const val BLOCK_SUPPORTS = DayCopy.TITLE
     const val BLOCK_TASKS = "Дела дня"
     const val BLOCK_RHYTHM = "Ритм дня"
     const val WHY_LINK = "почему так"
@@ -180,7 +183,7 @@ object TodayCopy {
 
     /** Every user-facing string above, for the stop-dictionary test (T-13). */
     fun all(): List<String> = listOf(
-        BLOCK_ME, BLOCK_SUPPORTS, BLOCK_SUPPORTS_HINT, BLOCK_TASKS, BLOCK_RHYTHM, WHY_LINK, CHARGE, CHARGE_NORM, NIGHT, YOU,
+        BLOCK_ME, BLOCK_SUPPORTS, BLOCK_TASKS, BLOCK_RHYTHM, WHY_LINK, CHARGE, CHARGE_NORM, NIGHT, YOU,
         YOU_CAPTION, NO_DATA, ESTIMATE, LEAD_NO_SOURCE,LEAD_NIGHT_PENDING, LEAD_RETURN, LEAD_SAFETY, calibration(3), need("7:40"),
         EFFORT, MOVEMENT, NUTRITION, WATER, SLEEP_TONIGHT, WATER_ADD, WATER_REMOVE, SOURCE_WHOOP_CYCLE, SOURCE_STEPS,
         SOURCE_STEPS_PHONE, SOURCE_MEALS, SOURCE_WATER, SOURCE_SLEEP_PREP, EFFORT_HIDDEN, MEAL_MARK, MEAL_UNMARK,

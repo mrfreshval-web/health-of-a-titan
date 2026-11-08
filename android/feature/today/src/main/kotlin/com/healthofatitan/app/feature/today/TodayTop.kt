@@ -2,11 +2,12 @@ package com.healthofatitan.app.feature.today
 
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.domain.today.DayMode
+import com.healthofatitan.app.domain.today.DayRowView
+import com.healthofatitan.app.domain.today.DayRules
 import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.MeRules
 import com.healthofatitan.app.domain.today.MeView
 import com.healthofatitan.app.domain.today.Scenario
-import com.healthofatitan.app.domain.today.SupportView
 import com.healthofatitan.app.domain.today.TaskKind
 import com.healthofatitan.app.domain.today.TodayCopy
 import com.healthofatitan.app.domain.today.WeekPlan
@@ -147,13 +148,10 @@ object TodayTopRules {
     val frameTop: Float get() = feetY - FEET * FRAME
 
     /**
-     * The share of the closed day (A66 §1.1): the mean of the rows of the day, each at most 1. Until
-     * «День» replaces «Опоры» the supports are the rows; a support without data counts as not done.
+     * The share of the closed day (A66 §1.1): the mean of the counted rows of «День», each at most 1
+     * (under `ED_CARE` two rows, A66 §3.5). A row without a norm to count against is left out.
      */
-    fun dayShare(supports: List<SupportView>): Float {
-        if (supports.isEmpty()) return 0f
-        return supports.sumOf { (if (it.pending) 0f else it.fill.coerceIn(0f, 1f)).toDouble() }.toFloat() / supports.size
-    }
+    fun dayShare(rows: List<DayRowView>): Float = DayRules.share(rows)
 
     /** The top of the column glow as a share of the frame: from the base up by the share of the day. */
     fun glowTop(share: Float): Float = BASE - (BASE - CAPITAL) * share.coerceIn(0f, 1f)

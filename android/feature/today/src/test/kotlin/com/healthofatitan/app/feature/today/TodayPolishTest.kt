@@ -99,7 +99,7 @@ class TodayPolishTest {
         listOf(7, 13, 21).forEach { hour ->
             val view = todayView(TodayUiState(whoop = whoop), day(today.atTime(hour, 5)))
             // A66 §3.2 (mockup 05b): the scene, «Сейчас» with the tasks, the day, the rhythm
-            assertEquals(listOf(TodayBlock.ME, TodayBlock.TASKS, TodayBlock.SUPPORTS, TodayBlock.RHYTHM), view.blocks)
+            assertEquals(listOf(TodayBlock.ME, TodayBlock.TASKS, TodayBlock.DAY, TodayBlock.RHYTHM), view.blocks)
         }
         compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day()) } }
         // positionInRoot, not boundsInRoot: the scene pushes «Ритм дня» below the fold, where bounds clip to 0
@@ -151,8 +151,8 @@ class TodayPolishTest {
     }
 
     @Test
-    fun `T-04 the supports have no red, a deviation is a quiet note`() {
-        SupportPalette.all().forEach { assertFalse(SupportPalette.reddish(it), "red in the supports: $it") }
+    fun `T-04 the day has no red, a deviation is a quiet note`() {
+        SupportPalette.all().forEach { assertFalse(SupportPalette.reddish(it), "red in «День»: $it") }
         assertTrue(SupportPalette.reddish(Color(0xFFE5484D)), "the check itself knows red")
         assertNotEquals(SupportPalette.of(SupportTone.NOTE, true), SupportPalette.of(SupportTone.LIT, true))
     }
@@ -254,9 +254,10 @@ class TodayPolishTest {
                 val measurer = rememberTextMeasurer()
                 val density = LocalDensity.current
                 val card = 412.dp - HotSpacing.edge * 2 - HotSpacing.cardPadding * 2
-                val column = with(density) { ((card - 6.dp * 4) / 5).toPx() }
+                // a row of «День»: the label, the narrowest bar, a gap and the number (A66 §3.5)
+                val column = with(density) { (card - DAY_LABEL_WIDTH - DAY_BAR_MIN - 8.dp).toPx() }
                 val number = with(density) { ((card - 12.dp * 2) / 3).toPx() }
-                val supports = listOf("20,9", "23 480", "4 из 4", "14 / 14").map {
+                val supports = listOf("20,9 из 14–18", "120 мин активности", "12 из 12 приёмов", "день закрыт ✓").map {
                     it to (measurer.measure(it, MaterialTheme.typography.labelLarge, softWrap = false).size.width <= column)
                 }
                 val me = listOf("95", "11:59", "5 / 5").map {
@@ -279,7 +280,7 @@ class TodayPolishTest {
     }
 
     @Test
-    fun `the water support adds a glass at once`() {
+    fun `the day adds a glass at once`() {
         val water = mutableListOf<Int>()
         compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day(), actions = DayActions(onWater = { _, d -> water += d })) } }
         compose.onNodeWithTag(WATER_ADD_TAG).performScrollTo().performClick()

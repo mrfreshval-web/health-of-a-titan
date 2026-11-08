@@ -21,7 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,8 +53,11 @@ import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.domain.engine.DayEngine
 import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.engine.ItemStatus
+import com.healthofatitan.app.domain.today.DayBlockView
 import com.healthofatitan.app.domain.today.DayFacts
+import com.healthofatitan.app.domain.today.DayInput
 import com.healthofatitan.app.domain.today.DayLight
+import com.healthofatitan.app.domain.today.DayRules
 import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.MeInput
 import com.healthofatitan.app.domain.today.MeRules
@@ -102,7 +107,7 @@ import kotlin.math.roundToInt
 
 /**
  * Tab «Сегодня» v3 (A46 v0.3, D-042): «Как я сегодня, что держится и что нужно от меня?». Four
- * blocks in a fixed order (T-01) — «Я сегодня», «Опоры», «Дела дня», «Ритм дня» — under the header
+ * blocks in a fixed order (T-01) — «Я сегодня», «Дела дня», «День», «Ритм дня» — under the header
  * (Винс · date · profile). Every block opens its details; nothing opens by itself (T-05). The
  * graphics are placeholders until Agents 4 and 17 («Колоннада», TitanLottie).
  *
@@ -217,6 +222,7 @@ private fun TodayRoute(
             onSteps = dayModel::refreshSteps,
             onOpen = onOpenRoute,
             onWater = dayModel::water,
+            onMeal = dayModel::meal,
             onTaskDone = dayModel::taskDone,
             onTaskToWeek = dayModel::toWeek,
             onTaskBack = dayModel::backFromWeek,
@@ -239,12 +245,14 @@ data class TodayView(
     val blocks: List<TodayBlock>,
     /** The food plan of today (S3); empty without a plan. */
     val food: TodayFood = TodayFood(),
-    /** The compact «Тарелка дня» line under the supports; null without a plan or under `HIDE_FOOD_TALK`. */
+    /** The compact «Тарелка дня» line at the foot of «День»; null without a plan or under `HIDE_FOOD_TALK`. */
     val plate: PlateLine? = null,
     /** «Заряд · Ночь · Ты» under the scene (A66 §3.3). */
     val tiles: List<MetricTileView> = emptyList(),
-    /** The share of the closed day: how high the columns glow (A66 §1.1). */
+    /** The share of the closed day: how high the columns glow (A66 §1.1), by the rows of «День». */
     val dayShare: Float = 0f,
+    /** «День»: Нагрузка · Питание · Отдых (A66 §3.5). */
+    val day: DayBlockView = DayBlockView.HIDDEN,
     /** «Сейчас» and the rest of the tasks folded under it (A66 §3.4). */
     val now: NowPick = NowPick.EMPTY,
     /** The scene as one TalkBack node (A66 §3.11). */
@@ -279,6 +287,24 @@ internal fun sleepPrep(plan: DayView?, food: TodayFood): SleepPrep? = plan?.let 
         bedtimeMin = it.bedtimeMin,
         foodWindows = !food.hideTimes,
     )
+}
+
+/**
+ * Without WHOOP the load is minutes of activity, an estimate (condition 2 of Agent 3): the planned
+ * minutes of today's training once it is marked done. Null when nothing is marked.
+ */
+internal fun activityMinutes(plan: DayView?, done: Set<String>): Int? {
+    val minutes = plan?.items.orEmpty()
+        .filter { it.id == DayEngine.Ids.TRAINING && (it.status != ItemStatus.OPEN || it.id in done) }
+        .sumOf { i -> val s = i.startMin; val e = i.endMin; if (s != null && e != null && e > s) e - s else 0 }
+    return minutes.takeIf { it > 0 }
+}
+
+/** The meal «+ Еда» marks: the plan's next main meal, or the first unmarked default slot without a plan. */
+internal fun nextMealSlot(food: TodayFood, nowMin: Int, marked: Set<String>): String? = when {
+    food.quiet -> null
+    food.mealsPlanned != null -> food.next(nowMin, marked)?.slot
+    else -> TodayCopy.MEALS.map { it.first }.firstOrNull { it !in marked }
 }
 
 /** A workout counts as «just confirmed» for scenario 4.5 for three hours after its end. */
@@ -341,12 +367,13 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
     val food = day?.food ?: TodayFood()
     val prep = sleepPrep(plan, food) ?: SleepPrep(foodWindows = !food.hideTimes)
     val marks = day?.marks
+    val todayStrain = cycle?.strain ?: glance?.dayStrain?.takeIf { !it.cycleStart.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }?.strain
     val supports = Supports.build(
         SupportsInput(
             mode = mode,
             scenario = scenario,
             nowMin = now.hour * 60 + now.minute,
-            strain = cycle?.strain ?: glance?.dayStrain?.takeIf { !it.cycleStart.atZone(zone).toLocalDate().isBefore(today.minusDays(1)) }?.strain,
+            strain = todayStrain,
             kilojoule = cycle?.kilojoule,
             whoopSteps = cycle?.steps,
             phoneSteps = phone?.today,
@@ -363,13 +390,14 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
     val candidates = day?.candidates.orEmpty().map { if (it.id in done) it.copy(done = true) else it }
     val tasks = TaskRules.pick(scenario, mode, candidates, marks?.toWeek.orEmpty(), healthConnect = phone != null)
         .map { if (it.id in done) it.copy(done = true) else it }
+    val dayClosed = day?.eveningAnswered == today || (day?.eveningAnswered == today.minusDays(1) && now.hour < 4)
     val rhythm = RhythmRules.build(
         RhythmInput(
             now = now,
             scenario = scenario,
             settings = day?.rituals ?: com.healthofatitan.app.domain.today.RitualSettings(),
             dawnDone = day?.dawnShown == true,
-            dayClosed = day?.eveningAnswered == today || (day?.eveningAnswered == today.minusDays(1) && now.hour < 4),
+            dayClosed = dayClosed,
             sleep = if (plan != null) prep else null,
             estimate = estimate,
         ),
@@ -381,7 +409,28 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
         needMinutes = glance?.sleep?.takeIf { it.wakeDay == today }?.needHours?.let { (it * 60).roundToInt() },
         nightZ = state.metrics.sleepHours?.z?.takeIf { state.metrics.dayKey == today },
     )
-    val dayShare = TodayTopRules.dayShare(supports)
+    val dayBlock = DayRules.build(
+        DayInput(
+            scenario = scenario,
+            mode = mode,
+            whoopConnected = connected,
+            strain = todayStrain,
+            activityMinutes = if (connected) null else activityMinutes(plan, marks?.done.orEmpty()),
+            sick = plan?.flags?.contains(DayFlag.SICK) == true,
+            redFlag = plan?.fired?.any { it.ref.id.startsWith("SAF-") } == true,
+            safety = facts.safety,
+            mealsMarked = food.marked(marks?.meals.orEmpty()),
+            food = food,
+            nextMeal = nextMealSlot(food, now.hour * 60 + now.minute, marks?.meals.orEmpty()),
+            water = marks?.water ?: 0,
+            dayClosed = dayClosed,
+            closeDue = day?.eveningFor != null,
+            screensFromMin = plan?.windDownMin,
+            bedtimeMin = plan?.bedtimeMin,
+            trainingToday = trainingItem != null,
+        ),
+    )
+    val dayShare = dayBlock.share
     return TodayView(
         scenario = scenario,
         light = Scenarios.light(scenario, now),
@@ -394,6 +443,7 @@ fun todayView(state: TodayUiState, day: DayUiState?, zone: ZoneId = ZoneId.syste
         plate = plateLine(food, scenario, now.hour * 60 + now.minute, marks?.meals.orEmpty()),
         tiles = tiles,
         dayShare = dayShare,
+        day = dayBlock,
         now = TodayTopRules.now(tasks, scenario, day?.week),
         sceneSpoken = TodayTopRules.sceneSpoken(me.mode, tiles.firstOrNull { it.kind == MetricKind.CHARGE }, dayShare),
     )
@@ -417,6 +467,8 @@ fun TodayScreen(
     val pull = rememberPullToRefreshState()
     val marks = rememberDayMarks(actions.onToggle)
     val view = todayView(state, day)
+    // «Закрыть день» unfolds in «Ритм дня»: from its point or from the row «Отдых» of «День»
+    var closing by rememberSaveable(day?.plan?.dayKey) { mutableStateOf(false) }
     val withConnect = if (actions.onConnectWhoop === NO_CONNECT) actions.copyWith(onConnectWhoop = onConnectWhoop) else actions
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -440,9 +492,9 @@ fun TodayScreen(
                 } else {
                     Column(Modifier.padding(horizontal = TODAY_EDGE), verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap)) {
                         when (block) {
-                            TodayBlock.SUPPORTS -> BlockSupports(view, day?.today ?: LocalDate.now(), withConnect)
+                            TodayBlock.DAY -> BlockDay(view, day?.today ?: LocalDate.now(), withConnect, onCloseDay = { closing = true })
                             TodayBlock.TASKS -> BlockTasks(view, day?.today ?: LocalDate.now(), withConnect, marks)
-                            TodayBlock.RHYTHM -> BlockRhythm(view, day, withConnect, slots)
+                            TodayBlock.RHYTHM -> BlockRhythm(view, day, withConnect, slots, closing) { closing = it }
                             TodayBlock.ME -> Unit
                         }
                     }

@@ -88,10 +88,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
           FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+          AUTH_SIGNING_KEY: ${{ secrets.AUTH_SIGNING_KEY }}
+          AUTH_SIGNING_KEY_PREVIOUS: ${{ secrets.AUTH_SIGNING_KEY_PREVIOUS }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           npx wrangler deploy | tee "$RUNNER_TEMP/deploy.log"
           # Upload only the secrets that are set; values never reach the log.
-          for name in WHOOP_CLIENT_ID WHOOP_CLIENT_SECRET ALLOWED_WHOOP_USER_IDS TOKEN_ENC_KEY ANTHROPIC_API_KEY GOOGLE_TTS_API_KEY FCM_SERVICE_ACCOUNT_JSON; do
+          for name in WHOOP_CLIENT_ID WHOOP_CLIENT_SECRET ALLOWED_WHOOP_USER_IDS TOKEN_ENC_KEY ANTHROPIC_API_KEY GOOGLE_TTS_API_KEY FCM_SERVICE_ACCOUNT_JSON AUTH_SIGNING_KEY AUTH_SIGNING_KEY_PREVIOUS GOOGLE_WEB_CLIENT_ID; do
             if [ -n "${!name}" ]; then
               printf '%s' "${!name}" | npx wrangler secret put "$name" > /dev/null
               echo "secret $name: updated"

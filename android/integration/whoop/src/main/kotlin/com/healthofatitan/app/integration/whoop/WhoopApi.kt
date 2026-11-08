@@ -55,6 +55,25 @@ class WhoopApi(
         return WhoopWindow(cycles, recoveries, sleeps, workouts)
     }
 
+    /**
+     * The first name and the body data for the profile (A65 §2.4, slice А4): `first_name` only
+     * (the e-mail and the last name are not declared, so never parsed); height and max heart rate.
+     * The weight is not declared either: without a weight goal it is dropped (D-043).
+     */
+    internal suspend fun profileFacts(): WhoopProfileFacts {
+        val basic = runCatching {
+            json.decodeFromString(WhoopBasicProfile.serializer(), get(baseUrl.newBuilder().addPathSegments("developer/v2/user/profile/basic").build()))
+        }.getOrNull()
+        val body = runCatching {
+            json.decodeFromString(WhoopBody.serializer(), get(baseUrl.newBuilder().addPathSegments("developer/v2/user/measurement/body").build()))
+        }.getOrNull()
+        return WhoopProfileFacts(
+            firstName = basic?.firstName,
+            heightCm = body?.heightMeter?.let { Math.round(it * 100).toInt() },
+            maxPulse = body?.maxHeartRate,
+        )
+    }
+
     private suspend fun <T> collection(path: String, from: Instant, to: Instant, item: KSerializer<T>): List<T> {
         val pageSerializer = WhoopPage.serializer(item)
         val out = mutableListOf<T>()

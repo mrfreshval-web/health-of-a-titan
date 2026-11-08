@@ -187,7 +187,7 @@ class CrisisGuardTest {
         CrisisLevel.entries.forEach { assertEquals(it, CrisisLevel.of(it.value)) }
         assertEquals(CrisisLevel.ACUTE, CrisisLevel.of(7))
         assertEquals(CrisisLevel.NONE, CrisisLevel.of(-1))
-        assertEquals(5, CrisisSource.entries.size)
+        assertEquals(6, CrisisSource.entries.size)
     }
 
     @Test

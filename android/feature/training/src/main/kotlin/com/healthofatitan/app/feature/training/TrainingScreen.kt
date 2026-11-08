@@ -43,7 +43,12 @@ import com.healthofatitan.app.domain.training.TrainingDecision
 import com.healthofatitan.app.domain.training.TrainingEngine
 import com.healthofatitan.app.domain.training.TrainingLibrary
 import com.healthofatitan.app.domain.training.TrainingPlace
+import com.healthofatitan.app.core.database.ProfileSnapshot
+import com.healthofatitan.app.core.database.ProfileStore
+import com.healthofatitan.app.domain.safety.SafetyState
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.day.DayView
+import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -73,24 +78,44 @@ class TrainingViewModel @Inject constructor(
     private val prefs: TrainingPrefs,
     private val controller: WorkoutController,
     days: DayPlanRepository,
+    profile: ProfileStore,
+    bus: SafetyBus,
     private val clock: Clock,
 ) : ViewModel() {
 
     private val library = flow<TrainingLibrary?> { emit(content.library()) }.catch { emit(null) }
 
+    private val dictionary = flow { emit(content.profileDictionary()) }.catch { emit(null) }
+
+    /** An unreadable bus is not «no crisis»: the strictest column of TRAINING (rule 3 of the bus). */
+    private val safety = bus.state.catch { emit(SafetyState(unknown = true)) }
+
+    /** Profile and bus for the request (S1); a missing profile is the empty one (no S4 consent). */
+    private val inputs = combine(profile.profile.catch { emit(ProfileSnapshot()) }, safety, dictionary) { p, s, d -> Triple(p, s, d) }
+
+    private val base = combine(library, days.latest, prefs.place, prefs.sound, controller.run) { lib, view, place, sound, run ->
+        Base(lib, view, place, sound, run != null && !run.state.done)
+    }
+
     val state: StateFlow<TrainingUiState> =
-        combine(library, days.latest, prefs.place, prefs.sound, controller.run) { lib, view, place, sound, run ->
-            if (lib == null) return@combine TrainingUiState(loaded = true, place = place, sound = sound)
+        combine(base, inputs) { b, (snapshot, busState, dict) ->
+            val lib = b.lib ?: return@combine TrainingUiState(loaded = true, place = b.place, sound = b.sound)
+            val guard = TrainingSafety.guard(snapshot.constraints, dict, busState, lib.rules)
+            val place = b.place
+            val sound = b.sound
+            val view = b.view
             TrainingUiState(
                 loaded = true,
-                day = TrainingRequests.day(TrainingEngine(lib), view, LocalDate.now(clock), place, sound),
+                day = TrainingRequests.day(TrainingEngine(lib), view, LocalDate.now(clock), place, sound, guard),
                 poses = lib.poses,
                 reviewed = lib.reviewed,
                 place = place,
                 sound = sound,
-                running = run != null && !run.state.done,
+                running = b.running,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainingUiState())
+
+    private data class Base(val lib: TrainingLibrary?, val view: DayView?, val place: TrainingPlace, val sound: SoundLevel, val running: Boolean)
 
     fun setPlace(place: TrainingPlace) = prefs.setPlace(place)
 

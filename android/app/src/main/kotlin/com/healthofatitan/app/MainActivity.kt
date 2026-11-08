@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.healthofatitan.app.core.account.AccountGate
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.ProfileSettingsStore
@@ -33,6 +34,7 @@ import com.healthofatitan.app.domain.engine.DayFlag
 import com.healthofatitan.app.domain.today.Rassvet
 import com.healthofatitan.app.domain.today.RassvetStep
 import com.healthofatitan.app.feature.checkin.CheckinRepository
+import com.healthofatitan.app.feature.me.account.SignInRoute
 import com.healthofatitan.app.integration.whoop.day.DawnRepository
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
@@ -84,6 +86,9 @@ class MainActivity : ComponentActivity() {
 
     /** The gate as the screen reads it: a journal that cannot be read means «ask». */
     private val ageGateState: Flow<AgeGate> by lazy { ageGate.gate.catch { emit(AgeGate.ASK) } }
+
+    /** «Вход» over the app when there is no HoT account (A65, D-062); unreadable → no screen. */
+    private val accountGate: Flow<AccountGate> by lazy { whoop.accountGate.catch { emit(AccountGate.NOT_REQUIRED) } }
 
     /** State cards (A44, D-036): which morning screen is due. */
     @Inject
@@ -158,6 +163,7 @@ class MainActivity : ComponentActivity() {
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
                 val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
                 val gate by ageGateState.collectAsStateWithLifecycle(AgeGate.LOADING)
+                val account by accountGate.collectAsStateWithLifecycle(AccountGate.LOADING)
                 CompositionLocalProvider(LocalAddressForm provides addressForm) {
                     HotApp(
                         pendingRoute = pendingRoute,
@@ -173,6 +179,8 @@ class MainActivity : ComponentActivity() {
                             lifecycleScope.launch { ageSaveFailed = runCatching { ageGate.confirmAdult() }.isFailure }
                         },
                         ageGateSaveFailed = ageSaveFailed,
+                        accountGate = account,
+                        signIn = { onHelp -> SignInRoute(onHelp = onHelp) },
                     )
                 }
             }
@@ -182,7 +190,11 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         // A18 И1.2 ①: every app start refreshes the 28-day window unless it is fresh (WorkManager).
-        lifecycleScope.launch { runCatching { whoop.onAppOpen() } }
+        // A65 §3.5 first: the old WHOOP session becomes an account, then the sync uses it.
+        lifecycleScope.launch {
+            runCatching { whoop.migrateLegacySession() }
+            runCatching { whoop.onAppOpen() }
+        }
         // A18 И4.4: the date of this open (silence is counted in whole days without one).
         lifecycleScope.launch { runCatching { dailyLoop.recordOpen() } }
         lifecycleScope.launch { runCatching { steps.refresh() } }

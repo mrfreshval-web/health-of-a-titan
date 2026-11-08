@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import worker, { handle, ROUTES, VERSION } from "../src/index";
 import { bearerToken, isAllowedModel, isAllowedWhoopUser, parseList } from "../src/allowlist";
 import type { Env } from "../src/env";
-import { makeEnv, pkcePair } from "./helpers";
+import { FakeDevice, makeEnv, pkcePair } from "./helpers";
 
 const req = (method: string, path: string, headers: Record<string, string> = {}, body?: unknown) =>
   new Request(`https://edge.test${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -10,15 +10,39 @@ const req = (method: string, path: string, headers: Record<string, string> = {},
 const post = (path: string, body?: unknown, token?: string) =>
   req("POST", path, token ? { Authorization: `Bearer ${token}` } : {}, body);
 
+interface SessionBody {
+  access: string;
+  refresh: string;
+  account_id: string;
+  whoop_user_id: string;
+  whoop_access_token: string;
+  identities: Array<{ provider: string; subject: string }>;
+}
+
 /** Full login through the Worker: /whoop/authorize → (WHOOP redirect) → /whoop/token. */
-async function login(env: Env, opts: { whoop?: ReturnType<typeof makeEnv>["whoop"]; code?: string } = {}) {
+async function login(
+  env: Env,
+  opts: { whoop?: ReturnType<typeof makeEnv>["whoop"]; code?: string; device?: FakeDevice; invite?: string; noProof?: boolean } = {},
+) {
   const { verifier, challenge } = await pkcePair();
   const a = await handle(post("/whoop/authorize", { code_challenge: challenge }), env);
   const { state } = (await a.json()) as { state: string };
-  const res = await handle(post("/whoop/token", { code: opts.code ?? "good-code", state, code_verifier: verifier }), env, {
-    fetch: opts.whoop?.fetch,
-  });
+  const device = opts.device ?? (await FakeDevice.create());
+  const proof = opts.noProof ? {} : await device.login(state);
+  const res = await handle(
+    post("/whoop/token", { code: opts.code ?? "good-code", state, code_verifier: verifier, ...proof, ...(opts.invite ? { invite: opts.invite } : {}) }),
+    env,
+    { fetch: opts.whoop?.fetch },
+  );
   return res;
+}
+
+/** A legacy `hs1` session of slice 1, as the app before D-062 holds it. */
+async function legacySession(ns: ReturnType<typeof makeEnv>["ns"], whoop: ReturnType<typeof makeEnv>["whoop"]): Promise<string> {
+  whoop.validAccess.add("whoop-access-0");
+  whoop.validRefresh.add("whoop-refresh-0");
+  const tokens = { accessToken: "whoop-access-0", refreshToken: "whoop-refresh-0", expiresAt: Date.now() + 3600_000, scope: "offline" };
+  return (await ns.entry("whoop-user:4242").vault.connect("4242", tokens, true))!;
 }
 
 describe("GET /health", () => {
@@ -54,6 +78,16 @@ describe("routes", () => {
       const res = await handle(post(path, {}), env);
       expect(res.status).toBe(503);
       expect(await res.json()).toEqual({ error: "not_configured" });
+    }
+  });
+
+  it("account routes answer 503 without the signing key or the account store", async () => {
+    for (const missing of [{ AUTH_SIGNING_KEY: undefined }, { ACCOUNT_VAULT: undefined }]) {
+      const { env } = makeEnv(missing);
+      for (const r of ROUTES.filter((x) => x.path.startsWith("/auth/"))) {
+        expect((await handle(post(r.path, {}), env)).status).toBe(503);
+      }
+      expect((await handle(post("/whoop/token", {}), env)).status).toBe(503);
     }
   });
 
@@ -95,22 +129,42 @@ describe("POST /whoop/authorize", () => {
   });
 });
 
-describe("POST /whoop/token", () => {
-  it("exchanges the code with client_secret, stores tokens in the vault and returns a session", async () => {
+describe("POST /whoop/token — «Войти через WHOOP» (A65 §2.2)", () => {
+  it("exchanges the code, stores WHOOP tokens in the vault and returns an account session", async () => {
     const { env, whoop, ns } = makeEnv();
     const res = await login(env, { whoop });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Record<string, unknown>;
+    const body = (await res.json()) as SessionBody & Record<string, unknown>;
     expect(body.whoop_user_id).toBe("4242");
-    expect(body.access_token).toBe("whoop-access-1");
-    expect(String(body.session)).toMatch(/^hs1\.4242\./);
+    expect(body.whoop_access_token).toBe("whoop-access-1");
+    expect(body.refresh).toMatch(/^hr1\./);
+    expect(body.access.split(".")).toHaveLength(3);
+    expect(body.identities).toEqual([expect.objectContaining({ provider: "whoop", subject: "4242" })]);
+    expect(body).not.toHaveProperty("session");
     expect(body).not.toHaveProperty("refresh_token");
+    expect(JSON.stringify(body)).not.toContain("private@example.com");
     const call = whoop.tokenCalls[0]!;
     expect(call.get("client_secret")).toBe("test-secret");
     expect(call.get("redirect_uri")).toBe("com.healthofatitan.app://oauth/whoop");
     const stored = ns.entry("whoop-user:4242").storage.dump();
     expect(stored).not.toContain("whoop-refresh-1");
     expect(stored.length).toBeGreaterThan(10);
+  });
+
+  it("a second WHOOP login lands in the same account", async () => {
+    const { env, whoop } = makeEnv();
+    const a = (await (await login(env, { whoop })).json()) as SessionBody;
+    const b = (await (await login(env, { whoop })).json()) as SessionBody;
+    expect(b.account_id).toBe(a.account_id);
+    expect(b.refresh).not.toBe(a.refresh);
+  });
+
+  it("needs the device proof over the state", async () => {
+    const { env, whoop } = makeEnv();
+    const res = await login(env, { whoop, noProof: true });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_device_proof" });
+    expect(whoop.tokenCalls).toHaveLength(0);
   });
 
   it("refuses a code without the matching verifier (intercepted redirect)", async () => {
@@ -125,13 +179,21 @@ describe("POST /whoop/token", () => {
     expect(whoop.tokenCalls).toHaveLength(0);
   });
 
-  it("a user outside the allowlist gets only the user id; nothing is stored, the grant is revoked", async () => {
-    const { env, whoop, ns } = makeEnv({ ALLOWED_WHOOP_USER_IDS: "" });
+  it("a new WHOOP user without an invite gets only the user id; nothing is stored, the grant is revoked", async () => {
+    const { env, whoop, ns, accounts } = makeEnv({ ALLOWED_WHOOP_USER_IDS: "" });
     const res = await login(env, { whoop });
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "not_allowed", whoop_user_id: "4242" });
+    expect(await res.json()).toEqual({ error: "invite_required", whoop_user_id: "4242" });
     expect(ns.vaults.size).toBe(0);
     expect(whoop.revoked).toEqual(["whoop-access-1"]);
+    expect(accounts.storage.dump()).not.toContain("4242");
+  });
+
+  it("a bad invite is 403 invite_invalid", async () => {
+    const { env, whoop } = makeEnv({ ALLOWED_WHOOP_USER_IDS: "" });
+    const res = await login(env, { whoop, invite: "0123456789ABCDEFGHJKMNPQRS" });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: "invite_invalid" });
   });
 
   it("a bad code is 400 invalid_code, WHOOP down is 502", async () => {
@@ -144,45 +206,57 @@ describe("POST /whoop/token", () => {
   });
 });
 
-describe("session routes", () => {
-  it("/whoop/access returns an access token for the session and 401 otherwise", async () => {
+describe("WHOOP session routes", () => {
+  it("/whoop/access returns an access token for the account session and 401 otherwise", async () => {
     const { env, whoop } = makeEnv();
-    const { session } = (await (await login(env, { whoop })).json()) as { session: string };
-    const ok = await handle(post("/whoop/access", undefined, session), env);
+    const { access } = (await (await login(env, { whoop })).json()) as SessionBody;
+    const ok = await handle(post("/whoop/access", undefined, access), env);
     expect(ok.status).toBe(200);
     expect(await ok.json()).toMatchObject({ access_token: "whoop-access-1" });
     expect((await handle(post("/whoop/access"), env)).status).toBe(401);
     expect((await handle(post("/whoop/access", undefined, "whoop-access-1"), env)).status).toBe(401);
-    expect((await handle(post("/whoop/access", undefined, session.slice(0, -1) + (session.endsWith("A") ? "B" : "A")), env)).status).toBe(401);
+    expect((await handle(post("/whoop/access", undefined, access.slice(0, -2) + (access.endsWith("AA") ? "BB" : "AA")), env)).status).toBe(401);
   });
 
-  it("/whoop/access is 403 when the user was removed from the allowlist", async () => {
+  it("«Выйти везде» stops /whoop/access at once (live session check)", async () => {
     const { env, whoop } = makeEnv();
-    const { session } = (await (await login(env, { whoop })).json()) as { session: string };
+    const { access } = (await (await login(env, { whoop })).json()) as SessionBody;
+    expect((await handle(post("/auth/logout-all", undefined, access), env)).status).toBe(204);
+    expect((await handle(post("/whoop/access", undefined, access), env)).status).toBe(401);
+  });
+
+  it("/whoop/disconnect wipes the vault; the account stays and WHOOP is just not connected", async () => {
+    const { env, whoop, ns } = makeEnv();
+    const { access } = (await (await login(env, { whoop })).json()) as SessionBody;
+    const res = await handle(post("/whoop/disconnect", undefined, access), env);
+    expect(res.status).toBe(204);
+    expect(ns.entry("whoop-user:4242").storage.map.size).toBe(0);
+    expect(whoop.revoked).toEqual(["whoop-access-1"]);
+    const again = await handle(post("/whoop/access", undefined, access), env);
+    expect(again.status).toBe(401);
+    expect(await again.json()).toEqual({ error: "reauth_required" });
+  });
+
+  it("legacy hs1 sessions keep working until they migrate (A65 §3.5)", async () => {
+    const { env, whoop, ns } = makeEnv();
+    const hs1 = await legacySession(ns, whoop);
+    const ok = await handle(post("/whoop/access", undefined, hs1), env);
+    expect(ok.status).toBe(200);
     env.ALLOWED_WHOOP_USER_IDS = "1";
-    const res = await handle(post("/whoop/access", undefined, session), env);
+    const res = await handle(post("/whoop/access", undefined, hs1), env);
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: "not_allowed" });
   });
 
-  it("/whoop/disconnect wipes the vault; the session is dead afterwards", async () => {
-    const { env, whoop, ns } = makeEnv();
-    const { session } = (await (await login(env, { whoop })).json()) as { session: string };
-    const res = await handle(post("/whoop/disconnect", undefined, session), env);
-    expect(res.status).toBe(204);
-    expect(ns.entry("whoop-user:4242").storage.map.size).toBe(0);
-    expect(whoop.revoked).toEqual(["whoop-access-1"]);
-    expect((await handle(post("/whoop/access", undefined, session), env)).status).toBe(401);
-  });
-
   const appPaths = ROUTES.filter((r) => r.auth === "app").map((r) => (r.path.endsWith("/") ? `${r.path}anthropic/v1/messages` : r.path));
 
-  it.each(appPaths)("AppAuth endpoint %s needs a valid session, then is a 501 stub", async (path) => {
-    const { env, whoop } = makeEnv();
+  it.each(appPaths)("AppAuth endpoint %s needs an account access token, then is a 501 stub", async (path) => {
+    const { env, whoop, ns } = makeEnv();
     expect((await handle(post(path), env)).status).toBe(401);
     expect((await handle(post(path, undefined, "some-whoop-access-token"), env)).status).toBe(401);
-    const { session } = (await (await login(env, { whoop })).json()) as { session: string };
-    const res = await handle(post(path, undefined, session), env);
+    expect((await handle(post(path, undefined, await legacySession(ns, whoop)), env)).status).toBe(401);
+    const { access } = (await (await login(env, { whoop })).json()) as SessionBody;
+    const res = await handle(post(path, undefined, access), env);
     expect(res.status).toBe(501);
     expect(await res.json()).toMatchObject({ error: "not_implemented" });
   });
@@ -217,7 +291,7 @@ describe("logging", () => {
     vi.restoreAllMocks();
   });
 
-  it("never logs bodies, tokens, user ids or query strings — through a whole login", async () => {
+  it("never logs bodies, tokens, user ids or query strings — through a whole login and refresh", async () => {
     const lines: string[] = [];
     for (const m of ["log", "info", "warn", "error", "debug"] as const) {
       vi.spyOn(console, m).mockImplementation((...args: unknown[]) => {
@@ -226,18 +300,22 @@ describe("logging", () => {
     }
     const { env, whoop } = makeEnv();
     vi.stubGlobal("fetch", whoop.fetch);
+    const device = await FakeDevice.create();
     const { verifier, challenge } = await pkcePair();
     const a = await worker.fetch(post("/whoop/authorize?secret=1", { code_challenge: challenge }), env);
     const { state } = (await a.json()) as { state: string };
-    const t = await worker.fetch(post("/whoop/token", { code: "good-code", state, code_verifier: verifier }), env);
-    const { session } = (await t.json()) as { session: string };
-    await worker.fetch(post("/whoop/access", undefined, session), env);
-    await worker.fetch(post("/stt", undefined, session), env);
-    await worker.fetch(post("/whoop/disconnect", undefined, session), env);
+    const t = await worker.fetch(post("/whoop/token", { code: "good-code", state, code_verifier: verifier, ...(await device.login(state)) }), env);
+    const { access, refresh, account_id } = (await t.json()) as SessionBody;
+    await worker.fetch(post("/whoop/access", undefined, access), env);
+    await worker.fetch(post("/stt", undefined, access), env);
+    const r = await worker.fetch(post("/auth/refresh", await device.refresh(refresh, Math.floor(Date.now() / 1000))), env);
+    expect(r.status).toBe(200);
+    await worker.fetch(post("/whoop/disconnect", undefined, access), env);
+    await worker.fetch(post("/auth/logout", undefined, access), env);
 
     const logged = lines.join("\n");
     expect(lines.length).toBeGreaterThan(0);
-    for (const secret of ["secret=1", "good-code", state, verifier, session, "whoop-access-1", "whoop-refresh-1", "test-secret", "4242"]) {
+    for (const secret of ["secret=1", "good-code", state, verifier, access, refresh, account_id, device.pub, "whoop-access-1", "whoop-refresh-1", "test-secret", "4242"]) {
       expect(logged).not.toContain(secret);
     }
   });

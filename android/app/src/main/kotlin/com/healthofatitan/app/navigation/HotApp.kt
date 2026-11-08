@@ -64,6 +64,7 @@ import com.healthofatitan.app.feature.checkin.EveningAreas
 import com.healthofatitan.app.feature.checkin.EveningKnownLine
 import com.healthofatitan.app.feature.checkin.EveningWeather
 import com.healthofatitan.app.feature.checkin.checkinScreens
+import com.healthofatitan.app.core.account.AccountGate
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.feature.me.consent.AgeGateScreen
 import com.healthofatitan.app.feature.me.meScreen
@@ -137,6 +138,9 @@ fun RassvetStep.route(): String = when (this) {
  *   shortcut and «Помощь» on the gate open it over the gate. Tests start confirmed.
  * @param onAdultConfirmed «Мне есть 18 лет» was confirmed (written as `ConsentRecord age18`).
  * @param ageGateSaveFailed writing `age18` failed: the gate asks to try again.
+ * @param accountGate the HoT account (A65, D-062): [AccountGate.SIGNED_OUT] puts «Вход» over the
+ *   app, after the gate 18+ and never over SOS. Tests start signed in.
+ * @param signIn draws «Вход»; its argument opens SOS over it.
  */
 @Composable
 fun HotApp(
@@ -152,6 +156,8 @@ fun HotApp(
     ageGate: AgeGate = AgeGate.CONFIRMED,
     onAdultConfirmed: () -> Unit = {},
     ageGateSaveFailed: Boolean = false,
+    accountGate: AccountGate = AccountGate.SIGNED_IN,
+    signIn: @Composable (onHelp: () -> Unit) -> Unit = {},
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -160,7 +166,10 @@ fun HotApp(
         currentRoute == HotRoute.BREATHER || currentRoute == HotRoute.PATH_RITUAL || currentRoute in CHECKIN_FULL_SCREEN
     val nested = NESTED[currentRoute]
     val currentTab = nested?.tab ?: HotTab.entries.firstOrNull { it.route == currentRoute } ?: HotTab.TODAY
-    val gated = ageGate != AgeGate.CONFIRMED && !inSos
+    val ageGated = ageGate != AgeGate.CONFIRMED && !inSos
+    // «Вход» comes after the gate 18+ (R-13 stays first) and never lies over SOS.
+    val signInGated = !ageGated && accountGate.showsSignIn && !inSos
+    val gated = ageGated || signInGated
     var underage by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(pendingRoute) {
@@ -337,7 +346,8 @@ fun HotApp(
             }
         }
         // The gate 18+ (R-13): over everything, and «Помощь» on it opens SOS over the gate.
-        if (gated) {
+        if (signInGated) signIn { navController.openSos() }
+        if (ageGated) {
             AgeGateScreen(
                 gate = ageGate,
                 under = underage,

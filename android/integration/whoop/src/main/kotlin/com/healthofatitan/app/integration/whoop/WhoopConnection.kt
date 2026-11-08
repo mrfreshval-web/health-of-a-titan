@@ -1,5 +1,9 @@
 package com.healthofatitan.app.integration.whoop
 
+import com.healthofatitan.app.core.account.AccountAccess
+import com.healthofatitan.app.core.account.AccountGate
+import com.healthofatitan.app.core.account.AccountSession
+import com.healthofatitan.app.core.account.MigrateResult
 import com.healthofatitan.app.core.database.dao.MetricDao
 import com.healthofatitan.app.core.network.EdgeConfig
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +38,14 @@ sealed interface LoginStart {
 sealed interface LoginOutcome {
     data object Connected : LoginOutcome
 
-    data class NotAllowed(val whoopUserId: String) : LoginOutcome
+    /** No HoT account for this WHOOP user and no (valid) invite (A65 §2.5): nothing was kept. */
+    data class NotAllowed(val whoopUserId: String, val inviteInvalid: Boolean = false) : LoginOutcome
+
+    /**
+     * This WHOOP belongs to another HoT account than the one on the phone. Nothing changed here;
+     * linking and switching accounts come with slice А3 (A65 §2.3).
+     */
+    data object OtherAccount : LoginOutcome
 
     data object Rejected : LoginOutcome
 
@@ -66,6 +77,8 @@ class WhoopConnection(
     private val clock: Clock,
     /** Application scope: a sync the user started outlives the screen it was started from. */
     private val scope: CoroutineScope,
+    /** The HoT account (A65, D-062): «Войти через WHOOP» signs in to it. */
+    private val account: AccountSession,
 ) {
 
     /** Live sync state for the sync mark and the status line (started → step → done / failed). */
@@ -89,6 +102,11 @@ class WhoopConnection(
         )
     }
 
+    /** Whether «Вход» must lie over the app (A65, D-062); `hs1` holders migrate without it. */
+    val accountGate: Flow<AccountGate> = combine(account.credentials, store.credentials) { acc, creds ->
+        AccountGate.of(edgeConfig.isConfigured, signedIn = acc != null, legacyWhoopSession = creds?.legacySession != null)
+    }
+
     /** Step 1: PKCE on the phone, signed state from the Worker. */
     suspend fun beginLogin(): LoginStart {
         if (!edgeConfig.isConfigured) return LoginStart.NotConfigured
@@ -102,10 +120,14 @@ class WhoopConnection(
         }
     }
 
-    /** Step 2, after the redirect `com.healthofatitan.app://oauth/whoop`. */
-    suspend fun completeLogin(code: String, state: String, verifier: String): LoginOutcome {
+    /**
+     * Step 2, after the redirect `com.healthofatitan.app://oauth/whoop`: the code goes to the Worker
+     * with the device proof over the state; the answer is a session of the HoT account (A65 §2.2).
+     * [invite] only matters for a WHOOP user without an account yet.
+     */
+    suspend fun completeLogin(code: String, state: String, verifier: String, invite: String? = null): LoginOutcome {
         val result = try {
-            edge.token(code, state, verifier)
+            edge.token(code, state, verifier, account.proof(state), invite)
         } catch (_: EdgeNotConfiguredException) {
             return LoginOutcome.NotConfigured
         } catch (_: IOException) {
@@ -115,15 +137,47 @@ class WhoopConnection(
         }
         return when (result) {
             is TokenResult.Connected -> {
-                store.save(WhoopCredentials(result.session, result.whoopUserId))
+                val current = account.credentials.value?.accountId
+                if (current != null && current != result.account.accountId) {
+                    // One account per install (A65 §2.3): the new session is ended at once.
+                    account.discard(result.account)
+                    return LoginOutcome.OtherAccount
+                }
+                account.establish(result.account)
+                store.save(WhoopCredentials(result.whoopUserId))
                 tokens.prime(result.accessToken, result.expiresAt)
                 scheduler.ensurePeriodic()
                 scheduler.ensureMorningWatch()
                 launchSync(SyncTrigger.LOGIN)
                 LoginOutcome.Connected
             }
-            is TokenResult.NotAllowed -> LoginOutcome.NotAllowed(result.whoopUserId)
+            is TokenResult.NotAllowed -> LoginOutcome.NotAllowed(result.whoopUserId, result.inviteInvalid)
             TokenResult.Rejected -> LoginOutcome.Rejected
+        }
+    }
+
+    /**
+     * A65 §3.5, on every start: the WHOOP session `hs1` of slice 1 becomes a HoT account with the
+     * WHOOP identity, without any screen. Without network it waits for the next start; a session
+     * the Worker no longer knows is dropped (the person signs in again).
+     */
+    suspend fun migrateLegacySession() {
+        val creds = store.credentials.value ?: return
+        val legacy = creds.legacySession ?: return
+        val result = try {
+            account.migrate(legacy)
+        } catch (_: IOException) {
+            return
+        } catch (_: kotlinx.serialization.SerializationException) {
+            return
+        }
+        when (result) {
+            is MigrateResult.Ok -> store.save(WhoopCredentials(result.whoopUserId))
+            MigrateResult.Rejected -> {
+                tokens.clear()
+                store.clear()
+            }
+            is MigrateResult.Unavailable -> Unit
         }
     }
 
@@ -168,7 +222,13 @@ class WhoopConnection(
         val creds = store.credentials.value
         if (creds != null) {
             val wiped = try {
-                edge.disconnect(creds.session)
+                // The legacy session before migration, else the account session (A65 §3).
+                val bearer = creds.legacySession ?: when (val a = account.accessToken()) {
+                    is AccountAccess.Ok -> a.token
+                    AccountAccess.SignedOut -> null // no session: nothing on the server is ours to wipe
+                    is AccountAccess.Unavailable -> return DisconnectOutcome.NeedsNetwork
+                }
+                bearer == null || edge.disconnect(bearer)
             } catch (_: EdgeNotConfiguredException) {
                 true // no Worker means no server copy to wipe
             } catch (_: IOException) {

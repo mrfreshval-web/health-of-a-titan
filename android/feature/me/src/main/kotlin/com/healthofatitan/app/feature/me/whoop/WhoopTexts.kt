@@ -78,6 +78,7 @@ object WhoopTexts {
         WhoopNote.SERVER_NOT_READY -> "Сервер HoT не настроен. Основателю: секреты WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, TOKEN_ENC_KEY."
         WhoopNote.NEEDS_NETWORK_TO_DISCONNECT -> "Нужна связь. Ничего не удалено."
         WhoopNote.DISCONNECTED -> "WHOOP отключён, токены удалены."
+        WhoopNote.OTHER_ACCOUNT -> "Этот WHOOP привязан к другому аккаунту HoT. Здесь ничего не изменилось."
     }
 
     /** Y7: «Синхронизировано в 14:32», «… вчера в 14:32»; before the first sync — «Загружаю…». */

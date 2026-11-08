@@ -25,6 +25,23 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
 
 Без `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `TOKEN_ENC_KEY` или привязки `WHOOP_VAULT` маршруты WHOOP отвечают `503 not_configured`.
 
+## Аккаунт HoT (A65, D-062; срезы А1 и А2)
+
+| Маршрут | Доступ | Что делает |
+|---|---|---|
+| `POST /auth/nonce` | лимит по IP | одноразовый `nonce` (5 мин) для Google и миграции |
+| `POST /auth/google` | лимит по IP | ID-токен Google (подпись по JWKS, `aud`, `iss`, `exp`, `iat`, `nonce`) + ключ устройства → сессия; нет аккаунта → `404 no_account` и `signup_ticket` |
+| `POST /auth/signup` | лимит по IP | `signup_ticket` + код приглашения → новый аккаунт |
+| `POST /auth/refresh` | лимит по IP | ротация refresh, подпись ключом устройства; повтор старого refresh в 30 с — тот же ответ, позже — отзыв всей сессии |
+| `POST /auth/logout` · `/auth/logout-all` | access | выйти · выйти везде (`session_epoch++`) |
+| `POST /auth/migrate` | `Bearer hs1.…` + ключ устройства | старая сессия среза 1 → аккаунт с identity WHOOP; `hs1` гасится |
+| `POST /auth/invites` | access, только аккаунты основателя | код приглашения (26 символов, 14 дней) |
+
+- `POST /whoop/token` теперь возвращает сессию аккаунта (`access`, `refresh`, `account_id`, `identities`) и `whoop_access_token`. Новый пользователь WHOOP без аккаунта — `403 invite_required` (ничего не хранится, грант отозван); пользователь из `ALLOWED_WHOOP_USER_IDS` получает аккаунт сразу (переходный период).
+- Access — JWS EdDSA (Ed25519, `kid`), 15 мин, не хранится. Refresh `hr1.<sid>.<32 байта>`: в хранилище только HMAC с «перцем» (ключ из `TOKEN_ENC_KEY`), текущий и предыдущий.
+- Хранилище — Durable Object `AccountVault` за интерфейсом `AccountStore`; токены WHOOP — `WhoopVault` за `TokenVault` (перенос в РФ — срез Б1, A65 §7.2).
+- Секреты: `AUTH_SIGNING_KEY` (`node scripts/gen-signing-key.mjs | gh secret set AUTH_SIGNING_KEY`), `GOOGLE_WEB_CLIENT_ID`; при ротации ключа — `AUTH_SIGNING_KEY_PREVIOUS` на 15 минут. Без них маршруты `/auth/*` и `/whoop/token` отвечают `503 not_configured`.
+
 ## Как хранится токен WHOOP (A18 И1.1a, A14 ADR-04)
 
 - **Durable Object `WhoopVault`**, один на WHOOP `user_id` (`idFromName`), SQLite-хранилище (миграция `v1-whoop-vault`).

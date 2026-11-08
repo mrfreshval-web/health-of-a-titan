@@ -65,3 +65,5 @@ include(":feature:checkin")
 include(":domain:today")
 // «Единый Титан» (D-051, A60 §3): the safety bus SafetyState over the event journal.
 include(":domain:safety")
+// HoT account (A65, D-062): sessions, device key, Google and WHOOP login.
+include(":core:account")

@@ -11,13 +11,14 @@ import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
 import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.database.ProfileStore
+import com.healthofatitan.app.core.database.UnifiedConsentStore
 import com.healthofatitan.app.core.database.dao.ConsentDao
 import com.healthofatitan.app.core.database.dao.DailyLoopDao
 import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.EventLogDao
-import com.healthofatitan.app.core.database.dao.NoteDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.database.dao.NoteDao
 import com.healthofatitan.app.core.database.dao.NutritionDao
 import com.healthofatitan.app.core.database.dao.CheckinDao
 import com.healthofatitan.app.core.database.dao.PathDao
@@ -114,6 +115,12 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAgeGate(db: HotDatabase): AgeGateStore = AgeGateStore(db.consentDao())
+
+    /** The unified consent (A68 v1): `unified` and its parts in one transaction. */
+    @Provides
+    @Singleton
+    fun provideUnifiedConsent(db: HotDatabase): UnifiedConsentStore =
+        UnifiedConsentStore(db.consentDao(), transaction = { block -> db.withTransaction { block() } })
 
     /** «О себе» → Винс only with `about_mentor` (A65 §5.2). */
     @Provides

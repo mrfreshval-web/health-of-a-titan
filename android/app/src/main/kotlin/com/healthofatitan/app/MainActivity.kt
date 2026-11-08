@@ -23,6 +23,8 @@ import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.account.LocalDataWiper
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.core.database.AgeGateStore
+import com.healthofatitan.app.core.database.ConsentGate
+import com.healthofatitan.app.core.database.UnifiedConsentStore
 import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate
 import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGateSource
 import com.healthofatitan.app.feature.path.onboarding.FirstLaunchRoute
@@ -100,6 +102,10 @@ class MainActivity : ComponentActivity() {
     /** The gate as the screen reads it: a journal that cannot be read means «ask». */
     private val ageGateState: Flow<AgeGate> by lazy { ageGate.gate.catch { emit(AgeGate.ASK) } }
 
+    @Inject
+    lateinit var consent: UnifiedConsentStore
+    private val consentState: Flow<ConsentGate> by lazy { consent.gate.catch { emit(ConsentGate.ASK) } }
+
     /** «Вход» over the app when there is no HoT account (A65, D-062); unreadable → no screen. */
     private val accountGate: Flow<AccountGate> by lazy { whoop.accountGate.catch { emit(AccountGate.NOT_REQUIRED) } }
 
@@ -145,6 +151,7 @@ class MainActivity : ComponentActivity() {
 
     /** Writing `age18` failed: the gate shows «Не получилось сохранить» (review of Agent 10). */
     private var ageSaveFailed by mutableStateOf(false)
+    private var consentSaveFailed by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -188,6 +195,7 @@ class MainActivity : ComponentActivity() {
                 val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
                 val gate by ageGateState.collectAsStateWithLifecycle(AgeGate.LOADING)
                 val account by accountGate.collectAsStateWithLifecycle(AccountGate.LOADING)
+                val consentGate by consentState.collectAsStateWithLifecycle(ConsentGate.LOADING)
                 val first by firstLaunchState.collectAsStateWithLifecycle(FirstLaunchGate.LOADING)
                 CompositionLocalProvider(LocalAddressForm provides addressForm) {
                     HotApp(
@@ -206,6 +214,12 @@ class MainActivity : ComponentActivity() {
                         ageGateSaveFailed = ageSaveFailed,
                         accountGate = account,
                         signIn = { onHelp -> SignInRoute(onHelp = onHelp) },
+                        consentGate = consentGate,
+                        onConsentAccepted = {
+                            consentSaveFailed = false
+                            lifecycleScope.launch { consentSaveFailed = runCatching { consent.accept() }.isFailure }
+                        },
+                        consentSaveFailed = consentSaveFailed,
                         firstLaunch = first,
                         onboarding = { onHelp -> FirstLaunchRoute(onHelp = onHelp, onDone = {}) },
                     )

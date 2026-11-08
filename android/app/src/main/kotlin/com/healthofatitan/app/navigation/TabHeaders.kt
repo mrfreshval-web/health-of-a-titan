@@ -3,6 +3,7 @@ package com.healthofatitan.app.navigation
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.IsoFields
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
@@ -29,9 +30,13 @@ object TabHeaders {
         }
     }
 
+    /** The middle of the «Неделя» header (A66 §2.2, mockup 06): «Неделя 45 · 2–8 ноября», ISO week. */
+    fun weekCenter(date: LocalDate): String = "Неделя ${date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)} · ${week(date)}"
+
     fun overline(tab: HotTab, date: LocalDate): String? = when (tab) {
         HotTab.TODAY -> null // the date stands in the middle of the header (A46 §2.1)
-        HotTab.WEEK -> week(date)
+        HotTab.WEEK -> null // the week and its dates stand in the middle (A66 §2.2)
         HotTab.PATH -> "Путь"
+        HotTab.BEHIND -> null
     }
 }

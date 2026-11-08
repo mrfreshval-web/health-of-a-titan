@@ -421,9 +421,20 @@ object Migrations {
         }
     }
 
+    /** Room 16 (A66 §2.4): `note` — the notes of «+», found again in «За плечами». */
+    val MIGRATION_15_16 = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `note` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `user_id` TEXT NOT NULL, " +
+                    "`day_key` TEXT NOT NULL, `text` TEXT NOT NULL, `at` INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_note_user_id_day_key` ON `note` (`user_id`, `day_key`)")
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
-        MIGRATION_14_15,
+        MIGRATION_14_15, MIGRATION_15_16,
     )
 }

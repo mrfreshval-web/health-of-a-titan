@@ -13,7 +13,8 @@ enum class DayMode(val word: String) {
 /** The four blocks of «Сегодня» (A46 §1); the tag is the test tag and the id of the block. */
 enum class TodayBlock(val tag: String) {
     ME("block_me"),
-    SUPPORTS("block_supports"),
+    /** «День»: Нагрузка · Питание · Отдых (A66 §3.5); it replaced «Опоры». */
+    DAY("block_day"),
     TASKS("block_tasks"),
     RHYTHM("block_rhythm"),
 }
@@ -111,9 +112,13 @@ object Scenarios {
     }
 }
 
-/** T-01: the order of the blocks is the same in every scenario and at any time of day. */
+/**
+ * T-01: the order of the blocks is the same in every scenario and at any time of day. A66 §3.2
+ * (mockup 05b): the scene and the three tiles, then «Сейчас» with the tasks, then the day and the
+ * rhythm — «Сейчас» stays above the fold.
+ */
 object TodayLayout {
-    val ORDER: List<TodayBlock> = listOf(TodayBlock.ME, TodayBlock.SUPPORTS, TodayBlock.TASKS, TodayBlock.RHYTHM)
+    val ORDER: List<TodayBlock> = listOf(TodayBlock.ME, TodayBlock.TASKS, TodayBlock.DAY, TodayBlock.RHYTHM)
 
     @Suppress("UNUSED_PARAMETER")
     fun blocks(scenario: Scenario, now: LocalDateTime): List<TodayBlock> = ORDER

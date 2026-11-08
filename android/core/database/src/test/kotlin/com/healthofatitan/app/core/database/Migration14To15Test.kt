@@ -76,7 +76,7 @@ class Migration14To15Test {
         val db = open(name)
         try {
             db.openHelper.writableDatabase // runs 14 → 15 and validates the schema
-            assertEquals(15, db.openHelper.readableDatabase.version)
+            assertEquals(16, db.openHelper.readableDatabase.version)
             val dao = db.eventLogDao()
 
             val local = dao.list("local", SafetyEventKinds.PREFIX)

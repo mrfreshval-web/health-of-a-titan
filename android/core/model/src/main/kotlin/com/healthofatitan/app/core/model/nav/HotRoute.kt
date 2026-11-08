@@ -94,10 +94,7 @@ object HotRoute {
     /** The collection of discoveries, under «Путь». */
     const val CHECKIN_COLLECTION = "checkin_collection"
 
-    /**
-     * «За плечами» (D-038, A47): since D-051 the reverse plan of the Path, opened from «Путь» by
-     * «Оглянуться ›», not a tab. A placeholder in this slice.
-     */
+    /** «За плечами» (D-038, A47, A66 §6): the fourth tab — everything lived, with search. */
     const val BEHIND = "behind"
 
     /** «Почему так» (A46 §3): the tap on «Я сегодня». Inside «Сегодня». */
@@ -112,6 +109,9 @@ object HotRoute {
     /** «Передышка» (A49 §4, D-043): only by the person's own tap; full screen. */
     const val BREATHER = "breather"
 
+    /** «Заметка» of «+» (A66 §2.4): the person's words about the day, kept on the phone. */
+    const val NOTE = "note"
+
     /** «Арсенал» of «За плечами» (A47 §6, D-043), opened from «Сегодня». A placeholder in this slice. */
     const val ARSENAL = "arsenal"
 
@@ -120,8 +120,8 @@ object HotRoute {
     const val TODAY_DEEP_LINK = "$DEEP_LINK_SCHEME://$TODAY"
 
     /**
-     * Bottom bar order (D-051): «Сегодня · Неделя · Путь». «За плечами» opens from «Путь»; the
-     * mentor is the circle on the left of every header, not a tab.
+     * Bottom bar order (A66 §2.3): «Сегодня · Неделя · + · Путь · За плечами». The mentor is the
+     * circle on the left of every header, not a tab.
      */
-    val tabs: List<String> = listOf(TODAY, WEEK, PATH)
+    val tabs: List<String> = listOf(TODAY, WEEK, PATH, BEHIND)
 }

@@ -70,16 +70,33 @@ import com.healthofatitan.app.domain.today.week.Sex
 import com.healthofatitan.app.domain.today.week.SupportWeekRow
 import com.healthofatitan.app.domain.today.week.TitanWeekLook
 import com.healthofatitan.app.domain.today.week.WeekCopy
+import com.healthofatitan.app.domain.today.week.WeekFace
+import com.healthofatitan.app.domain.today.week.WeekFaceCopy
+import com.healthofatitan.app.domain.today.week.WeekFaceView
 import com.healthofatitan.app.domain.today.week.WeekScoring
 import com.healthofatitan.app.integration.whoop.week.BodyInputs
 import com.healthofatitan.app.integration.whoop.week.DayDetail
 import com.healthofatitan.app.integration.whoop.week.WeekScreenState
 import java.time.LocalDate
 
-/** Tab «Неделя» (A52, D-044, D-045): seven blocks, the Titan of the week and the Sunday ritual. */
-fun NavGraphBuilder.weekScreen(stateful: Boolean = true, onOpenHelp: () -> Unit = {}) {
+/**
+ * Tab «Неделя» (A66 §4, mockups 06 and 09; A52, D-044, D-045): the verdict of the goals, the goal
+ * cards and the days; without a goal of the Path «Назови цель» (A66 §0.3); the Sunday ritual.
+ *
+ * @param onOpenPath «Путь · неделя N из 12 ›» → the tab «Путь» ([HotRoute.PATH])
+ * @param onNameGoal «Назвать цель · 90 с» → the ritual of the goal ([HotRoute.PATH_RITUAL])
+ * @param onOpenBehind «За плечами: N тренировок ›» → «За плечами» ([HotRoute.BEHIND])
+ */
+fun NavGraphBuilder.weekScreen(
+    stateful: Boolean = true,
+    onOpenHelp: () -> Unit = {},
+    onOpenPath: () -> Unit = {},
+    onNameGoal: () -> Unit = {},
+    onOpenBehind: () -> Unit = {},
+) {
     composable(route = HotRoute.WEEK) {
-        if (stateful) WeekRoute(onOpenHelp) else WeekScreen(WeekUiState(), WeekActions(onHelp = onOpenHelp))
+        val nav = WeekActions(onHelp = onOpenHelp, onOpenPath = onOpenPath, onNameGoal = onNameGoal, onOpenBehind = onOpenBehind)
+        if (stateful) WeekRoute(nav) else WeekScreen(WeekUiState(), nav)
     }
 }
 
@@ -88,6 +105,7 @@ const val WEEK_GLANCE_TAG = "week_glance"
 const val WEEK_COLUMNS_TAG = "week_columns"
 const val WEEK_DAYS_TAG = "week_days_in_support"
 const val WEEK_GOALS_TAG = "week_goals"
+const val WEEK_MORE_GOALS_TAG = "week_more_goals"
 const val WEEK_SUPPORTS_TAG = "week_supports"
 const val WEEK_BODY_TAG = "week_body"
 const val WEEK_PATTERNS_TAG = "week_patterns"
@@ -112,10 +130,16 @@ data class WeekActions(
     val onMarkExperiment: (Boolean) -> Unit = {},
     /** The choice to see the fitness age at milestones (A53 §3.3). */
     val onFitnessOptIn: (Boolean) -> Unit = {},
+    /** «Путь · неделя N из 12 ›» (A66 §4.2). */
+    val onOpenPath: () -> Unit = {},
+    /** «Назвать цель · 90 с» without a goal of the Path (A66 §0.3). */
+    val onNameGoal: () -> Unit = {},
+    /** «За плечами: N тренировок за 90 дней ›». */
+    val onOpenBehind: () -> Unit = {},
 )
 
 @Composable
-private fun WeekRoute(onOpenHelp: () -> Unit, viewModel: WeekViewModel = hiltViewModel()) {
+private fun WeekRoute(nav: WeekActions, viewModel: WeekViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     WeekScreen(
@@ -129,18 +153,23 @@ private fun WeekRoute(onOpenHelp: () -> Unit, viewModel: WeekViewModel = hiltVie
             onSaveInputs = viewModel::saveInputs,
             onFinishRitual = viewModel::finishRitual,
             onShare = { WeekShare.share(context, it) },
-            onHelp = onOpenHelp,
+            onHelp = nav.onHelp,
             onMarkExperiment = viewModel::markExperiment,
             onFitnessOptIn = viewModel::setFitnessOptIn,
+            onOpenPath = nav.onOpenPath,
+            onNameGoal = nav.onNameGoal,
+            onOpenBehind = nav.onOpenBehind,
         ),
     )
 }
 
 /**
- * The screen of A52 §1, top to bottom: the Titan of the week with the seven columns under it and
- * «Дни в опоре N из 7» (mark 4); the Sunday card; «Цели недели»; «Опоры за неделю»; «Тело за
- * неделю»; «Закономерности» (≤ 3); the fitness age behind its flag; the year ribbon. No red
- * anywhere except «Помощь» (W-02).
+ * The screen of A66 §4.2, top to bottom: the verdict «2 из 3 держатся» with what is left and the
+ * blank of the Sculpture; 2–3 goal cards; the seven days. Without a goal of the Path (and without
+ * care, A66 §0.3) the card «Назови цель» and «Что видно уже сейчас» stand instead, and no goals
+ * are invented from data. Then, below the fold: the Titan of the week with «Дни в опоре»,
+ * «Опоры», «Тело», «Закономерности», the fitness age behind its flag, the year ribbon. The Sunday
+ * card opens the ritual as before. No red anywhere except «Помощь» (W-02).
  */
 @Composable
 fun WeekScreen(state: WeekUiState, actions: WeekActions = WeekActions(), modifier: Modifier = Modifier, ritualOpen: Boolean = false) {
@@ -155,20 +184,36 @@ fun WeekScreen(state: WeekUiState, actions: WeekActions = WeekActions(), modifie
             .fillMaxSize()
             .testTag(WEEK_SCREEN_TAG)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = HotSpacing.edge, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
+            .padding(horizontal = WeekEdge, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(WeekGap),
     ) {
         if (week == null) {
             HotPendingCard(WeekCopy.TITAN_FORMING, caption = WeekCopy.GOAL_EMPTY)
             return@Column
         }
         val v = week.view
-        HotOverline(WeekCopy.weekNumber(v.number))
+        val face = remember(week) { WeekFace.build(v, week.goalDays, week.path, week.care, week.kind, week.nights, week.behind) }
+        var picked by remember { mutableStateOf<LocalDate?>(null) }
+        when (face) {
+            is WeekFaceView.NoPath -> {
+                NoGoalCard(actions.onNameGoal, Modifier.padding(top = 8.dp))
+                if (v.ritualCard) RitualCard(onOpen = { ritual = true })
+                SeenNow(face, actions.onOpenBehind, Modifier.padding(top = 8.dp))
+                v.experiment?.let { BlockExperiment(it, actions.onMarkExperiment) }
+            }
+            is WeekFaceView.Goals -> {
+                WeekVerdict(face.verdict, face.carved, actions.onOpenPath)
+                if (v.ritualCard) RitualCard(onOpen = { ritual = true })
+                FaceGoals(face, v.goalsNote, actions)
+                WeekDaysRow(v.columns, picked, onPick = { d -> picked = if (picked == d) null else d }, modifier = Modifier.padding(top = 4.dp))
+                picked?.let { d -> week.dayDetails[d]?.let { DayCard(it, v.columns.first { c -> c.day == d }) } }
+                v.experiment?.let { BlockExperiment(it, actions.onMarkExperiment) }
+                v.experimentNote?.let { HotOverline(it) }
+                BlockMoreGoals(week, face.cards.map { it.goal.id }.toSet(), actions)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
         BlockGlance(week)
-        if (v.ritualCard) RitualCard(onOpen = { ritual = true })
-        v.experiment?.let { BlockExperiment(it, actions.onMarkExperiment) }
-        v.experimentNote?.let { HotOverline(it) }
-        BlockGoals(week, actions)
         BlockSupports(week)
         BlockBody(week, actions.onHelp)
         BlockPatterns(v.patterns, v.patternsEmpty, state.tried, actions.onTry)
@@ -177,6 +222,20 @@ fun WeekScreen(state: WeekUiState, actions: WeekActions = WeekActions(), modifie
         if (v.fitness == null && week.fitnessOptedIn) HotOverline(WeekCopy.FIT_FIRST_AFTER)
         if (week.frames.size >= 2) Ribbon(week.frames)
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** The 2–3 goal cards (A66 §4.3) and the note of the plan («Предложение на неделю…»). */
+@Composable
+private fun FaceGoals(face: WeekFaceView.Goals, note: String?, actions: WeekActions) {
+    var open by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxWidth().testTag(WEEK_GOALS_TAG), verticalArrangement = Arrangement.spacedBy(WeekGap)) {
+        face.cards.forEach { card ->
+            WeekGoalCard(card, expanded = open == card.goal.id, onTap = { open = if (open == card.goal.id) null else card.goal.id }, actions = actions)
+        }
+        note?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("week_goals_note"))
+        }
     }
 }
 
@@ -196,7 +255,6 @@ internal fun BlockTitle(title: String, hint: String? = null) {
 @Composable
 private fun BlockGlance(week: WeekScreenState) {
     val v = week.view
-    var picked by remember { mutableStateOf<LocalDate?>(null) }
     HotCard(cornice = true, modifier = Modifier.fillMaxWidth().testTag(WEEK_GLANCE_TAG)) {
         BlockTitle(WeekCopy.TITAN, if (v.titan.revealed) null else WeekCopy.TITAN_FORMING.lowercase())
         Spacer(Modifier.height(12.dp))
@@ -207,67 +265,8 @@ private fun BlockGlance(week: WeekScreenState) {
         week.poseCaption?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
         }
-        Spacer(Modifier.height(14.dp))
-        Columns(v.columns, picked) { d -> picked = if (picked == d) null else d }
-        picked?.let { d -> week.dayDetails[d]?.let { DayCard(it, v.columns.first { c -> c.day == d }) } }
         Spacer(Modifier.height(16.dp))
         DaysInSupport(v.daysInSupport, v.mark)
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(WeekCopy.GOALS_TOTAL, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(WeekCopy.ofTotal(v.goalsDone, v.goalsTotal), style = HotType.ringValue, color = MaterialTheme.colorScheme.onSurface)
-        }
-    }
-}
-
-/** Seven columns Monday–Sunday (W-08): the mode colour, the fill = supports, the dot = a task, today ringed, the future an outline. */
-@Composable
-private fun Columns(columns: List<DayColumn>, picked: LocalDate?, onPick: (LocalDate) -> Unit) {
-    val tokens = HotThemeTokens.colors
-    val outline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
-    val quiet = tokens.ruleSoft
-    Row(
-        Modifier.fillMaxWidth().testTag(WEEK_COLUMNS_TAG).semantics { contentDescription = WeekCopy.SPOKEN_COLUMNS },
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        columns.forEach { c ->
-            val color = c.mode?.hotMode()?.color() ?: MaterialTheme.colorScheme.onSurfaceVariant
-            val spoken = WeekScoring.short(c.day) + ": " + when {
-                c.future -> WeekCopy.DAY_FUTURE
-                c.sick -> WeekCopy.DAY_REST
-                c.noData -> WeekCopy.DAY_NO_DATA
-                c.inSupport -> WeekCopy.DAY_IN_SUPPORT
-                else -> "${WeekCopy.SUPPORTS_FILLED} ${c.supportsFilled}"
-            }
-            Column(
-                Modifier
-                    .width(40.dp)
-                    .testTag("week_col_${c.day.dayOfWeek.value}")
-                    .clickable(enabled = !c.future, role = Role.Button) { onPick(c.day) }
-                    .semantics(mergeDescendants = true) { contentDescription = spoken },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Canvas(Modifier.width(22.dp).height(64.dp)) {
-                    val r = CornerRadius(size.width / 2)
-                    if (c.future) {
-                        drawRoundRect(outline, cornerRadius = r, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f))))
-                    } else {
-                        drawRoundRect(quiet, cornerRadius = r)
-                        val h = size.height * (if (c.sick) 0.5f else c.fill.coerceAtLeast(if (c.noData) 0f else 0.08f))
-                        if (h > 0f) drawRoundRect(color.copy(alpha = if (c.inSupport) 0.95f else 0.55f), Offset(0f, size.height - h), Size(size.width, h), r)
-                        if (c.today || c.day == picked) {
-                            drawRoundRect(color, Offset(-3.dp.toPx(), -3.dp.toPx()), Size(size.width + 6.dp.toPx(), size.height + 6.dp.toPx()), CornerRadius(size.width), style = Stroke(1.5.dp.toPx()))
-                        }
-                    }
-                }
-                Spacer(Modifier.height(6.dp))
-                Box(Modifier.size(6.dp)) {
-                    if (c.taskDone) Canvas(Modifier.fillMaxSize()) { drawCircle(color) }
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(WeekScoring.short(c.day), style = HotType.mono, color = if (c.today) MaterialTheme.colorScheme.onSurface else tokens.textTertiary)
-            }
-        }
     }
 }
 
@@ -328,20 +327,23 @@ private fun RitualCard(onOpen: () -> Unit) {
 
 // ---------------------------------------------------------------- Цели недели
 
+/**
+ * The goals of the week beyond the 2–3 cards (reminders, starter goals) and «добавить
+ * напоминание»: below the cards, so the cards stay the answer (A66 §4.3 «целей 2–3»).
+ */
 @Composable
-private fun BlockGoals(week: WeekScreenState, actions: WeekActions) {
+private fun BlockMoreGoals(week: WeekScreenState, onCards: Set<String>, actions: WeekActions) {
     val v = week.view
+    val rest = v.goals.filter { it.goal.id !in onCards }
     var open by remember { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(WEEK_GOALS_TAG)) {
-        BlockTitle(WeekCopy.BLOCK_GOALS)
-        v.goalsNote?.let {
-            Spacer(Modifier.height(6.dp))
-            Text(it, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary, modifier = Modifier.testTag("week_goals_note"))
-        }
-        Spacer(Modifier.height(8.dp))
-        v.goals.forEach { line ->
-            GoalRow(line, expanded = open == line.goal.id, onTap = { open = if (open == line.goal.id) null else line.goal.id }, actions = actions)
+    Column(Modifier.fillMaxWidth().testTag(WEEK_MORE_GOALS_TAG)) {
+        if (rest.isNotEmpty()) {
+            BlockTitle(WeekFaceCopy.MORE_GOALS)
+            Spacer(Modifier.height(4.dp))
+            rest.forEach { line ->
+                GoalRow(line, expanded = open == line.goal.id, onTap = { open = if (open == line.goal.id) null else line.goal.id }, actions = actions)
+            }
         }
         if (v.returnedToday > 0) HotOverline("${WeekCopy.GOAL_RETURNED}: ${v.returnedToday}", modifier = Modifier.padding(top = 6.dp))
         if (adding) {

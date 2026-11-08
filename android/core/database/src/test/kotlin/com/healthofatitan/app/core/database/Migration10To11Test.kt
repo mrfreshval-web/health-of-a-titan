@@ -94,7 +94,7 @@ class Migration10To11Test {
         try {
             db.openHelper.writableDatabase // runs and validates every migration
             // «Путь» v1 takes 11 → 12 on top of the week tables, the profile «Я» 12 → 13, its cleanup 13 → 14
-            assertEquals(15, db.openHelper.readableDatabase.version)
+            assertEquals(16, db.openHelper.readableDatabase.version)
             assertEquals("hk-ravno-001", db.dawnDao().day("local", "2026-11-10")?.haikuId)
             db.todayDao().upsert(TodayMarkEntity("local", "2026-11-11", TodayMarkEntity.KIND_TASK_TO_WEEK, "wg:body-training", 1, goal = "body-training", at = 1L))
 

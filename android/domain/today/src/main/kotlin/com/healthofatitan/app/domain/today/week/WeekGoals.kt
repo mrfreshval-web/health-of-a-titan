@@ -68,9 +68,10 @@ sealed interface PathWeek {
     /**
      * An active goal: [name] is its short name for the mark on the steps of the day; [goalIds] are
      * the week goals of its lever and leading components ([WeekGoalRules] ids, lever first);
-     * [takenOn] is the day of «Беру путь» (the pour into the current week, A56 §2).
+     * [takenOn] is the day of «Беру путь» (the pour into the current week, A56 §2); [pausedDays] are
+     * the closed pauses of the stage, so «Неделя» can say «Путь · неделя N из 12» (A66 §4.2).
      */
-    data class Active(val name: String, val goalIds: List<String>, val takenOn: LocalDate) : PathWeek
+    data class Active(val name: String, val goalIds: List<String>, val takenOn: LocalDate, val pausedDays: Int = 0) : PathWeek
 }
 
 object WeekGoalRules {

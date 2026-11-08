@@ -28,7 +28,10 @@ import com.healthofatitan.app.domain.today.week.ExperimentPoint
 import com.healthofatitan.app.domain.today.week.ExperimentRules
 import com.healthofatitan.app.domain.today.week.ExperimentSeed
 import com.healthofatitan.app.domain.today.week.ExperimentStatus
+import com.healthofatitan.app.domain.today.week.GoalDays
 import com.healthofatitan.app.domain.today.week.LastWeek
+import com.healthofatitan.app.domain.today.week.PathWeek
+import com.healthofatitan.app.domain.today.week.WeekFace
 import com.healthofatitan.app.domain.today.week.Pattern
 import com.healthofatitan.app.domain.today.week.PlanStatus
 import com.healthofatitan.app.domain.today.week.RitualRules
@@ -156,7 +159,23 @@ class WeekV1Screenshots {
         } else {
             null
         }
-        return WeekScreenState(view = view, frames = frames, ritual = ritual, suggestUp = ritual?.proposal?.suggestUp.orEmpty())
+        return WeekScreenState(
+            view = view, frames = frames, ritual = ritual, suggestUp = ritual?.proposal?.suggestUp.orEmpty(),
+            path = path, goalDays = goalDays, nights = WeekFace.nights(listOf(6.4, 7.1, 6.9, 6.5, 6.8)), behind = WeekFace.behind(38, 90),
+        )
+    }
+
+    /** A66 §4: the stage of a goal of the Path (week 3 of 12) and the days each goal was done. */
+    private val path = PathWeek.Active("Сильнее к весне", listOf(WeekGoalRules.ID_TRAINING, WeekGoalRules.ID_SLEEP), monday.minusDays(14))
+    private val goalDays = mapOf(
+        WeekGoalRules.ID_TRAINING to GoalDays(setOf(monday, monday.plusDays(2))),
+        WeekGoalRules.ID_SLEEP to GoalDays(setOf(monday, monday.plusDays(1), monday.plusDays(3)), known = (0..4L).map { monday.plusDays(it) }.toSet()),
+        WeekGoalRules.ID_FOCUS to GoalDays(setOf(monday, monday.plusDays(1), monday.plusDays(3))),
+    )
+
+    @Test
+    fun weekNoPath() = shoot("week_v3_no_path") {
+        WeekScreen(WeekUiState(state(normalInput(friday)).copy(path = PathWeek.NoGoal)))
     }
 
     @Test

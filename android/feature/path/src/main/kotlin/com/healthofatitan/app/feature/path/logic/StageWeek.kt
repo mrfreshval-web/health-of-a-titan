@@ -33,7 +33,7 @@ object StageWeek {
      * by the safety bus a pause (the calendar stands, A60 §2); anything else — no goal (A67 §4).
      */
     fun of(goal: PracticalGoal?, flags: PathFlags): PathWeek = when (goal?.status) {
-        GoalStatus.ACTIVE -> PathWeek.Active(name(goal.title), goalIds(goal, flags), goal.start)
+        GoalStatus.ACTIVE -> PathWeek.Active(name(goal.title), goalIds(goal, flags), goal.start, goal.pausedDays)
         GoalStatus.PAUSED, GoalStatus.HELD -> PathWeek.Paused
         else -> PathWeek.NoGoal
     }

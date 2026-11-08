@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** One-off notes on the WHOOP screen. Texts live in [WhoopTexts]. */
-enum class WhoopNote { CANCELLED, REJECTED, OFFLINE, SERVER_NOT_READY, NEEDS_NETWORK_TO_DISCONNECT, DISCONNECTED }
+enum class WhoopNote { CANCELLED, REJECTED, OFFLINE, SERVER_NOT_READY, NEEDS_NETWORK_TO_DISCONNECT, DISCONNECTED, OTHER_ACCOUNT }
 
 enum class WhoopPhase { IDLE, CONNECTING, DISCONNECTING }
 
@@ -94,6 +94,7 @@ class WhoopViewModel @Inject constructor(
                         notAllowed = outcome.whoopUserId
                     }
                     LoginOutcome.Rejected -> note = WhoopNote.REJECTED
+                    LoginOutcome.OtherAccount -> note = WhoopNote.OTHER_ACCOUNT
                     LoginOutcome.Offline -> note = WhoopNote.OFFLINE
                     LoginOutcome.NotConfigured -> note = WhoopNote.SERVER_NOT_READY
                 }

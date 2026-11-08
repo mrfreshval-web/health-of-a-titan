@@ -11,6 +11,8 @@ android {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:security"))
+    // The HoT account (A65, D-062): WHOOP tokens are asked for with the account session.
+    api(project(":core:account"))
     api(project(":core:network"))
     api(project(":core:database"))
     api(project(":domain:metrics"))

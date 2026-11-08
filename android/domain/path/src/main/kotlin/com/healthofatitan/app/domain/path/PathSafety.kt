@@ -14,9 +14,9 @@ data class SafetyHold(val paused: Boolean = false, val held: Boolean = false, va
 
 /**
  * The seam for the single SafetyState of D-051 (A58 audit: one safety state instead of a pause per
- * module). The Path does not decide on its own whether it is held: it asks this interface. Until
- * the event bus and its projectors arrive, [LOCAL] reads the goal's own status and the regime of
- * the week; the bus will replace it without touching the rules.
+ * module). The Path does not decide on its own whether it is held: it asks this interface. [LOCAL]
+ * reads the goal's own status and the regime of the week; the app passes the bus version
+ * (`PathBus.safety` in :feature:path), which adds the holds of `SafetyState` on top of [LOCAL].
  */
 fun interface PathSafety {
     fun hold(goal: PracticalGoal?, heavyWeek: Boolean): SafetyHold

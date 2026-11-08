@@ -18,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.healthofatitan.app.core.database.AgeGate
+import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.datastore.MentorPrefs
 import com.healthofatitan.app.core.datastore.MentorSettings
@@ -76,6 +78,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var profile: ProfileSettingsStore
 
+    /** The gate 18+ (R-13, A61 §1.2): `ConsentRecord age18`. */
+    @Inject
+    lateinit var ageGate: AgeGateStore
+
+    /** The gate as the screen reads it: a journal that cannot be read means «ask». */
+    private val ageGateState: Flow<AgeGate> by lazy { ageGate.gate.catch { emit(AgeGate.ASK) } }
+
     /** State cards (A44, D-036): which morning screen is due. */
     @Inject
     lateinit var checkin: CheckinRepository
@@ -108,6 +117,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private var pendingRoute by mutableStateOf<String?>(null)
+
+    /** Writing `age18` failed: the gate shows «Не получилось сохранить» (review of Agent 10). */
+    private var ageSaveFailed by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -145,6 +157,7 @@ class MainActivity : ComponentActivity() {
                 val ritual by rassvet.collectAsStateWithLifecycle(Pair<RassvetStep?, RassvetStep?>(null, null))
                 val mentorPrefs by mentor.prefs.collectAsStateWithLifecycle(MentorPrefs())
                 val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
+                val gate by ageGateState.collectAsStateWithLifecycle(AgeGate.LOADING)
                 CompositionLocalProvider(LocalAddressForm provides addressForm) {
                     HotApp(
                         pendingRoute = pendingRoute,
@@ -154,6 +167,12 @@ class MainActivity : ComponentActivity() {
                         rassvetNext = ritual.second,
                         onRassvetOffered = ::markRassvetOffered,
                         persona = mentorPrefs.persona,
+                        ageGate = gate,
+                        onAdultConfirmed = {
+                            ageSaveFailed = false
+                            lifecycleScope.launch { ageSaveFailed = runCatching { ageGate.confirmAdult() }.isFailure }
+                        },
+                        ageGateSaveFailed = ageSaveFailed,
                     )
                 }
             }

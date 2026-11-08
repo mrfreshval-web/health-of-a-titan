@@ -104,7 +104,7 @@ class Migration12To13Test {
         val db = open(name)
         try {
             db.openHelper.writableDatabase // runs and validates every migration
-            assertEquals(14, db.openHelper.readableDatabase.version)
+            assertEquals(15, db.openHelper.readableDatabase.version)
             val store = ProfileSettingsStore(db.personProfileDao()) { 99L }
             assertEquals(ProfileSettings(AddressForm.NEUTRAL, 1988, SexForCalc.MALE), store.current())
             assertEquals(21L, db.personProfileDao().get(HotDatabase.LOCAL_USER)?.updatedAt)

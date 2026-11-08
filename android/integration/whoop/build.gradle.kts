@@ -17,6 +17,8 @@ dependencies {
     api(project(":domain:engine"))
     implementation(project(":domain:checkin"))
     api(project(":domain:today"))
+    // The safety bus (A60 §3, D-051): the journal → SafetyState for «Сегодня», «Неделя» and «Путь».
+    api(project(":domain:safety"))
 
     api(libs.appauth)
     api(libs.androidx.work.runtime.ktx)

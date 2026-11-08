@@ -112,8 +112,8 @@ import kotlinx.coroutines.sync.withLock
 
 /** What overrides the week, bound in :app (crisis log, StormNet of the state cards, the profile). */
 interface WeekSignals {
-    /** CrisisGuard ≥ 2 in the last 72 h: the Sunday push stays silent. */
-    fun crisis(): Boolean
+    /** CrisisGuard ≥ 2 in the last 72 h, read from the safety bus (A60 §3): the Sunday push stays silent. */
+    suspend fun crisis(): Boolean
 
     /** When «Как ты на самом деле?» (StormNet) last opened; skews hide for 7 days after it (W-04). */
     suspend fun stormShownAt(): Instant?
@@ -123,7 +123,7 @@ interface WeekSignals {
 
     companion object {
         val None = object : WeekSignals {
-            override fun crisis(): Boolean = false
+            override suspend fun crisis(): Boolean = false
             override suspend fun stormShownAt(): Instant? = null
             override suspend fun profile(): WeekProfile = WeekProfile()
         }

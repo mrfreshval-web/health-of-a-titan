@@ -16,6 +16,7 @@ import com.healthofatitan.app.domain.engine.CrisisSource
 import com.healthofatitan.app.domain.engine.DayTexts
 import com.healthofatitan.app.domain.engine.ReturnPolicy
 import com.healthofatitan.app.domain.engine.ReturnStage
+import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -44,11 +45,13 @@ fun interface ReturnNotifier {
  * - silence ≥ 2 days → the day plan is built with RET-01 and one warm nudge is sent per pause;
  * - silence ≥ 7 days → «С возвращением» once, on the first open;
  * - a crisis level from CrisisGuard is logged as date + level + reason + source, **never text**;
- *   it also feeds [CrisisSignals] (no haiku on «Рассвет» for 72 h after level ≥ 2).
+ *   it also feeds [CrisisSignals] (no haiku on «Рассвет» for 72 h after level ≥ 2) and the event
+ *   journal of the safety bus [SafetyBus] (A60 §3), which «Сегодня», «Неделя» and «Путь» read.
  */
 class DailyLoopRepository(
     private val dao: DailyLoopDao,
     private val clock: Clock,
+    private val bus: SafetyBus? = null,
 ) : CrisisSignals {
 
     private val user = HotDatabase.LOCAL_USER
@@ -106,6 +109,7 @@ class DailyLoopRepository(
             ),
         )
         if (assessment.level.autoShowHelp) lastSevereAt = at
+        bus?.crisis(assessment.level.value, source.name, at)
     }
 
     /** Loads the last severe event once per process (called at app start). */

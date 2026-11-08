@@ -81,6 +81,7 @@ dependencies {
     implementation(project(":feature:checkin"))
     implementation(project(":domain:checkin"))
     implementation(project(":domain:today"))
+    implementation(project(":domain:safety"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

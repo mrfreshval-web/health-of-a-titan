@@ -42,8 +42,10 @@ import com.healthofatitan.app.domain.path.PracticalGoal
 import com.healthofatitan.app.domain.path.Refusal
 import com.healthofatitan.app.domain.path.Role
 import com.healthofatitan.app.domain.path.Sufficiency
+import com.healthofatitan.app.feature.path.logic.PathBus
 import com.healthofatitan.app.feature.path.logic.PathGiven
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
+import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -101,14 +103,16 @@ data class PathData(
 /**
  * «Путь» from stored HoT data (A56 §1): goals, parts, versions, the horizon and marks from
  * `path_*`, sleep (SLP) for the lever's sufficiency, today's mode from the day plan and «Дано»
- * from the profile of specifics. Pure rules live in `:domain:path`; nothing here talks to the
- * network, and no text of a goal leaves the phone (P-21).
+ * from the profile of specifics. The holds of the Path come from the safety bus (D-051, A60 §3):
+ * a crisis seen by «Сегодня» and «Неделя» holds the Path too ([PathBus]). Pure rules live in
+ * `:domain:path`; nothing here talks to the network, and no text of a goal leaves the phone (P-21).
  */
 class PathRepository @Inject constructor(
     private val dao: PathDao,
     private val plans: DayPlanRepository,
     private val profiles: ProfileStore,
     private val clock: Clock,
+    private val bus: SafetyBus,
 ) {
     private val user = HotDatabase.LOCAL_USER
 
@@ -121,9 +125,9 @@ class PathRepository @Inject constructor(
             val list = goals.mapNotNull { toGoal(it, byGoal[it.id].orEmpty()) }
             list to versions.mapNotNull { v -> toVersion(v, list.firstOrNull { it.id == v.goalId }) }
         }
-        val context = combine(plans.latest, profiles.profile) { plan, profile ->
+        val context = combine(plans.latest, profiles.profile, bus.state) { plan, profile, safety ->
             val regime = plan?.takeIf { it.dayKey == today }?.regime
-            regime to PathGiven.from(codes(profile.constraints))
+            Triple(regime, PathBus.given(PathGiven.from(codes(profile.constraints)), safety), PathBus.safety(safety))
         }
         combine(
             stored,
@@ -131,7 +135,7 @@ class PathRepository @Inject constructor(
             dao.observeMarks(user),
             dao.observeMetric(user, Metrics.SLP.id, Metrics.SLP.version, from),
             context,
-        ) { (goals, versions), horizons, marks, sleep, (regime, given) ->
+        ) { (goals, versions), horizons, marks, sleep, (regime, given, safety) ->
             val goal = goals.firstOrNull { GoalLifecycle.layer(it.status) == GoalLayer.PATH }
             val taken = marks.filter { it.goalId == goal?.id }
                 .mapNotNull { m -> ComponentKey.fromId(m.component)?.let { it to m.mark } }
@@ -150,6 +154,7 @@ class PathRepository @Inject constructor(
                     given = given,
                     sufficiency = data.sufficiency,
                     heavy = regime == Regime.GENTLE,
+                    safety = safety,
                 ),
             )
         }

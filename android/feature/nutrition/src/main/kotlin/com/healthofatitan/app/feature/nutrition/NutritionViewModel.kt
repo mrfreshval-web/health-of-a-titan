@@ -53,6 +53,12 @@ class NutritionViewModel @Inject constructor(private val repo: NutritionReposito
         launch { repo.setConsent(granted) }
     }
 
+    /** Withdraws S4 (D-058); [keepEdCare] is the answer to «Оставить бережный режим еды?». */
+    fun withdrawConsent(keepEdCare: Boolean) {
+        draft = null
+        launch { repo.withdrawConsent(keepEdCare) }
+    }
+
     fun setLevel(level: Level) = launch { repo.setLevel(level) }
 
     /** One tap: none → «избегаю» → «аллергия» → «тяжёлая реакция» → none. */

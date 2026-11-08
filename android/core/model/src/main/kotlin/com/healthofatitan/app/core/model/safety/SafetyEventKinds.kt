@@ -11,6 +11,9 @@ object SafetyEventKinds {
     /** CrisisGuard set a level; payload: 1–3. */
     const val CRISIS = "safety.crisis"
 
+    /** Every event of `ED_CARE` (entry, exit, steps of the return): what a withdrawal of S4 deletes (D-058). */
+    const val ED_CARE_PREFIX = "safety.ed_care."
+
     /** `ED_CARE` began; payload: the reason of entry (`signals | screen | self_report | body | specialist | self_choice`). */
     const val ED_CARE_ENTER = "safety.ed_care.enter"
 
@@ -25,6 +28,13 @@ object SafetyEventKinds {
 
     const val REASON_SELF_REPORT = "self_report"
     const val REASON_BODY = "body"
+    const val REASON_SELF_CHOICE = "self_choice"
+
+    /**
+     * The source of the one mark «режим включён» that stays after S4 is withdrawn with «Да»
+     * (D-058): an entry `self_choice` on the narrow consent `ed_care_keep`, never the old reason.
+     */
+    const val SOURCE_CONSENT_KEEP = "consent_keep"
 
     /**
      * The codes of the profile of specifics (A41, `medical_flags`) that start `ED_CARE`, and the

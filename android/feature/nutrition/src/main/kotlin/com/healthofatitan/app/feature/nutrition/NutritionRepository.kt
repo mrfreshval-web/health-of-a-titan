@@ -11,6 +11,7 @@ import com.healthofatitan.app.core.model.profile.ProfileCategory
 import com.healthofatitan.app.core.model.profile.UserConstraints
 import com.healthofatitan.app.domain.nutrition.DayCondition
 import com.healthofatitan.app.domain.nutrition.EveningMark
+import com.healthofatitan.app.domain.nutrition.FoldedProfile
 import com.healthofatitan.app.domain.nutrition.Level
 import com.healthofatitan.app.domain.nutrition.NutritionContent
 import com.healthofatitan.app.domain.nutrition.NutritionDayPlan
@@ -19,6 +20,7 @@ import com.healthofatitan.app.domain.nutrition.ProfileFold
 import com.healthofatitan.app.domain.nutrition.ProfileMode
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.DayView
+import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -49,6 +51,8 @@ fun interface NutritionContentSource {
  * Everything the food screens show.
  *
  * @property eveningDue the one-tap evening mark is asked (after 18:00, not in ed_care)
+ * @property edCareActive `ED_CARE` is on in the safety bus: a withdrawal of S4 asks
+ *   «Оставить бережный режим еды?» once (D-058)
  */
 data class NutritionState(
     val content: NutritionContent? = null,
@@ -60,6 +64,7 @@ data class NutritionState(
     /** The highest level the profile allows (safety only lowers, A41 §4). */
     val levelCap: Level = Level.PRECISE,
     val loaded: Boolean = false,
+    val edCareActive: Boolean = false,
 ) {
     val chosenLevel: Level get() = Level.of(profile.nutritionLevel) ?: Level.BASE
 }
@@ -75,6 +80,7 @@ class NutritionRepository @Inject constructor(
     private val profiles: ProfileStore,
     private val days: DayPlanRepository,
     private val dao: NutritionDao,
+    private val bus: SafetyBus,
 ) {
     private val user = HotDatabase.LOCAL_USER
     private val chips = MutableStateFlow(DayChips())
@@ -85,15 +91,16 @@ class NutritionRepository @Inject constructor(
     fun state(clock: Flow<LocalDateTime>): Flow<NutritionState> {
         val today = clock.map { it.toLocalDate() }.distinctUntilChanged()
         val evening = today.flatMapLatest { d -> dao.observeEvening(user, d.toString()) }
+        val safety = bus.state.map { it.edCare.active }.distinctUntilChanged()
         val inputs = combine(content, profiles.profile, days.latest, chips) { c, p, d, ch -> Inputs(c, p, d, ch) }
-        return combine(inputs, clock, evening) { i, now, ev -> build(i, now, EveningMark.of(ev?.mark)) }
+        return combine(inputs, clock, evening, safety) { i, now, ev, ed -> build(i, now, EveningMark.of(ev?.mark), ed) }
     }
 
-    private fun build(i: Inputs, now: LocalDateTime, evening: EveningMark?): NutritionState {
+    private fun build(i: Inputs, now: LocalDateTime, evening: EveningMark?, edCare: Boolean): NutritionState {
         val today = now.toLocalDate()
         val dayChips = i.chips.takeIf { it.day == today } ?: DayChips(today)
-        val c = i.content ?: return NutritionState(profile = i.profile, loaded = true)
-        val folded = ProfileFold.fold(i.profile.constraints, c.profile, i.profile.consented)
+        val c = i.content ?: return NutritionState(profile = i.profile, loaded = true, edCareActive = edCare)
+        val folded = ProfileFold.fold(i.profile.constraints, c.profile, i.profile.consented).underEdCare(edCare)
         val chosen = Level.of(i.profile.nutritionLevel) ?: Level.BASE
         val plan = NutritionEngine.plan(DayFacts.input(i.day, today, chosen, folded, dayChips.conditions, dayChips.replaced), c)
         return NutritionState(
@@ -105,6 +112,7 @@ class NutritionRepository @Inject constructor(
             eveningDue = now.hour >= EVENING_FROM_HOUR && plan.mode != ProfileMode.ED_CARE,
             levelCap = folded.levelCap,
             loaded = true,
+            edCareActive = edCare,
         )
     }
 
@@ -123,6 +131,13 @@ class NutritionRepository @Inject constructor(
         dao.upsertEvening(NutritionEveningEntity(user, today.toString(), mark.code, System.currentTimeMillis()))
 
     suspend fun setConsent(granted: Boolean) = profiles.setConsent(granted)
+
+    /**
+     * Withdraws S4 (D-058). [keepEdCare] counts only while `ED_CARE` is on in the bus: then one
+     * mark «режим включён» stays; otherwise everything is deleted.
+     */
+    suspend fun withdrawConsent(keepEdCare: Boolean) =
+        profiles.withdrawConsent(keepEdCare = keepEdCare && bus.current().edCare.active)
 
     suspend fun save(constraints: UserConstraints) = profiles.save(constraints)
 
@@ -165,3 +180,15 @@ object NutritionModule {
         return NutritionContentSource { cached }
     }
 }
+
+/**
+ * `ED_CARE` of the safety bus folds into the food of the day even without the profile (D-058):
+ * after S4 is withdrawn with «Да» the one kept mark still gives «Основа» without numbers and
+ * without photo feedback. The bus only makes it stricter, never softer.
+ */
+internal fun FoldedProfile.underEdCare(edCareActive: Boolean): FoldedProfile =
+    if (!edCareActive || mode == ProfileMode.ED_CARE) {
+        this
+    } else {
+        copy(mode = ProfileMode.ED_CARE, levelCap = Level.BASE, hideNumbers = true, photoFeedbackOff = true)
+    }

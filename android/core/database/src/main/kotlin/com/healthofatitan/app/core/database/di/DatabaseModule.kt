@@ -3,6 +3,7 @@ package com.healthofatitan.app.core.database.di
 import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.HotDatabase
@@ -88,7 +89,7 @@ object DatabaseModule {
     /** The shared profile of specifics (S4): nutrition and training read the same store. */
     @Provides
     @Singleton
-    fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao(), db.eventLogDao())
+    fun provideProfileStore(db: HotDatabase): ProfileStore = ProfileStore(db.nutritionDao(), db.consentDao(), db.eventLogDao(), transaction = { block -> db.withTransaction { block() } })
 
     @Provides
     fun provideTrainingLogDao(db: HotDatabase): TrainingLogDao = db.trainingLogDao()

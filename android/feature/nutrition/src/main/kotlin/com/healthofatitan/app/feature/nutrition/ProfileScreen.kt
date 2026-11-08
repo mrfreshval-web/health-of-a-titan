@@ -40,7 +40,6 @@ import com.healthofatitan.app.core.ui.component.HotCard
 import com.healthofatitan.app.core.ui.component.HotOverline
 import com.healthofatitan.app.core.ui.component.HotPrimaryButton
 import com.healthofatitan.app.core.ui.component.HotSpacing
-import com.healthofatitan.app.core.ui.component.HotTextButton
 import com.healthofatitan.app.core.ui.theme.HotThemeTokens
 import com.healthofatitan.app.core.ui.theme.HotType
 
@@ -50,6 +49,8 @@ const val PROFILE_CONSENT_TAG = "nutrition_consent"
 /** Actions of the profile screen (all stored at once, S4, by category). */
 data class ProfileActions(
     val onConsent: (Boolean) -> Unit = {},
+    /** The S4 consent is withdrawn (D-058): `true` keeps the one mark of `ED_CARE`. */
+    val onWithdraw: (keepEdCare: Boolean) -> Unit = {},
     val onAllergen: (String) -> Unit = {},
     val onDiet: (String) -> Unit = {},
     val onIntolerance: (String) -> Unit = {},
@@ -158,7 +159,7 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         }
 
         Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
-        HotTextButton(NutritionTexts.CONSENT_REVOKE, onClick = { actions.onConsent(false) })
+        ConsentWithdraw(edCareActive = state.edCareActive, onWithdraw = actions.onWithdraw)
     }
 }
 

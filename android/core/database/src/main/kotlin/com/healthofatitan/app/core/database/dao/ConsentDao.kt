@@ -21,4 +21,8 @@ interface ConsentDao {
         """,
     )
     fun observeCurrent(userId: String): Flow<List<ConsentRecordEntity>>
+
+    /** The latest record of [consentId], or null if there is none. */
+    @Query("SELECT * FROM consent_record WHERE user_id = :userId AND consent_id = :consentId ORDER BY id DESC LIMIT 1")
+    suspend fun latest(userId: String, consentId: String): ConsentRecordEntity?
 }

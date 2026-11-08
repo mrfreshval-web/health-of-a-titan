@@ -37,6 +37,7 @@ private fun ProfileRoute(onOpenLevel: () -> Unit, vm: NutritionViewModel = hiltV
         state = state,
         actions = ProfileActions(
             onConsent = vm::consent,
+            onWithdraw = vm::withdrawConsent,
             onAllergen = vm::cycleAllergen,
             onDiet = vm::toggleDiet,
             onIntolerance = vm::toggleIntolerance,

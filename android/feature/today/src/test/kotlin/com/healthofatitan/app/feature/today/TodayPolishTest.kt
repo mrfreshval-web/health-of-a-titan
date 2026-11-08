@@ -18,7 +18,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthofatitan.app.core.model.nav.HotRoute
-import com.healthofatitan.app.core.ui.component.HotSpacing
 import com.healthofatitan.app.core.ui.theme.HotTheme
 import com.healthofatitan.app.core.ui.theme.HotType
 import com.healthofatitan.app.domain.engine.DayFlag
@@ -253,10 +252,12 @@ class TodayPolishTest {
             HotTheme {
                 val measurer = rememberTextMeasurer()
                 val density = LocalDensity.current
-                val card = 412.dp - HotSpacing.edge * 2 - HotSpacing.cardPadding * 2
+                // «Тише» (A66 §3.2а): «День» and the tiles stand without cards, at the 16 dp margins
+                val width = 412.dp - TODAY_EDGE * 2
                 // a row of «День»: the label, the narrowest bar, a gap and the number (A66 §3.5)
-                val column = with(density) { (card - DAY_LABEL_WIDTH - DAY_BAR_MIN - 8.dp).toPx() }
-                val number = with(density) { ((card - 12.dp * 2) / 3).toPx() }
+                val column = with(density) { (width - DAY_LABEL_WIDTH - DAY_BAR_MIN - 8.dp).toPx() }
+                // three tiles divided by two 1 dp hairlines
+                val number = with(density) { ((width - 1.dp * 2) / 3).toPx() }
                 val supports = listOf("20,9 из 14–18", "120 мин активности", "12 из 12 приёмов", "день закрыт ✓").map {
                     it to (measurer.measure(it, MaterialTheme.typography.labelLarge, softWrap = false).size.width <= column)
                 }

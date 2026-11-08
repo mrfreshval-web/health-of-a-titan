@@ -9,13 +9,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -29,6 +29,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -96,13 +98,24 @@ internal class SceneSky(val stops: List<Color>, val glow: Color, val sun: Color,
 
 /** The light of the columns (A66 §1.1): gold from the base up to the share of the closed day. */
 private val ColumnGlow = Color(0xFFFFBE6E)
-private val HorizonGold = Color(0xFFFFC77A)
 
 /**
- * «Сегодня» scene by mockup 05b (A66 §1.4, §3.2): the sky of the mode, the sun disk on the axis of
- * the Titan behind the figure (its height is Заряд to the norm, linear), the Titan between his
- * columns, the glow of the columns rising by the share of the closed day, the word of the mode on
- * top. One TalkBack node with [spoken]; a tap opens «Почему так».
+ * The render of the Titan and his columns, quieter (A66 §3.2а): saturation 0.55, brightness 0.85.
+ */
+private val QuietColumns: ColorFilter = ColorFilter.colorMatrix(
+    ColorMatrix().apply {
+        setToSaturation(TodayTopRules.COLUMN_SATURATION)
+        val b = TodayTopRules.COLUMN_BRIGHTNESS
+        timesAssign(ColorMatrix().apply { setToScale(b, b, b, 1f) })
+    },
+)
+
+/**
+ * «Сегодня» scene, variant B «Тише» (A66 v0.5 §3.2а, §1.4): the sky of the mode under the header,
+ * the sun disk on the axis of the Titan behind the figure (its height is Заряд to the norm,
+ * linear), the Titan between his quieter columns, their glow rising by the share of the closed
+ * day, and the word of the mode on the ground under the feet. One TalkBack node with [spoken]; a
+ * tap opens «Почему так». The sun is the one glow of the screen.
  *
  * Layer 2 is the placeholder `core_ui_titan_front` until the render comes (A66 §11.2). The sky is
  * a plain gradient (no AGSL yet). «Удалить анимацию» (A66 §1.3): with animators off the sun and the
@@ -147,9 +160,8 @@ internal fun TodayScene(
                 this.onClick(label = TodayCopy.WHY_TITLE) { tap(); true }
             },
     ) {
-        val width = maxWidth
-        // the frame keeps its 440 : 412 ratio to the width, the head below the mode word; the axis is the centre
-        val frame = TodayTopRules.frameSide(width.value).dp
+        // 280 : 412 of the width, the head never closer than 24 dp to the header; the axis is the centre
+        val frame = TodayTopRules.frameSide(maxWidth.value)
         Spacer(
             Modifier
                 .fillMaxSize()
@@ -159,17 +171,16 @@ internal fun TodayScene(
                     sky.haze?.let { h ->
                         drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.55f to h.copy(alpha = 0.07f), 0.9f to Color.Transparent))
                     }
-                    val axis = size.width / 2f
                     if (charge != null) {
-                        val c = Offset(axis, TodayTopRules.sunCenterY(sun.value).dp.toPx())
-                        drawCircle(Brush.radialGradient(listOf(sky.glow.copy(alpha = 0.30f), Color.Transparent), c, 220.dp.toPx()), 220.dp.toPx(), c)
-                        drawCircle(Brush.radialGradient(listOf(sky.glow.copy(alpha = 0.22f), Color.Transparent), c, 110.dp.toPx()), 110.dp.toPx(), c)
-                        val r = SUN_RADIUS.dp.toPx() / 0.72f
+                        val c = Offset(size.width / 2f, TodayTopRules.sunCenterY(sun.value, frame).dp.toPx())
+                        val halo = (frame * SKY_GLOW_REACH).dp.toPx()
+                        drawCircle(Brush.radialGradient(listOf(sky.glow.copy(alpha = TodayTopRules.SKY_GLOW), Color.Transparent), c, halo), halo, c)
+                        val r = (TodayTopRules.SUN_DIAMETER / 2f).dp.toPx() / 0.72f
                         drawCircle(
                             Brush.radialGradient(
                                 0f to Color(0xFFFFF8EC),
                                 0.38f to Color(0xFFFFE2B4),
-                                0.62f to sky.sun.copy(alpha = 0.85f),
+                                0.62f to sky.sun.copy(alpha = 0.8f),
                                 0.72f to Color.Transparent,
                                 center = c,
                                 radius = r,
@@ -178,19 +189,13 @@ internal fun TodayScene(
                             c,
                         )
                     }
-                    val feet = TodayTopRules.feetY.dp.toPx()
-                    drawRect(
-                        Brush.horizontalGradient(listOf(Color.Transparent, HorizonGold.copy(alpha = 0.25f), Color.Transparent)),
-                        topLeft = Offset(0f, feet),
-                        size = Size(size.width, 1.dp.toPx()),
-                    )
                 },
         )
         // Layer 2: the Titan and his columns; layer 3: the glow, only where the frame is opaque.
         Box(
             Modifier
                 .layout { measurable, constraints ->
-                    val side = frame.roundToPx()
+                    val side = frame.dp.roundToPx()
                     val placeable = measurable.measure(Constraints.fixed(side, side))
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         val left = ((constraints.maxWidth - side) / 2f).roundToInt()
@@ -206,10 +211,11 @@ internal fun TodayScene(
                         val s = size.width
                         val base = TodayTopRules.BASE * s
                         val top = TodayTopRules.glowTop(share) * s
+                        val a = TodayTopRules.COLUMN_GLOW
                         val brush = Brush.verticalGradient(
                             0f to ColumnGlow.copy(alpha = 0f),
-                            0.15f to ColumnGlow.copy(alpha = 0.18f),
-                            1f to ColumnGlow.copy(alpha = 0.55f),
+                            0.15f to ColumnGlow.copy(alpha = a / 3f),
+                            1f to ColumnGlow.copy(alpha = a),
                             startY = top,
                             endY = base,
                         )
@@ -228,50 +234,50 @@ internal fun TodayScene(
                 painter = painterResource(R.drawable.core_ui_titan_front),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
+                colorFilter = QuietColumns,
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // the ground: the last 60 dp go to the depth, the haiku stands on it
+        // the ground: from 10 dp above the feet down to the depth, the mode word stands on it
         Spacer(
             Modifier
                 .fillMaxWidth()
-                .height(GROUND.dp)
+                .height((TodayTopRules.SCENE_HEIGHT - TodayTopRules.feetY + 10f).dp)
                 .align(Alignment.BottomCenter)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Titanium.Titan1.copy(alpha = 0.9f)))),
         )
         if (mode != null) {
-            // text over the sky stands on Depth ≥ 0.8 (A66 §3.11)
-            Column(Modifier.align(Alignment.TopCenter).padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            // A66 §3.2а: the word of the mode under the scene, centred, no frame
+            Row(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = TodayTopRules.MODE_WORD_TOP.dp)
+                    .height(TodayTopRules.MODE_WORD_HEIGHT.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 ModeWord(
                     mode,
                     style = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp),
                     glyphSize = 16.dp,
                     gap = 6.dp,
-                    modifier = Modifier
-                        .background(Titanium.Depth.copy(alpha = 0.8f), RoundedCornerShape(50))
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
                 )
                 // S2: without WHOOP the mode is the default day and self-report
                 if (estimate) {
-                    HotOverline(
-                        TodayCopy.ESTIMATE,
-                        modifier = Modifier
-                            .testTag(ME_ESTIMATE_TAG)
-                            .background(Titanium.Depth.copy(alpha = 0.8f), RoundedCornerShape(50))
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
+                    Spacer(Modifier.width(8.dp))
+                    HotOverline(TodayCopy.ESTIMATE, modifier = Modifier.testTag(ME_ESTIMATE_TAG))
                 }
             }
         }
     }
 }
 
-private const val SUN_RADIUS = 28f
-private const val GROUND = 60f
 private const val GREET_FROM = 0.92f
+
+/** The halo of the sky around the sun, as a share of the frame (mockup: 0.55 × S). */
+private const val SKY_GLOW_REACH = 0.55f
 
 /** HotMotion `COLUMN_MS` (A66 §1.3). */
 private const val COLUMN_MS = 600
 
-/** Where the five sky colours stand (mockup 05b: 0, 40, 72, 87, 100 % of 0–470 dp, from y 100). */
+/** Where the five sky colours stand (from the top of the scene to the ground). */
 private val SKY_STOPS = listOf(0f, 0.24f, 0.64f, 0.835f, 1f)

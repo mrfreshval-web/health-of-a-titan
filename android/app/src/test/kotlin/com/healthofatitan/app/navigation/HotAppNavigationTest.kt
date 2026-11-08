@@ -188,6 +188,38 @@ class HotAppNavigationTest {
     }
 
     @Test
+    fun `the unified consent comes before the first launch, accepts only with the tick, help opens over it`() {
+        var accepted = 0
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    navController = nav,
+                    stateful = false,
+                    consentGate = com.healthofatitan.app.core.database.ConsentGate.ASK,
+                    onConsentAccepted = { accepted++ },
+                    firstLaunch = com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate.SHOW,
+                    onboarding = { onHelp ->
+                        com.healthofatitan.app.feature.path.onboarding.OnboardingScreen(
+                            com.healthofatitan.app.feature.path.onboarding.OnboardingUi(),
+                            com.healthofatitan.app.feature.path.onboarding.OnboardingActions(onHelp = onHelp),
+                        )
+                    },
+                )
+            }
+        }
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_TAG).assertExists()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.path.onboarding.ONBOARDING_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_ACCEPT_TAG).performScrollTo().performClick()
+        assertEquals(0, accepted)
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_CHECK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_ACCEPT_TAG).performScrollTo().performClick()
+        assertEquals(1, accepted)
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_HELP_TAG).performClick()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.me.consent.CONSENT_TAG).assertDoesNotExist()
+    }
+
+    @Test
     fun `starts on Today and all four tabs open`() {
         launch()
         compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()

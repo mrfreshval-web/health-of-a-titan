@@ -66,7 +66,10 @@ import com.healthofatitan.app.feature.checkin.EveningWeather
 import com.healthofatitan.app.feature.checkin.checkinScreens
 import com.healthofatitan.app.core.account.AccountGate
 import com.healthofatitan.app.core.database.AgeGate
+import com.healthofatitan.app.core.database.ConsentGate
 import com.healthofatitan.app.feature.me.consent.AgeGateScreen
+import com.healthofatitan.app.feature.me.consent.ConsentView
+import com.healthofatitan.app.feature.me.consent.UnifiedConsentScreen
 import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.account.accountScreen
 import com.healthofatitan.app.feature.me.meScreen
@@ -169,6 +172,9 @@ fun HotApp(
     ageGateSaveFailed: Boolean = false,
     accountGate: AccountGate = AccountGate.SIGNED_IN,
     signIn: @Composable (onHelp: () -> Unit) -> Unit = {},
+    consentGate: ConsentGate = ConsentGate.GRANTED,
+    onConsentAccepted: () -> Unit = {},
+    consentSaveFailed: Boolean = false,
     firstLaunch: FirstLaunchGate = FirstLaunchGate.DONE,
     onboarding: @Composable (onHelp: () -> Unit) -> Unit = {},
 ) {
@@ -182,10 +188,13 @@ fun HotApp(
     val ageGated = ageGate != AgeGate.CONFIRMED && !inSos
     // «Вход» comes after the gate 18+ (R-13 stays first) and never lies over SOS.
     val signInGated = !ageGated && accountGate.showsSignIn && !inSos
-    // The first launch comes after «Вход» (A66 §0.2: consents first) and never lies over SOS.
-    val firstLaunchGated = !ageGated && !signInGated && firstLaunch != FirstLaunchGate.DONE && !inSos
-    val gated = ageGated || signInGated || firstLaunchGated
+    // The unified consent (A68) after «Вход»: nothing is stored about health before it.
+    val consentGated = !ageGated && !signInGated && consentGate != ConsentGate.GRANTED && !inSos
+    // The first launch comes after the consent (A66 §0.2: consents first) and never lies over SOS.
+    val firstLaunchGated = !ageGated && !signInGated && !consentGated && firstLaunch != FirstLaunchGate.DONE && !inSos
+    val gated = ageGated || signInGated || consentGated || firstLaunchGated
     var underage by rememberSaveable { mutableStateOf(false) }
+    var consentView by rememberSaveable { mutableStateOf(ConsentView.TEXT) }
 
     LaunchedEffect(pendingRoute) {
         if (pendingRoute != null) {
@@ -398,6 +407,16 @@ fun HotApp(
         }
         // The gate 18+ (R-13): over everything, and «Помощь» on it opens SOS over the gate.
         if (signInGated) signIn { navController.openSos() }
+        if (consentGated) {
+            UnifiedConsentScreen(
+                gate = consentGate,
+                view = consentView,
+                onViewChange = { consentView = it },
+                onAccept = onConsentAccepted,
+                onHelp = { navController.openSos() },
+                saveFailed = consentSaveFailed,
+            )
+        }
         if (firstLaunchGated) {
             if (firstLaunch == FirstLaunchGate.SHOW) onboarding { navController.openSos() } else HotBackground(Modifier.fillMaxSize()) {}
         }

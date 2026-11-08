@@ -7,6 +7,7 @@ import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.account.SignInTexts
 import com.healthofatitan.app.feature.me.profile.AccountProfileTexts
 import com.healthofatitan.app.feature.me.consent.AgeGateTexts
+import com.healthofatitan.app.feature.me.consent.UnifiedConsentTexts
 import com.healthofatitan.app.feature.nutrition.ConsentWithdrawTexts
 import com.healthofatitan.app.feature.today.DailyTexts
 import org.junit.Test
@@ -69,6 +70,8 @@ class GenderNeutralTextsTest {
         ) + DailyTexts.trainingOptions(address).associate { (value, label) -> "DailyTexts.trainingOptions.$value" to label } +
             // The gate 18+ (R-13) stands before the address form is chosen: neutral in every form.
             AgeGateTexts.ALL.mapIndexed { i, g -> "AgeGateTexts.$i" to g.of(address) } +
+            // The unified consent (A68) stands before the address form is chosen too: neutral.
+            UnifiedConsentTexts.ALL.mapIndexed { i, g -> "UnifiedConsentTexts.$i" to g.of(address) } +
             // The withdrawal of S4 and the one question about ED_CARE (D-058): neutral in every form.
             ConsentWithdrawTexts.ALL.mapIndexed { i, g -> "ConsentWithdrawTexts.$i" to g.of(address) } +
             // «Вход» (A65, D-062) stands before the address form is chosen too: neutral.

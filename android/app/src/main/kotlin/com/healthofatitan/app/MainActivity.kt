@@ -23,6 +23,9 @@ import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.account.LocalDataWiper
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.core.database.AgeGateStore
+import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate
+import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGateSource
+import com.healthofatitan.app.feature.path.onboarding.FirstLaunchRoute
 import com.healthofatitan.app.core.database.ProfileSettingsStore
 import com.healthofatitan.app.core.datastore.MentorPrefs
 import com.healthofatitan.app.core.datastore.MentorSettings
@@ -99,6 +102,13 @@ class MainActivity : ComponentActivity() {
 
     /** «Вход» over the app when there is no HoT account (A65, D-062); unreadable → no screen. */
     private val accountGate: Flow<AccountGate> by lazy { whoop.accountGate.catch { emit(AccountGate.NOT_REQUIRED) } }
+
+    /** The first launch (A66 §0.2, D-065): shown until it is passed or put off. */
+    @Inject
+    lateinit var firstLaunch: FirstLaunchGateSource
+
+    /** A store that cannot be read does not lock the app behind the first launch. */
+    private val firstLaunchState: Flow<FirstLaunchGate> by lazy { firstLaunch.gate.catch { emit(FirstLaunchGate.DONE) } }
 
     /** State cards (A44, D-036): which morning screen is due. */
     @Inject
@@ -178,6 +188,7 @@ class MainActivity : ComponentActivity() {
                 val addressForm by profile.addressForm.collectAsStateWithLifecycle(AddressForm.NEUTRAL)
                 val gate by ageGateState.collectAsStateWithLifecycle(AgeGate.LOADING)
                 val account by accountGate.collectAsStateWithLifecycle(AccountGate.LOADING)
+                val first by firstLaunchState.collectAsStateWithLifecycle(FirstLaunchGate.LOADING)
                 CompositionLocalProvider(LocalAddressForm provides addressForm) {
                     HotApp(
                         pendingRoute = pendingRoute,
@@ -195,6 +206,8 @@ class MainActivity : ComponentActivity() {
                         ageGateSaveFailed = ageSaveFailed,
                         accountGate = account,
                         signIn = { onHelp -> SignInRoute(onHelp = onHelp) },
+                        firstLaunch = first,
+                        onboarding = { onHelp -> FirstLaunchRoute(onHelp = onHelp, onDone = {}) },
                     )
                 }
             }

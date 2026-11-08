@@ -123,6 +123,7 @@ class HotAppNavigationTest {
         HotTab.TODAY to TODAY_SCREEN_TAG,
         HotTab.WEEK to WEEK_SCREEN_TAG,
         HotTab.PATH to PATH_SCREEN_TAG,
+        HotTab.BEHIND to BEHIND_SCREEN_TAG,
     )
 
     private lateinit var nav: NavHostController
@@ -145,21 +146,52 @@ class HotAppNavigationTest {
     }
 
     @Test
-    fun `the three modules are Today, Week and Path`() {
-        assertEquals(listOf(HotTab.TODAY, HotTab.WEEK, HotTab.PATH), HotTab.entries.toList())
+    fun `the four modules are Today, Week, Path and Behind`() {
+        assertEquals(listOf(HotTab.TODAY, HotTab.WEEK, HotTab.PATH, HotTab.BEHIND), HotTab.entries.toList())
     }
 
     @Test
-    fun `behind opens from the path by look back, the path stays selected`() {
+    fun `behind is a tab, and look back on the path opens it`() {
         launch()
         compose.onNodeWithTag(HotTab.PATH.testTag).performClick()
         compose.onNodeWithTag(PATH_LOOK_BACK_TAG).performScrollTo().performClick()
         compose.onNodeWithTag(BEHIND_SCREEN_TAG).assertExists()
-        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+        compose.onNodeWithTag(HotTab.BEHIND.testTag).assertIsSelected()
     }
 
     @Test
-    fun `starts on Today and all three tabs open`() {
+    fun `plus opens the sheet of the day`() {
+        launch()
+        compose.onNodeWithTag(PLUS_TAG).performClick()
+        compose.onNodeWithTag(PLUS_SHEET_TAG).assertExists()
+    }
+
+    @Test
+    fun `the first launch lies over the app, help opens over it`() {
+        compose.setContent {
+            nav = rememberNavController()
+            HotTheme {
+                HotApp(
+                    navController = nav,
+                    stateful = false,
+                    firstLaunch = com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate.SHOW,
+                    onboarding = { onHelp ->
+                        com.healthofatitan.app.feature.path.onboarding.OnboardingScreen(
+                            com.healthofatitan.app.feature.path.onboarding.OnboardingUi(),
+                            com.healthofatitan.app.feature.path.onboarding.OnboardingActions(onHelp = onHelp),
+                        )
+                    },
+                )
+            }
+        }
+        compose.onNodeWithTag(com.healthofatitan.app.feature.path.onboarding.ONBOARDING_TAG).assertExists()
+        compose.onNodeWithTag(HotTab.WEEK.testTag).assertDoesNotExist()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.path.onboarding.ONBOARDING_HELP_TAG).performClick()
+        compose.onNodeWithTag(com.healthofatitan.app.feature.path.onboarding.ONBOARDING_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun `starts on Today and all four tabs open`() {
         launch()
         compose.onNodeWithTag(TODAY_SCREEN_TAG).assertExists()
         screens.forEach { (tab, screenTag) ->

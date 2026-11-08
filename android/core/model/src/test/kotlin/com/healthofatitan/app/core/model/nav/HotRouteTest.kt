@@ -6,8 +6,8 @@ import kotlin.test.assertFalse
 
 class HotRouteTest {
     @Test
-    fun `four modules of D-038, the mentor and sos are outside tabs`() {
-        assertEquals(listOf("today", "week", "path"), HotRoute.tabs)
+    fun `four tabs of A66, the mentor and sos are outside tabs`() {
+        assertEquals(listOf("today", "week", "path", "behind"), HotRoute.tabs)
         assertFalse(HotRoute.MENTOR in HotRoute.tabs)
         assertFalse(HotRoute.SOS in HotRoute.tabs)
         assertFalse(HotRoute.ME in HotRoute.tabs)

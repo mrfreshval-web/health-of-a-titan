@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -77,6 +78,7 @@ import com.healthofatitan.app.feature.mentor.mentorScreen
 import com.healthofatitan.app.feature.nutrition.NutritionTexts
 import com.healthofatitan.app.feature.nutrition.nutritionScreens
 import com.healthofatitan.app.feature.path.mentorPersonaScreen
+import com.healthofatitan.app.feature.path.onboarding.FirstLaunchGate
 import com.healthofatitan.app.feature.path.pathRitualScreen
 import com.healthofatitan.app.feature.path.pathScreen
 import com.healthofatitan.app.feature.sos.sosScreen
@@ -95,13 +97,14 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
- * Bottom modules «Сегодня · Неделя · Путь» (D-051; «За плечами» opens from «Путь»). The mentor left the bar: Винс is
- * the circle on the left of every header.
+ * Bottom modules «Сегодня · Неделя · Путь · За плечами» with «+» in the middle (A66 §2.3, v3
+ * mockups). Винс is the circle on the left of every header.
  */
 enum class HotTab(val route: String, val label: String, @param:DrawableRes val icon: Int) {
     TODAY(HotRoute.TODAY, "Сегодня", R.drawable.core_ui_ic_today),
     WEEK(HotRoute.WEEK, "Неделя", R.drawable.core_ui_ic_week),
     PATH(HotRoute.PATH, "Путь", R.drawable.core_ui_ic_path),
+    BEHIND(HotRoute.BEHIND, "За плечами", R.drawable.core_ui_ic_behind),
     ;
 
     val testTag: String get() = "tab_$route"
@@ -143,6 +146,10 @@ fun RassvetStep.route(): String = when (this) {
  * @param accountGate the HoT account (A65, D-062): [AccountGate.SIGNED_OUT] puts «Вход» over the
  *   app, after the gate 18+ and never over SOS. Tests start signed in.
  * @param signIn draws «Вход»; its argument opens SOS over it.
+ * @param firstLaunch the first launch (A66 §0.2, D-065): [FirstLaunchGate.SHOW] puts «Приветствие →
+ *   Откуда ты идёшь → Куда ты идёшь → Первая неделя» over the app, after «Вход» and never over SOS.
+ *   Tests start with it passed.
+ * @param onboarding draws the first launch; its argument opens SOS over it.
  */
 @Composable
 fun HotApp(
@@ -160,6 +167,8 @@ fun HotApp(
     ageGateSaveFailed: Boolean = false,
     accountGate: AccountGate = AccountGate.SIGNED_IN,
     signIn: @Composable (onHelp: () -> Unit) -> Unit = {},
+    firstLaunch: FirstLaunchGate = FirstLaunchGate.DONE,
+    onboarding: @Composable (onHelp: () -> Unit) -> Unit = {},
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -171,7 +180,9 @@ fun HotApp(
     val ageGated = ageGate != AgeGate.CONFIRMED && !inSos
     // «Вход» comes after the gate 18+ (R-13 stays first) and never lies over SOS.
     val signInGated = !ageGated && accountGate.showsSignIn && !inSos
-    val gated = ageGated || signInGated
+    // The first launch comes after «Вход» (A66 §0.2: consents first) and never lies over SOS.
+    val firstLaunchGated = !ageGated && !signInGated && firstLaunch != FirstLaunchGate.DONE && !inSos
+    val gated = ageGated || signInGated || firstLaunchGated
     var underage by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(pendingRoute) {
@@ -179,7 +190,7 @@ fun HotApp(
             navController.currentBackStackEntryFlow.first() // wait until NavHost has set the graph
             when (pendingRoute) {
                 HotRoute.SOS -> navController.openSos()
-                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR, HotRoute.BEHIND ->
+                HotRoute.TRAINING_PLAYER, HotRoute.CHECKIN, HotRoute.BREATHER, HotRoute.MENTOR ->
                     navController.navigate(pendingRoute) { launchSingleTop = true }
                 else -> navController.openTab(pendingRoute)
             }
@@ -217,6 +228,9 @@ fun HotApp(
         }
     }
 
+    // «+» (A66 §2.4): one entry of the day, a sheet over the current tab.
+    var plusOpen by rememberSaveable { mutableStateOf(false) }
+
     val sync = rememberTopBarSync(syncProgress)
     SyncHaptics(sync)
 
@@ -230,13 +244,18 @@ fun HotApp(
                 if (!fullScreen) {
                     HotTopBar(
                         // «Сегодня» and «Путь» have no title: the date and the hero speak there
-                        title = nested?.title ?: currentTab.label.takeIf { currentTab != HotTab.TODAY && currentTab != HotTab.PATH },
+                        title = nested?.title ?: currentTab.label.takeIf { currentTab != HotTab.TODAY && currentTab != HotTab.PATH && currentTab != HotTab.WEEK },
                         overline = if (nested != null) nested.backLabel else TabHeaders.overline(currentTab, LocalDate.now()),
                         onBack = if (nested != null) ({ if (!navController.popBackStack()) navController.openTab(nested.tab.route) }) else null,
                         // The WHOOP screen has the big mark itself; one animated titan per screen.
                         sync = if (currentRoute == HotRoute.WHOOP) null else sync.toMark(),
                         mentor = { MentorCircle(persona) { navController.navigate(HotRoute.MENTOR) { launchSingleTop = true } } },
-                        center = if (nested == null && currentTab == HotTab.TODAY) TabHeaders.today(LocalDate.now()) else null,
+                        center = when {
+                            nested != null -> null
+                            currentTab == HotTab.TODAY -> TabHeaders.today(LocalDate.now())
+                            currentTab == HotTab.WEEK -> TabHeaders.weekCenter(LocalDate.now())
+                            else -> null
+                        },
                         avatar = {
                             AvatarMenu(
                                 persona = persona,
@@ -249,7 +268,13 @@ fun HotApp(
                 }
             },
             bottomBar = {
-                if (!fullScreen) HotBottomBar(currentTab = currentTab, onTabClick = { navController.openTab(it.route) })
+                if (!fullScreen) {
+                    HotBottomBar(
+                        currentTab = currentTab,
+                        onTabClick = { navController.openTab(it.route) },
+                        onPlus = { plusOpen = true },
+                    )
+                }
             },
         ) { padding ->
             NavHost(
@@ -306,7 +331,7 @@ fun HotApp(
                 pathScreen(
                     stateful = stateful,
                     onOpenRitual = { open(HotRoute.PATH_RITUAL) },
-                    onLookBack = { open(HotRoute.BEHIND) },
+                    onLookBack = { navController.openTab(HotRoute.BEHIND) },
                     onHelp = { navController.openSos() },
                 )
                 pathRitualScreen(onClose = back, onHelp = { navController.openSos() }, stateful = stateful)
@@ -349,8 +374,23 @@ fun HotApp(
                 )
             }
         }
+        if (plusOpen && !fullScreen && !gated) {
+            PlusSheet(
+                onDismiss = { plusOpen = false },
+                onOpen = { route ->
+                    plusOpen = false
+                    when (route) {
+                        in HotRoute.tabs -> navController.openTab(route)
+                        else -> navController.navigate(route) { launchSingleTop = true }
+                    }
+                },
+            )
+        }
         // The gate 18+ (R-13): over everything, and «Помощь» on it opens SOS over the gate.
         if (signInGated) signIn { navController.openSos() }
+        if (firstLaunchGated) {
+            if (firstLaunch == FirstLaunchGate.SHOW) onboarding { navController.openSos() } else HotBackground(Modifier.fillMaxSize()) {}
+        }
         if (ageGated) {
             AgeGateScreen(
                 gate = ageGate,
@@ -408,8 +448,6 @@ private class NestedScreen(val tab: HotTab, val title: String, val backLabel: St
 
 private val NESTED = mapOf(
     HotRoute.ME to NestedScreen(HotTab.PATH, "Настройки", null),
-    // D-051: «За плечами» is the reverse plan of the Path, not a tab.
-    HotRoute.BEHIND to NestedScreen(HotTab.PATH, "За плечами", "Путь"),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.PROFILE to NestedScreen(HotTab.PATH, ProfileTexts.TITLE, "Настройки"),
     HotRoute.ACCOUNT to NestedScreen(HotTab.PATH, AccountTexts.TITLE.n, "Настройки"),
@@ -426,51 +464,6 @@ private val NESTED = mapOf(
     HotRoute.SUPPORT to NestedScreen(HotTab.TODAY, TodayCopy.BLOCK_SUPPORTS, TodayCopy.BLOCK_SUPPORTS),
     HotRoute.ARSENAL to NestedScreen(HotTab.TODAY, TodayCopy.ARSENAL, null),
 )
-
-/**
- * Bottom modules in «Титаниум» (A37 §6): a floating glass pill over the content, line icons; the
- * active module is the dawn icon on a soft light. No shadow in the dark theme.
- */
-@Composable
-private fun HotBottomBar(currentTab: HotTab, onTabClick: (HotTab) -> Unit) {
-    val tokens = HotThemeTokens.colors
-    val shape = RoundedCornerShape(30.dp)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        NavigationBar(
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-            windowInsets = WindowInsets(0, 0, 0, 0),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(Brush.verticalGradient(listOf(tokens.glassTop, tokens.glassBottom)), shape)
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f), shape)
-                .border(1.dp, tokens.glassEdge, shape),
-        ) {
-            HotTab.entries.forEach { tab ->
-                NavigationBarItem(
-                    selected = tab == currentTab,
-                    onClick = { onTabClick(tab) },
-                    icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                    label = { Text(tab.label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                        indicatorColor = tokens.ruleSoft,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                    modifier = Modifier.testTag(tab.testTag),
-                )
-            }
-        }
-    }
-}
 
 private fun NavHostController.openTab(route: String) {
     navigate(route) {

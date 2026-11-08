@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,11 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -68,16 +71,17 @@ fun sexTag(sex: SexForCalc): String = "profile_sex_${sex.code}"
 
 /**
  * «Профиль» (A61 §5.1, D-055): the card «Ты» of the settings. In this slice the three facts typed
- * by hand: the address form, the year of birth and the sex for calculations. No account, no
- * e-mail, no login (D-055 п. 1); everything stays on the phone.
+ * by hand: the address form, the year of birth and the sex for calculations. Slice А4 (A65 §2.4) adds the
+ * account part on top: name, photo, height and max pulse from WHOOP, «О себе». Everything stays on
+ * the phone.
  *
  * @param stateful false renders the screen from default state without a ViewModel (navigation
  *   tests run without Hilt).
  */
-fun NavGraphBuilder.profileScreen(stateful: Boolean = true) {
+fun NavGraphBuilder.profileScreen(stateful: Boolean = true, onOpenHelp: () -> Unit = {}) {
     composable(route = HotRoute.PROFILE) {
         if (stateful) {
-            ProfileRoute()
+            ProfileRoute(onOpenHelp)
         } else {
             var local by remember { mutableStateOf(ProfileSettings()) }
             ProfileScreen(
@@ -109,11 +113,47 @@ class ProfileViewModel @Inject constructor(private val store: ProfileSettingsSto
 }
 
 @Composable
-private fun ProfileRoute(viewModel: ProfileViewModel = hiltViewModel()) {
+private fun ProfileRoute(
+    onOpenHelp: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel(),
+    accountModel: AccountProfileViewModel = hiltViewModel(),
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val profile by accountModel.profile.collectAsStateWithLifecycle()
+    val avatar by accountModel.avatar.collectAsStateWithLifecycle()
+    val about by accountModel.about.collectAsStateWithLifecycle()
+    val aboutMentor by accountModel.aboutMentor.collectAsStateWithLifecycle()
+    var aboutSaved by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     // Nothing is drawn until the stored profile is read: the year field starts from it.
     val loaded = settings ?: return
-    ProfileScreen(loaded, viewModel::setAddress, viewModel::setBirthYear, viewModel::setSex)
+    val actions = remember(accountModel, context) {
+        AccountProfileActions(
+            onConfirmName = accountModel::confirmName,
+            onName = accountModel::setName,
+            onPhoto = { uri -> accountModel.setPhoto(context, uri) },
+            onDeletePhoto = accountModel::deletePhoto,
+            onAbout = { text ->
+                scope.launch {
+                    val openHelp = accountModel.saveAbout(text)
+                    aboutSaved = true
+                    // A07 §4.1: levels 2–3 open the help card (112 · 911) by themselves; saving is not blocked.
+                    if (openHelp) onOpenHelp()
+                }
+            },
+            onAboutMentor = accountModel::setAboutMentor,
+            onOpenHelp = onOpenHelp,
+        )
+    }
+    ProfileScreen(loaded, viewModel::setAddress, viewModel::setBirthYear, viewModel::setSex) {
+        AccountProfileSection(
+            ui = AccountProfileUi(profile, avatar, about, aboutMentor),
+            actions = actions,
+            photoFailed = accountModel.photoFailed,
+            aboutSaved = aboutSaved,
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -125,6 +165,8 @@ fun ProfileScreen(
     onSex: (SexForCalc) -> Unit,
     modifier: Modifier = Modifier,
     currentYear: Int = LocalDate.now().year,
+    /** The account part (A65 §2.4): name, photo, WHOOP body data, «О себе». */
+    account: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -135,6 +177,7 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(HotSpacing.cardGap),
     ) {
         Section(ProfileTexts.SECTION_YOU)
+        account()
         HotCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(ProfileTexts.ADDRESS_TITLE, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)

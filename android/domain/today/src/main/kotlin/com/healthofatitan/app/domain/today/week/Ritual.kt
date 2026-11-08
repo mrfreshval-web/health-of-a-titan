@@ -77,7 +77,7 @@ object RitualRules {
     /** «Беру» turns the skew into one small reminder of the next week. */
     fun skewGoal(skew: Skew): WeekGoal? {
         val title = SKEW_TITLES[skew.support] ?: return null
-        return WeekGoal(SKEW_ID_PREFIX + skew.support.name.lowercase(), Sphere.BODY, TaskKind.REMINDER, title, 3, WeekCopy.UNIT_DAYS, 0, GoalSource.PATH, GoalMeasure.DAYS)
+        return WeekGoal(SKEW_ID_PREFIX + skew.support.name.lowercase(), Sphere.BODY, TaskKind.REMINDER, title, 3, WeekCopy.UNIT_DAYS, 0, GoalSource.PERSON, GoalMeasure.DAYS)
     }
 
     /** The goal «Полегче» softens for a skew. */
@@ -107,7 +107,7 @@ object RitualRules {
         a.tried.forEach { t -> if (goals.none { it.id == t.id }) goals = goals + t }
         val carry = a.carry?.trim()?.takeIf { it.isNotEmpty() && a.carryToGoal }
         if (carry != null && goals.none { it.id == CARRY_ID }) {
-            goals = goals + WeekGoal(CARRY_ID, Sphere.WORK, TaskKind.REMINDER, carry.take(60), 2, WeekCopy.UNIT_DAYS, 0, GoalSource.WORK, GoalMeasure.DAYS)
+            goals = goals + WeekGoal(CARRY_ID, Sphere.WORK, TaskKind.REMINDER, carry.take(60), 2, WeekCopy.UNIT_DAYS, 0, GoalSource.PERSON, GoalMeasure.DAYS)
         }
         return WeekPlan(proposal.plan.weekStart, goals)
     }

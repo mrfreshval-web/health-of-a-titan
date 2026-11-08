@@ -65,21 +65,30 @@ object TrainingRequests {
         return MINUTES.find(item.title)?.groupValues?.get(1)?.toIntOrNull()
     }
 
-    fun request(view: DayView?, today: LocalDate, place: TrainingPlace): TrainingRequest {
+    /** [guard]: the profile of specifics and the safety bus (S1) — always applied, with or without a plan. */
+    fun request(view: DayView?, today: LocalDate, place: TrainingPlace, guard: TrainingGuard = TrainingGuard.NONE): TrainingRequest {
         val plan = view?.takeIf { it.dayKey == today }
-            ?: return TrainingRequest(mode = DayMode.STEADY, place = place)
+            ?: return TrainingRequest(mode = DayMode.STEADY, place = place, codes = guard.codes, flags = guard.flags)
         val item = trainingItem(plan)
         return TrainingRequest(
             mode = mode(plan.regime),
             kind = kind(item),
             minutes = minutes(item),
             place = place,
-            flags = flags(plan.flags),
+            codes = guard.codes,
+            flags = flags(plan.flags) + guard.flags,
         )
     }
 
-    fun day(engine: TrainingEngine, view: DayView?, today: LocalDate, place: TrainingPlace, sound: SoundLevel): TrainingDay {
-        val request = request(view, today, place)
+    fun day(
+        engine: TrainingEngine,
+        view: DayView?,
+        today: LocalDate,
+        place: TrainingPlace,
+        sound: SoundLevel,
+        guard: TrainingGuard = TrainingGuard.NONE,
+    ): TrainingDay {
+        val request = request(view, today, place, guard)
         val plan = view?.takeIf { it.dayKey == today }
         val item = plan?.let(::trainingItem)
         return TrainingDay(

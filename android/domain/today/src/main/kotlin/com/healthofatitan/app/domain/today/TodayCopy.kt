@@ -25,7 +25,7 @@ object TodayCopy {
     const val YOU_CAPTION = "бодрость утром"
     const val NO_DATA = "нет данных"
     const val ESTIMATE = "оценка"
-    const val LEAD_NO_WHOOP = "Я ещё не знаю тебя"
+    const val LEAD_NO_SOURCE = "Я ещё не знаю тебя"
     const val LEAD_NIGHT_PENDING = "Ночь досчитывается"
     const val LEAD_RETURN = "С возвращением"
     const val LEAD_SAFETY = "Сегодня главное — ты. Помощь рядом."
@@ -86,6 +86,9 @@ object TodayCopy {
     const val START = "Начать"
     const val OPEN = "открыть"
     const val TASK_CONNECT_WHOOP = "Подключить WHOOP · 1 мин"
+
+    /** S2 draft (review of Agents 16 and 10): no source of data yet, the day goes on without it. */
+    const val TASK_CONNECT_SOURCE = "Подключить WHOOP или Health Connect · 1 мин"
     const val TASK_START_QUESTIONS = "Начать с вопросов"
     const val TASK_START_SMALL = "Начать с малого"
     const val TASK_START_SMALL_WHY = "одно небольшое дело — и день уже твой"
@@ -98,6 +101,12 @@ object TodayCopy {
     const val BACK_TO_WEEK = "Вернулось в неделю"
 
     fun week(done: Int, target: Int): String = "неделя $done из $target"
+
+    /**
+     * The mark of the goal on a step of the day (A57 §4.3, A67 С-4): the short name of the goal,
+     * no terms of the Path (lexicon ladder A60 §4.1). DRAFT for the review of Agents 4 and 16.
+     */
+    fun goalMark(name: String): String = "Цель: $name"
 
     // Rhythm (A46 §2.5, A49, D-043).
     const val DAWN = "Рассвет"
@@ -172,11 +181,11 @@ object TodayCopy {
     /** Every user-facing string above, for the stop-dictionary test (T-13). */
     fun all(): List<String> = listOf(
         BLOCK_ME, BLOCK_SUPPORTS, BLOCK_SUPPORTS_HINT, BLOCK_TASKS, BLOCK_RHYTHM, WHY_LINK, CHARGE, CHARGE_NORM, NIGHT, YOU,
-        YOU_CAPTION, NO_DATA, ESTIMATE, LEAD_NO_WHOOP, LEAD_NIGHT_PENDING, LEAD_RETURN, LEAD_SAFETY, calibration(3), need("7:40"),
+        YOU_CAPTION, NO_DATA, ESTIMATE, LEAD_NO_SOURCE,LEAD_NIGHT_PENDING, LEAD_RETURN, LEAD_SAFETY, calibration(3), need("7:40"),
         EFFORT, MOVEMENT, NUTRITION, WATER, SLEEP_TONIGHT, WATER_ADD, WATER_REMOVE, SOURCE_WHOOP_CYCLE, SOURCE_STEPS,
         SOURCE_STEPS_PHONE, SOURCE_MEALS, SOURCE_WATER, SOURCE_SLEEP_PREP, EFFORT_HIDDEN, MEAL_MARK, MEAL_UNMARK,
         COND_CAFFEINE, COND_TRAINING, COND_DINNER, COND_SCREENS, NOW, FULL, MINI, NOT_TODAY, DONE, UNDO, START, OPEN,
-        TASK_CONNECT_WHOOP, TASK_START_QUESTIONS, TASK_START_SMALL, TASK_START_SMALL_WHY, TASK_HELP, TASK_DOCTOR,
+        TASK_CONNECT_WHOOP, TASK_CONNECT_SOURCE, TASK_START_QUESTIONS, TASK_START_SMALL, TASK_START_SMALL_WHY, TASK_HELP, TASK_DOCTOR,
         TASK_ASSEMBLE_WEEK, TASK_ASSEMBLE_WEEK_WHY, TASK_REMINDER, BACK_TO_WEEK, week(2, 3), DAWN, TRANSITION, CLOSE_DAY,
         LANDING, WEEK_ASSEMBLY, BREATHER, ARSENAL, WIN_COFFEE, WIN_DINNER, WIN_SCREENS, WIN_BEDTIME, WHY_TITLE, WHY_SUMMARY,
         WHY_SLEEP, WHY_HEART, WHY_BREATH, WHY_DEVIATIONS, WHY_YOU, WHY_DISAGREE, WHY_ASK, WHY_NO_DEVIATIONS,
@@ -185,6 +194,7 @@ object TodayCopy {
         M_SPO2, M_SKIN, M_SELF, SRC_SLEEP, SRC_RECOVERY, SRC_CHECKIN, WEEK_SOON, BEHIND, BEHIND_SOON, ARSENAL_SOON,
         BREATHER_LINE, BREATHER_REST, BREATHER_OFF, BREATHER_HIDE, BREATHER_EXHALE, SUPPORT_SOURCE, SUPPORT_NORM,
         BREATHER_BACK, STEPS_GOAL, NUTRITION_GENTLE, SOURCE_MEALS_GENTLE, SOURCE_WHOOP_LOAD, PLATE_OF_DAY, NUTRITION_QUIET,
+        goalMark("Пробежать 5 км"),
     ) + MEALS.map { it.second }
 }
 

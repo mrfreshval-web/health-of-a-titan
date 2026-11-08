@@ -4,6 +4,8 @@
 # Non-secret build config (A14 §9 step 9). Env vars with the same names win over this file.
 # Worker address (not a secret). The WHOOP client id comes from the Worker since slice 1.
 # EDGE_BASE_URL=https://hot-edge.<account>.workers.dev
+# Google OAuth Web client id (not a secret, A65 §8): enables «Войти через Google».
+# GOOGLE_WEB_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 
 # Release signing (normally only in GitHub Secrets; see android/README.md).
 # HOT_KEYSTORE_FILE=/absolute/path/to/hot.jks

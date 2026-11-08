@@ -3,6 +3,8 @@ package com.healthofatitan.app.feature.training
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.healthofatitan.app.core.model.content.ContentJson
+import com.healthofatitan.app.core.model.profile.ProfileDictionary
 import com.healthofatitan.app.domain.training.SoundLevel
 import com.healthofatitan.app.domain.training.TrainingLibrary
 import com.healthofatitan.app.domain.training.TrainingPlace
@@ -32,6 +34,18 @@ class TrainingContent @Inject constructor(@param:ApplicationContext private val 
         cached ?: withContext(Dispatchers.IO) { load() }.also { cached = it }
     }
 
+    @Volatile
+    private var dictionary: ProfileDictionary? = null
+
+    /**
+     * The dictionary of the shared profile (`content/profile/constraints.json`, the same asset that
+     * nutrition reads): what an injury preset, a life stage or a medical flag means for training.
+     * Null when the asset cannot be read; the guard then takes the gentle Classic (S1).
+     */
+    suspend fun profileDictionary(): ProfileDictionary? = dictionary ?: withContext(Dispatchers.IO) {
+        read(CONSTRAINTS_ASSET)?.let { text -> runCatching { ProfileDictionary.parse(ContentJson.parse(text)) }.getOrNull() }
+    }.also { dictionary = it }
+
     private fun read(path: String): String? = runCatching {
         context.assets.open(path).bufferedReader().use { it.readText() }
     }.getOrNull()
@@ -42,6 +56,10 @@ class TrainingContent @Inject constructor(@param:ApplicationContext private val 
         rules = read(TrainingLibrary.RULES_ASSET) ?: error("missing ${TrainingLibrary.RULES_ASSET}"),
         poses = read(TrainingLibrary.POSES_ASSET),
     )
+
+    private companion object {
+        const val CONSTRAINTS_ASSET = "content/profile/constraints.json"
+    }
 }
 
 /**

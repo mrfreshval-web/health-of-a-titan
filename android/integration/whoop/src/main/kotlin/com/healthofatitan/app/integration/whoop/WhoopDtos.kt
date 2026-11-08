@@ -145,3 +145,17 @@ internal data class WhoopWindow(
     val sleeps: List<WhoopSleep>,
     val workouts: List<WhoopWorkout>,
 )
+
+/** `user/profile/basic`: only the first name is read (A65 §2.4); e-mail and last name are never parsed. */
+@Serializable
+internal data class WhoopBasicProfile(@SerialName("first_name") val firstName: String? = null)
+
+/** `user/measurement/body`: height and max heart rate; the weight is never parsed (D-043). */
+@Serializable
+internal data class WhoopBody(
+    @SerialName("height_meter") val heightMeter: Double? = null,
+    @SerialName("max_heart_rate") val maxHeartRate: Int? = null,
+)
+
+/** What the profile takes from WHOOP; held in memory only until [WhoopProfileImport] stores it. */
+internal data class WhoopProfileFacts(val firstName: String?, val heightCm: Int?, val maxPulse: Int?)

@@ -180,6 +180,8 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     if (mode != null) {
                         ModeWord(mode, style = HotType.numeral, glyphSize = 28.dp, gap = 10.dp)
+                        // S2: without WHOOP the mode is the default day and self-report
+                        if (me.estimate) HotOverline(TodayCopy.ESTIMATE, modifier = Modifier.testTag(ME_ESTIMATE_TAG))
                     }
                     me.lead?.let { Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface) }
                 }
@@ -216,6 +218,7 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit) {
 const val ME_HAIKU_TAG = "me_haiku"
 const val ME_NUMBERS_TAG = "me_numbers"
 const val ME_CALIBRATION_TAG = "me_calibration"
+const val ME_ESTIMATE_TAG = "me_estimate"
 
 @Composable
 private fun MeNumber(label: String, value: String, caption: String?, modifier: Modifier) {
@@ -483,7 +486,8 @@ private fun TaskRow(task: DayTask, playable: Boolean, onTap: () -> Unit, onDone:
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val sub = listOfNotNull(task.week, if (task.hasMini) (if (mini) TodayCopy.MINI else TodayCopy.FULL) else null)
+                    // A67 С-4: which goal the step serves; the mode still decides full or mini
+                    val sub = listOfNotNull(task.goal?.let(TodayCopy::goalMark), task.week, if (task.hasMini) (if (mini) TodayCopy.MINI else TodayCopy.FULL) else null)
                     if (sub.isNotEmpty()) HotOverline(sub.joinToString(" · "))
                 }
             }
@@ -550,6 +554,7 @@ fun BlockRhythm(view: TodayView, day: DayUiState?, actions: DayActions, slots: T
             Spacer(Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 view.rhythm.windows.forEach { HotOverline(it.text) }
+                if (view.rhythm.estimate) HotOverline(TodayCopy.ESTIMATE)
             }
         }
         Spacer(Modifier.height(12.dp))

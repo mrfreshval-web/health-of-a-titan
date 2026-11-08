@@ -27,6 +27,12 @@ object HotRoute {
      */
     const val PROFILE = "profile"
 
+    /**
+     * «Настройки › Аккаунт» (A65 §2.3, §6): ways in, devices, «Выйти», «Выйти везде» and deleting
+     * the account. Inside a tab.
+     */
+    const val ACCOUNT = "account"
+
     /** «Аватар › Наставник» (D-030, A38 §9): the mentor's character. */
     const val MENTOR_PERSONA = "mentor_persona"
 

@@ -65,6 +65,9 @@ object DayTexts {
     fun preliminary(days: Int) = "Норма ещё складывается ($days дн. из 28): Разгон позже."
     const val LOW_COVERAGE = "Ночью браслет записал не всё — восстановление не оцениваю."
     const val MANUAL = "WHOOP ещё не посчитал ночь — день собран по умолчанию, уточню позже."
+
+    /** S2 draft (review of Agents 16 and 10): no WHOOP at all, the day is an estimate. */
+    const val MANUAL_NO_WHOOP = "Без браслета день собран по умолчанию и по самоощущению — это оценка."
     const val LIGHT_WEEK_GENTLE = "Третий бережный день — лёгкая неделя: легче на 40 %, без интервалов."
     const val LIGHT_WEEK_LOAD = "Нагрузка копится неделю — лёгкая неделя: легче на 40 %, без интервалов."
     fun lightWeekDay(day: Int) = "Лёгкая неделя, день $day из 7: легче на 40 %."

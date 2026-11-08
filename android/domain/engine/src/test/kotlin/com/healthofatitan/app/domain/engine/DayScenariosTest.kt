@@ -163,6 +163,21 @@ class DayScenariosTest {
     }
 
     @Test
+    fun `S2 without WHOOP a good self-report gives at most STEADY and says the day is an estimate`() {
+        val p = DayEngine.plan(
+            input(
+                NightFacts(),
+                SelfReport(energy = 10),
+                data = DataFacts(baselineNights = 0, historyDays = 1, coverage = 0.0, whoopToday = false, whoopConnected = false),
+            ),
+        )
+        assertEquals(Regime.STEADY, p.regime)
+        assertTrue(DayFlag.MANUAL in p.flags)
+        assertTrue(p.fired.any { it.ref == RuleSet.REG_05 && it.why == DayTexts.MANUAL_NO_WHOOP })
+        assertFalse(p.fired.any { it.why == DayTexts.MANUAL })
+    }
+
+    @Test
     fun `D09 after GENTLE a great day is only STEADY`() {
         val p = DayEngine.plan(
             input(

@@ -44,7 +44,8 @@ object WeekCopy {
     const val GOAL_TRAINING = "Тренировки"
     const val GOAL_FOCUS = "Фокус-блоки"
     const val GOAL_ZONES = "Минуты в зонах"
-    const val GOAL_SLEEP = "Шаг пути: сон по потребности"
+    // A67 С-3: without a goal this is a starter goal, not a step of the Path (the old «Шаг пути: …» was a false mark).
+    const val GOAL_SLEEP = "Сон по потребности"
     const val GOAL_REMINDER = "Напоминание"
     const val UNIT_TIMES = "раз"
     const val UNIT_MINUTES = "мин"
@@ -60,6 +61,12 @@ object WeekCopy {
     const val GOAL_SUGGEST_DOWN = "Следующая неделя на шаг легче: так держится ритм."
     const val GOAL_FIRST_WEEK = "Первая неделя: цели небольшие, чтобы присмотреться."
     const val GOAL_PAUSED = "Цели на паузе, пока ты восстанавливаешься."
+
+    /** A67 §4: the Path goal is on pause, the week keeps the starter goals a step lighter. DRAFT, review 4 and 16. */
+    const val GOAL_PATH_PAUSED = "Путь на паузе: неделя держит опоры на шаг легче."
+
+    /** A67 С-3: the goals of the week come from the stage of the goal. DRAFT, review 4 and 16. */
+    const val GOAL_FROM_PATH = "Цели недели собраны из твоей цели."
     const val GOAL_AUTO = "Собрал сам — поправь, если нужно"
     const val GOAL_PROPOSED = "Предложение на неделю — одобри в «Итоге и сборке»"
     const val GOAL_EMPTY = "Цели появятся после первой сборки недели."
@@ -270,7 +277,7 @@ object WeekCopy {
         READ_ONLY, WEEKDAYS, ofTotal(3, 7), markHint(4), SPOKEN_COLUMNS,
         GOAL_TRAINING, GOAL_FOCUS, GOAL_ZONES, GOAL_SLEEP, GOAL_REMINDER, UNIT_TIMES, UNIT_MINUTES, UNIT_NIGHTS, UNIT_DAYS,
         GOAL_CHANGE, GOAL_LIGHTER, GOAL_MORE, GOAL_REMOVE, GOAL_KEEP, GOAL_NO_PENALTY, GOAL_SUGGEST_UP, GOAL_SUGGEST_DOWN,
-        GOAL_FIRST_WEEK, GOAL_PAUSED, GOAL_AUTO, GOAL_PROPOSED, GOAL_EMPTY, GOAL_RETURNED, REMINDER_ADD, REMINDER_HINT,
+        GOAL_FIRST_WEEK, GOAL_PAUSED, GOAL_PATH_PAUSED, GOAL_FROM_PATH, GOAL_AUTO, GOAL_PROPOSED, GOAL_EMPTY, GOAL_RETURNED, REMINDER_ADD, REMINDER_HINT,
         REMINDER_TITLE, REMINDER_DAYS, SAVE, CANCEL, minutes(90, 150),
         S_BALANCE, S_MOVEMENT, S_NUTRITION, S_DRINK, S_SLEEP, S_WEIGHT, S_NO_DATA, balanceDays(4, 5), stepsDays(3, 5), zones(90),
         mealsDays(4, 5), drinkPct(74), sleepDebt("3:40"), regularity(71), nightsAtNeed(3, 5), weightAvg("80,4"), WEIGHT_NO_DATA,

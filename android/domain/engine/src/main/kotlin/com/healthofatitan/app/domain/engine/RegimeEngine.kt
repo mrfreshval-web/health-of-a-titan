@@ -66,7 +66,7 @@ object RegimeEngine {
         if (calibration) flags += DayFlag.CALIBRATION
         if (preliminary) flags += DayFlag.PRELIMINARY_NORM
         val dataWhy = when {
-            manual -> DayTexts.MANUAL
+            manual -> if (d.whoopConnected) DayTexts.MANUAL else DayTexts.MANUAL_NO_WHOOP
             calibration -> DayTexts.CALIBRATION
             !physioUsable -> DayTexts.LOW_COVERAGE
             preliminary -> DayTexts.preliminary(d.historyDays)

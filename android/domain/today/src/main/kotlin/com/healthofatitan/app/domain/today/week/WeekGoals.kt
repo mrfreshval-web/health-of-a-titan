@@ -53,6 +53,26 @@ data class Proposal(
     val note: String?,
 )
 
+/**
+ * What the Path gives the weeks (the bridge Путь → Неделя, A67 §2.1 ①, С-3). Only an
+ * active goal gives stage goals; a goal on pause or held by the safety bus gives
+ * [Paused]; any other state is [NoGoal] (A67 §4: С1 knows no «Держим» yet).
+ */
+sealed interface PathWeek {
+    /** No active goal: the week runs on HoT's starter goals ([GoalSource.START], П-1). */
+    data object NoGoal : PathWeek
+
+    /** The goal is on pause or held: the calendar stands; the week keeps the starter goals a step lighter. */
+    data object Paused : PathWeek
+
+    /**
+     * An active goal: [name] is its short name for the mark on the steps of the day; [goalIds] are
+     * the week goals of its lever and leading components ([WeekGoalRules] ids, lever first);
+     * [takenOn] is the day of «Беру путь» (the pour into the current week, A56 §2).
+     */
+    data class Active(val name: String, val goalIds: List<String>, val takenOn: LocalDate) : PathWeek
+}
+
 object WeekGoalRules {
     const val ID_TRAINING = "body-training"
     const val ID_FOCUS = "work-focus"
@@ -64,25 +84,84 @@ object WeekGoalRules {
     /** Task ids of week goals that are not plan items: «wg:<goalId>». */
     const val TASK_PREFIX = "wg:"
 
+    /** A67 Расх.-4, П-1: a week with an active goal shows 2–3 goals, at least one of the stage. */
+    const val STAGE_MIN = 2
+    const val STAGE_MAX = 3
+
     const val MINUTES_STEP = 30
     const val LIGHTER_BELOW = 0.5
     const val UP_FROM = 0.9
 
-    /** The working targets of a normal week (A31 §1 example: 3 силовые, 4 фокус-блока, 150 минут Z2). */
+    /**
+     * The working targets of a normal week (A31 §1 example: 3 силовые, 4 фокус-блока, 150 минут Z2).
+     * They are HoT's starter goals ([GoalSource.START]): without an active goal they are not the
+     * Path and are never marked as such (A67 С-3).
+     */
     fun defaults(monday: LocalDate, first: Boolean): WeekPlan {
         val f = if (first) 1 else 0
         return WeekPlan(
             monday,
             listOf(
-                WeekGoal(ID_TRAINING, Sphere.BODY, TaskKind.TRAINING, WeekCopy.GOAL_TRAINING, 3 - f, WeekCopy.UNIT_TIMES, 0, GoalSource.PATH),
-                WeekGoal(ID_FOCUS, Sphere.WORK, TaskKind.FOCUS, WeekCopy.GOAL_FOCUS, 4 - f, WeekCopy.UNIT_TIMES, 0, GoalSource.WORK),
+                WeekGoal(ID_TRAINING, Sphere.BODY, TaskKind.TRAINING, WeekCopy.GOAL_TRAINING, 3 - f, WeekCopy.UNIT_TIMES, 0, GoalSource.START),
+                WeekGoal(ID_FOCUS, Sphere.WORK, TaskKind.FOCUS, WeekCopy.GOAL_FOCUS, 4 - f, WeekCopy.UNIT_TIMES, 0, GoalSource.START),
                 WeekGoal(
                     ID_ZONES, Sphere.BODY, TaskKind.TRAINING, WeekCopy.GOAL_ZONES, if (first) 90 else 150, WeekCopy.UNIT_MINUTES, 0,
-                    GoalSource.PATH, GoalMeasure.MINUTES,
+                    GoalSource.START, GoalMeasure.MINUTES,
                 ),
-                WeekGoal(ID_SLEEP, Sphere.SLEEP, TaskKind.REMINDER, WeekCopy.GOAL_SLEEP, 5 - f, WeekCopy.UNIT_NIGHTS, 0, GoalSource.PATH, GoalMeasure.NIGHTS),
+                WeekGoal(ID_SLEEP, Sphere.SLEEP, TaskKind.REMINDER, WeekCopy.GOAL_SLEEP, 5 - f, WeekCopy.UNIT_NIGHTS, 0, GoalSource.START, GoalMeasure.NIGHTS),
             ),
         )
+    }
+
+    /**
+     * The source of a stored goal: the names before A45 §17.2 read through [GoalSource.parse]; the
+     * goals the person added (reminders, a skew, what drags on) were stored as `PATH` or `WORK` and
+     * are the person's ([GoalSource.PERSON]).
+     */
+    fun sourceOf(goalId: String, stored: String?): GoalSource = when {
+        goalId.startsWith(REMINDER_PREFIX) || goalId.startsWith(RitualRules.SKEW_ID_PREFIX) || goalId == RitualRules.CARRY_ID -> GoalSource.PERSON
+        goalId.startsWith(PATTERN_PREFIX) -> GoalSource.EXPERIMENT
+        else -> GoalSource.parse(stored)
+    }
+
+    /**
+     * The goals of the stage for the week of [monday] (A67 С-3): the starter goal of each id the
+     * Path gives, as [GoalSource.STAGE], at most [STAGE_MAX]. A goal taken on Thursday or later
+     * pours into its own week as the first step only (A56 §2 «Что меняется после Э7»).
+     */
+    fun stageGoals(monday: LocalDate, first: Boolean, path: PathWeek.Active): List<WeekGoal> {
+        val all = defaults(monday, first).goals
+        val firstStep = CalendarWeek.contains(monday, path.takenOn) && path.takenOn.dayOfWeek >= DayOfWeek.THURSDAY
+        return path.goalIds.distinct()
+            .mapNotNull { id -> all.firstOrNull { it.id == id } }
+            .take(STAGE_MAX)
+            .map { it.copy(source = GoalSource.STAGE) }
+            .map { if (firstStep) it.copy(target = step(it)) else it }
+    }
+
+    /** [stage] and, while it has fewer than [STAGE_MIN], the first of [others] the stage does not cover. */
+    private fun withStage(stage: List<WeekGoal>, others: List<WeekGoal>): List<WeekGoal> {
+        val ids = stage.map { it.id }.toSet()
+        return stage + others.filter { it.id !in ids }.take(max(0, STAGE_MIN - stage.size))
+    }
+
+    /**
+     * «Беру путь» in the middle of a week (A56 §2, A67 С-3): the goals of the stage pour into the
+     * current [plan] once — when the goal was taken this week and the plan has no stage goal yet.
+     * The person's goals and the experiment stay; the starter goals make room. Null: nothing to pour
+     * (a change of the Path in the middle of the week waits for Monday, P-15).
+     */
+    fun pour(plan: WeekPlan, path: PathWeek): WeekPlan? {
+        if (path !is PathWeek.Active || !CalendarWeek.contains(plan.weekStart, path.takenOn)) return null
+        if (plan.goals.any { it.source == GoalSource.STAGE }) return null
+        val stage = stageGoals(plan.weekStart, first = false, path = path).map { s ->
+            // the person's own target of the same goal stays (A52 §2.2 «Тап»), within the first step
+            plan.goal(s.id)?.let { s.copy(target = min(s.target, it.target)) } ?: s
+        }
+        if (stage.isEmpty()) return null
+        val starter = plan.goals.filter { it.source == GoalSource.START }
+        val rest = plan.goals.filter { it.source == GoalSource.PERSON || it.source == GoalSource.EXPERIMENT }
+        return WeekPlan(plan.weekStart, withStage(stage, starter) + rest.filter { r -> stage.none { it.id == r.id } })
     }
 
     fun line(goal: WeekGoal): GoalLine {
@@ -114,12 +193,35 @@ object WeekGoalRules {
      * ≥ 3 days of Бережно; «+1 шаг» only offered after ≥ 90 % with Заряд in the norm. [extras] are
      * small goals the person took in the ritual (a pattern to try, what drags on). Progress is zero.
      */
-    fun propose(monday: LocalDate, previous: WeekPlan?, last: LastWeek?, kind: WeekKind, extras: List<WeekGoal> = emptyList()): Proposal {
+    fun propose(
+        monday: LocalDate,
+        previous: WeekPlan?,
+        last: LastWeek?,
+        kind: WeekKind,
+        extras: List<WeekGoal> = emptyList(),
+        path: PathWeek = PathWeek.NoGoal,
+    ): Proposal {
         require(monday.dayOfWeek == DayOfWeek.MONDAY)
         val first = kind == WeekKind.FIRST || previous == null || previous.goals.isEmpty()
-        val base = if (first) defaults(monday, first = true).goals else previous!!.goals.filter { !it.id.startsWith(PATTERN_PREFIX) }
+        val kept = if (first) emptyList() else previous!!.goals.filter { !it.id.startsWith(PATTERN_PREFIX) }
+        val person = kept.filter { it.source == GoalSource.PERSON }
+        val stage = if (path is PathWeek.Active) {
+            // A67 С-3: the stage gives the week; the person's targets of the same goals stay
+            stageGoals(monday, first, path).map { s -> kept.firstOrNull { it.id == s.id && it.source == GoalSource.STAGE }?.let { s.copy(target = it.target) } ?: s }
+        } else {
+            emptyList()
+        }
+        val base = if (stage.isNotEmpty()) {
+            withStage(stage, defaults(monday, first).goals) + person.filter { p -> stage.none { it.id == p.id } }
+        } else if (first) {
+            defaults(monday, first = true).goals
+        } else {
+            // without an active goal nothing is the Path: stage goals of a past goal go back to the starter
+            kept.map { if (it.source == GoalSource.STAGE) it.copy(source = GoalSource.START) else it }
+                .ifEmpty { defaults(monday, first = false).goals }
+        }
         val lighter = !first && last != null && ((last.completion ?: 1.0) < LIGHTER_BELOW || last.gentleDays >= 3)
-        val easierReturn = kind == WeekKind.RETURN
+        val easierReturn = kind == WeekKind.RETURN || path == PathWeek.Paused
         val goals = (base + extras.filter { e -> base.none { it.id == e.id } })
             .map { it.copy(progress = 0) }
             .map { if ((lighter || easierReturn) && !it.id.startsWith(REMINDER_PREFIX)) lighter(it) else it }
@@ -129,6 +231,8 @@ object WeekGoalRules {
             emptySet()
         }
         val note = when {
+            path == PathWeek.Paused -> WeekCopy.GOAL_PATH_PAUSED
+            stage.isNotEmpty() -> WeekCopy.GOAL_FROM_PATH
             first -> WeekCopy.GOAL_FIRST_WEEK
             lighter || easierReturn -> WeekCopy.GOAL_SUGGEST_DOWN
             up.isNotEmpty() -> WeekCopy.GOAL_SUGGEST_UP
@@ -167,6 +271,12 @@ object WeekGoalRules {
 
     fun goalOfTask(taskId: String): String? = taskId.takeIf { it.startsWith(TASK_PREFIX) }?.removePrefix(TASK_PREFIX)
 
+    /**
+     * The mark of the Path goal on a step from [g] (A67 С-4): only a stage goal of an active goal
+     * carries it; a starter goal never does.
+     */
+    fun goalMark(g: WeekGoal?, goal: String?): String? = goal?.takeIf { g?.source == GoalSource.STAGE }
+
     /** Goals that become tasks of a day: workouts, focus blocks and reminders counted in times or days. */
     fun yieldsTasks(g: WeekGoal): Boolean =
         g.measure == GoalMeasure.TIMES || g.measure == GoalMeasure.DAYS
@@ -177,7 +287,7 @@ object WeekGoalRules {
      * a goal done today stays in the list as done. «Не сегодня» (W-05) only takes the task off
      * today: its goal keeps what is left, and the next days offer it again.
      */
-    fun candidates(plan: WeekPlan, day: LocalDate, doneToday: Set<String>, paused: Boolean = false): List<DayTask> {
+    fun candidates(plan: WeekPlan, day: LocalDate, doneToday: Set<String>, paused: Boolean = false, goal: String? = null): List<DayTask> {
         if (paused || !CalendarWeek.contains(plan.weekStart, day)) return emptyList()
         val daysLeft = (6 - (day.toEpochDay() - plan.weekStart.toEpochDay())).toInt() + 1
         return plan.goals.asSequence()
@@ -198,6 +308,7 @@ object WeekGoalRules {
                     week = TodayCopy.week(min(g.progress, g.target), g.target),
                     hasMini = g.kind != TaskKind.REMINDER,
                     done = g.id in doneToday,
+                    goal = goalMark(g, goal),
                 )
             }
             .toList()

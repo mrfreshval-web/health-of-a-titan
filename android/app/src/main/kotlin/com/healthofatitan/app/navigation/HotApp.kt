@@ -301,7 +301,7 @@ fun HotApp(
                     onBack = back,
                     onAskMentor = { open(HotRoute.MENTOR) },
                 )
-                mentorScreen(onOpenHelp = { navController.openSos() })
+                mentorScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
                 weekScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
                 pathScreen(
                     stateful = stateful,

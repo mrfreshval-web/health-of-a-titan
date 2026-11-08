@@ -248,7 +248,7 @@ describe("WHOOP session routes", () => {
     expect(await res.json()).toEqual({ error: "not_allowed" });
   });
 
-  const appPaths = ROUTES.filter((r) => r.auth === "app").map((r) => (r.path.endsWith("/") ? `${r.path}anthropic/v1/messages` : r.path));
+  const appPaths = ROUTES.filter((r) => r.auth === "app" && !r.implemented).map((r) => (r.path.endsWith("/") ? `${r.path}anthropic/v1/messages` : r.path));
 
   it.each(appPaths)("AppAuth endpoint %s needs an account access token, then is a 501 stub", async (path) => {
     const { env, whoop, ns } = makeEnv();

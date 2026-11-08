@@ -34,6 +34,8 @@ export interface Env {
   WHOOP_VAULT?: DurableObjectNamespace;
   /** Durable Object: the account store — accounts, identities, sessions, invites (A65 §4.1). */
   ACCOUNT_VAULT?: DurableObjectNamespace;
+  /** Durable Object: the money meter of Винс, one per user (A62 §2, D-056). */
+  MENTOR_METER?: DurableObjectNamespace;
   /** Workers rate limiting binding for the unauthenticated OAuth routes (optional). */
   RATE_LIMITER?: RateLimit;
 }

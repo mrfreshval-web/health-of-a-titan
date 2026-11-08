@@ -30,6 +30,16 @@ class_name = "AccountVault"
 tag = "v2-account-vault"
 new_sqlite_classes = ["AccountVault"]
 
+# Durable Object MentorMeter: the money meter of Винс per user — sums of USD per day and month,
+# nothing else (A62 §2 «Лимиты», D-056: soft $0.40 / hard $1.50 a day, $10 a month).
+[[durable_objects.bindings]]
+name = "MENTOR_METER"
+class_name = "MentorMeter"
+
+[[migrations]]
+tag = "v3-mentor-meter"
+new_sqlite_classes = ["MentorMeter"]
+
 # Rate limit for the unauthenticated OAuth routes (/whoop/authorize, /whoop/token): 20 per
 # minute per IP. namespace_id is any account-unique integer string.
 [[ratelimits]]
@@ -45,7 +55,7 @@ simple = { limit = 20, period = 60 }
 
 # Non-secret configuration (A14 §5). DAILY_TOKEN_CAP is a placeholder [Оценка], tuned in slice 5a.
 [vars]
-LLM_MODELS = "claude-opus-5-5"
+LLM_MODELS = "claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5"
 DAILY_TOKEN_CAP = "2000000"
 FCM_PROJECT_ID = ""
 WHOOP_REDIRECT_URI = "com.healthofatitan.app://oauth/whoop"

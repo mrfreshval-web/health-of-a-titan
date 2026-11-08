@@ -5,7 +5,14 @@ package com.healthofatitan.app.domain.safety
  * (rituals, pushes and widgets, ContextPack of Винс, supplements, food photo, SOS practices) join
  * with their slices — each one gets its column in [SafetyPolicy] the day it reads the bus.
  */
-enum class SafetyConsumer { TODAY, WEEK, PATH }
+enum class SafetyConsumer {
+    TODAY,
+    WEEK,
+    PATH,
+
+    /** The ContextPack of Винс and the check of his answers (A62 §8 layer 3–4, A60 §3.5 L-07). */
+    MENTOR,
+}
 
 /**
  * What a flag forbids a consumer (A58 §2 «коды запретов»). Codes, never the names of states: the
@@ -78,6 +85,7 @@ object SafetyPolicy {
         SafetyConsumer.TODAY -> today(flag)
         SafetyConsumer.WEEK -> week(flag)
         SafetyConsumer.PATH -> path(flag)
+        SafetyConsumer.MENTOR -> mentor(flag)
     }
 
     /** Everything a consumer can forbid: what an unknown flag means (rule 3). */
@@ -98,6 +106,14 @@ object SafetyPolicy {
         SafetyFlag.HEALTH_ANXIETY, SafetyFlag.CALIBRATION, SafetyFlag.MANUAL, SafetyFlag.ATYPICAL_PHYSIO, SafetyFlag.CYCLE,
         -> emptySet()
     }
+
+    /**
+     * Винс (A62 §8): the column of «Сегодня» — the same day, said in words. The crisis stops
+     * coaching (A07 §4.3), `ED_CARE` hides calories, weight, food talk and body photos (A60 §3.4),
+     * pregnancy and the clinical flags cap the intensity he may propose. Черновик колонки — ждёт
+     * ревью Агента 3 (свои строки Винса, например «Здоровье» при SICK).
+     */
+    private fun mentor(flag: SafetyFlag): Set<Restriction> = today(flag)
 
     private fun week(flag: SafetyFlag): Set<Restriction> = when (flag) {
         SafetyFlag.EMERGENCY, SafetyFlag.CRISIS_L2, SafetyFlag.CRISIS_L3 -> STOP + Restriction.HIDE_SKEWS + Restriction.NO_FITNESS_AGE

@@ -41,14 +41,14 @@ class MentorRulesTest {
         val pack = ContextPackBuilder.build(inputs)
         assertEquals(listOf("Обсудили сон, договорились ложиться до 23:30."), pack.summaries)
         assertNull(pack.about)
-        assertEquals(listOf(ContextPack.FLAG_ED_CARE), pack.flags)
+        assertEquals(listOf("food_gentle"), pack.flags)
         assertEquals(listOf("HIDE_CALORIES", "HIDE_FOOD_TALK", "HIDE_WEIGHT"), pack.restrictions)
     }
 
     @Test
     fun `the crisis goes as a flag only and the pack keeps at most three summaries`() {
         val pack = ContextPackBuilder.build(PackInputs(recentCrisis = true, summaries = (1..5).map { "Разговор $it." }, addressForm = "x"))
-        assertEquals(listOf(ContextPack.FLAG_RECENT_CRISIS), pack.flags)
+        assertEquals(listOf("gentle_plus"), pack.flags)
         assertEquals(listOf("Разговор 3.", "Разговор 4.", "Разговор 5."), pack.summaries)
         assertEquals("n", pack.addressForm)
     }
@@ -59,9 +59,25 @@ class MentorRulesTest {
     fun `level 2 or 3 never reaches the model, an active crisis window stops coaching`() {
         assertEquals(InputDecision.Sos(3), MentorGate.before("…", { 3 }, crisisActive = false))
         assertEquals(InputDecision.Sos(2), MentorGate.before("…", { 2 }, crisisActive = false))
-        assertEquals(InputDecision.Sos(2), MentorGate.before("привет", { 0 }, crisisActive = true))
+        assertEquals(InputDecision.Window, MentorGate.before("привет", { 0 }, crisisActive = true, mode = CrisisWindowMode.CARD_ONCE))
         assertEquals(InputDecision.Send(1), MentorGate.before("сил нет", { 1 }, crisisActive = false))
         assertEquals(InputDecision.Send(0), MentorGate.before("привет", { 0 }, crisisActive = false))
+    }
+
+    @Test
+    fun `the crisis window is CARD_ONCE until the founder decides, variant B is gentle talk on level 1`() {
+        assertEquals(CrisisWindowMode.CARD_ONCE, MentorPolicy.CRISIS_WINDOW_MODE)
+        val b = CrisisWindowMode.GENTLE_TALK
+        assertEquals(InputDecision.Send(1, care = true), MentorGate.before("привет", { 0 }, crisisActive = true, mode = b))
+        assertEquals(InputDecision.Sos(2), MentorGate.before("…", { 2 }, crisisActive = true, mode = b))
+    }
+
+    @Test
+    fun `a short yes to the safety question is consent, a no or a new topic is not`() {
+        listOf("да", "Да.", "бывают", "есть", "иногда", "yes", "ну да, бывает").forEach { assertTrue(MentorGate.consent(it), it) }
+        listOf("нет", "да нет", "не бывает", "no", "давай лучше про тренировку завтра утром в зале", "").forEach {
+            assertFalse(MentorGate.consent(it), it)
+        }
     }
 
     @Test
@@ -80,6 +96,32 @@ class MentorRulesTest {
         assertEquals(GuardResult.Replaced(GuardReason.ED_CARE), ResponseGuard.check("Чтобы похудеть, ешь меньше.", emptySet(), edCare = true))
         assertIs<GuardResult.Pass>(ResponseGuard.check("На ужин держи 600 ккал.", emptySet(), edCare = false))
         assertIs<GuardResult.Pass>(ResponseGuard.check("Сон — главное сегодня. Ложись до 23:30.", setOf("HIDE_CALORIES"), edCare = true))
+    }
+
+    @Test
+    fun `a hiding of the bus without ED_CARE is FOOD_HIDDEN, not the care mode`() {
+        assertEquals(GuardResult.Replaced(GuardReason.FOOD_HIDDEN), ResponseGuard.check("Твой вес 92 кг — это норм.", setOf("HIDE_WEIGHT"), edCare = false))
+    }
+
+    @Test
+    fun `doses in units, pills, and ml or grams of a supplement are replaced, grams of food are not`() {
+        listOf(
+            "Инсулин 10 ЕД перед ужином.",
+            "Коли 8 ед. утром.",
+            "Выпей 2 таблетки.",
+            "По одной капсуле на ночь.",
+            "Полтаблетки перед сном.",
+            "Креатин 5 г в день.",
+            "Омега-3: 2 г в день.",
+            "Сироп от кашля 10 мл три раза.",
+            "Мелатонин 3 мг.",
+        ).forEach { assertEquals(GuardResult.Replaced(GuardReason.DOSE), ResponseGuard.check(it, emptySet(), false), it) }
+        listOf(
+            "150 г курицы на обед и рис.",
+            "Выпей 500 мл воды после тренировки.",
+            "Две еды до тренировки, отдых 90 с.",
+            "Присед 3×8 по 60 кг.",
+        ).forEach { assertIs<GuardResult.Pass>(ResponseGuard.check(it, emptySet(), false), it) }
     }
 
     @Test
@@ -123,5 +165,16 @@ class MentorRulesTest {
         assertTrue(s.shouldSummarize())
         s.markCrisis()
         assertFalse(s.shouldSummarize())
+    }
+
+    @Test
+    fun `after the model's crisis marker the last words of the person never go out again`() {
+        val s = MentorSession()
+        s.add(ChatLine(Speaker.PERSON, "а", 1))
+        s.add(ChatLine(Speaker.MENTOR, "б", 2))
+        s.add(ChatLine(Speaker.PERSON, "в", 3))
+        s.localizeLastPerson()
+        assertEquals(listOf("а", "б"), s.window().map { it.text })
+        assertEquals(3, s.lines.size)
     }
 }

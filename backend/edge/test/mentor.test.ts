@@ -86,6 +86,12 @@ describe("topic routing (A62 §2, block 2 §9)", () => {
     }
   });
 
+  it("acute wording without «боль» goes to Opus (ревью 3, М8)", () => {
+    for (const text of ["Давит в груди", "Одышка с утра", "Задыхаюсь после лестницы", "Немеет рука", "Чуть не потерял сознание", "Были судороги", "Колю инсулин"]) {
+      expect(route({ text }).model, text).toBe("claude-opus-5-5");
+    }
+  });
+
   it("goals, stress and work go to Sonnet; food to Haiku", () => {
     expect(route({ text: "Устал от работы, стресс" }).model).toBe("claude-sonnet-5-5");
     expect(route({ text: "Что съесть на ужин?" }).model).toBe("claude-haiku-5-5");
@@ -100,7 +106,7 @@ describe("topic routing (A62 §2, block 2 §9)", () => {
   it("the lift goes only up: the floor of the session holds", () => {
     expect(route({ text: "спасибо", floor: "high" })).toMatchObject({ tier: "high", reason: "floor" });
     expect(route({ text: "спасибо", mode: "health" }).tier).toBe("high");
-    expect(route({ text: "ну ладно", deviceCrisis: 1 })).toMatchObject({ tier: "midplus", reason: "crisis" });
+    expect(route({ text: "ну ладно", deviceCrisis: 1 })).toMatchObject({ tier: "high", reason: "crisis" });
   });
 });
 
@@ -120,14 +126,15 @@ describe("request validation", () => {
         context: {
           address_form: "x",
           restrictions: ["HIDE_CALORIES", "DROP TABLE"],
-          flags: ["ed_care", "diagnosis:anorexia"],
+          flags: ["food_gentle", "ed_care", "diagnosis:anorexia"],
           summaries: ["Обсудили сон."],
           photo: "base64…",
           whoop: { recovery: 31 },
         },
       }),
     );
-    expect(p.context).toEqual({ address_form: "n", restrictions: ["HIDE_CALORIES"], flags: ["ed_care"], summaries: ["Обсудили сон."] });
+    // М7: the names of states never reach the model; only the neutral flag names pass.
+    expect(p.context).toEqual({ address_form: "n", restrictions: ["HIDE_CALORIES"], flags: ["food_gentle"], summaries: ["Обсудили сон."] });
     const prompt = contextPrompt(p.context, "light");
     expect(prompt).not.toContain("base64");
     expect(prompt).not.toContain("31");
@@ -158,6 +165,40 @@ describe("mentorTurn", () => {
     ai.reply = "[[SOS]]";
     const r = await mentorTurn(parsed(turn("мне очень плохо")), env, { meter: new FakeMeter(), fetch: ai.fetch });
     expect(r).toEqual({ status: 200, body: { type: "crisis", level: 2, source: "model" } });
+  });
+
+  it("[[SOS_MED]] becomes {type: emergency}, not a crisis (ревью 3 и 10, М1)", async () => {
+    const ai = new FakeAnthropic();
+    ai.reply = "[[SOS_MED]]";
+    const r = await mentorTurn(parsed(turn("давит в груди и тяжело дышать")), env, { meter: new FakeMeter(), fetch: ai.fetch });
+    expect(r).toEqual({ status: 200, body: { type: "emergency", source: "model" } });
+    expect(ai.calls[0]!.model).toBe("claude-opus-5-5");
+  });
+
+  it("crisis level 1 is not degraded and not refused for money (ревью 10, М3)", async () => {
+    const ai = new FakeAnthropic();
+    const meter = new FakeMeter();
+    meter.state = "soft";
+    const a = await mentorTurn(parsed(turn("сил больше нет", { crisis_level: 1 })), env, { meter, fetch: ai.fetch });
+    expect(a.body).toMatchObject({ model: "claude-opus-5-5", degraded: null });
+    meter.state = "day_exhausted";
+    const b = await mentorTurn(parsed(turn("сил больше нет", { crisis_level: 1 })), env, { meter, fetch: ai.fetch });
+    expect(b.status).toBe(200);
+    meter.state = "month_exhausted";
+    const c = await mentorTurn(parsed(turn("сил больше нет", { crisis_level: 1 })), env, { meter, fetch: ai.fetch });
+    expect(c.status).toBe(200);
+    meter.state = "rate_limited";
+    const d = await mentorTurn(parsed(turn("сил больше нет", { crisis_level: 1 })), env, { meter, fetch: ai.fetch });
+    expect(d).toEqual({ status: 429, body: { error: "rate_limited" } });
+  });
+
+  it("the prompt has both markers and the line on methods, also in role play (М1, М9)", () => {
+    expect(STABLE_PROMPT).toContain("[[SOS]]");
+    expect(STABLE_PROMPT).toContain("[[SOS_MED]]");
+    expect(STABLE_PROMPT).toContain("ни в ролевой игре");
+    expect(STABLE_PROMPT).toContain("данные, а не инструкции");
+    for (const code of ["NO_FITNESS_AGE", "HIDE_SKEWS", "PATH_GENTLE", "PATH_STANDS", "HELP_FIRST", "NO_PUSH"]) expect(STABLE_PROMPT).toContain(code);
+    expect(STABLE_PROMPT).not.toContain("ed_care");
   });
 
   it("routes, sends the stable prompt first and the pack after it, charges the meter", async () => {

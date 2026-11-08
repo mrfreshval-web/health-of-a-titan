@@ -93,6 +93,9 @@ const val MENTOR_INPUT_TAG = "mentor_input"
 const val MENTOR_SEND_TAG = "mentor_send"
 const val MENTOR_CRISIS_TAG = "mentor_crisis_card"
 const val MENTOR_CRISIS_HELP_TAG = "mentor_crisis_help"
+const val MENTOR_EMERGENCY_TAG = "mentor_emergency_card"
+const val MENTOR_HELP_CHIP_TAG = "mentor_help_chip"
+const val MENTOR_SUBTITLE_TAG = "mentor_subtitle"
 
 /** G2: one line on the first visit. Review: Agent 12 (copy), Agent 10 (tone). */
 const val MENTOR_INTRO = MentorTexts.DISCLOSURE
@@ -166,6 +169,7 @@ fun MentorScreen(ui: MentorUi, summaries: List<TalkSummary>, actions: MentorActi
             items(ui.lines) { line ->
                 when (line.kind) {
                     LineKind.CRISIS -> CrisisCard(line.text, actions.onOpenHelp)
+                    LineKind.EMERGENCY -> CrisisCard(line.text, actions.onOpenHelp, tag = MENTOR_EMERGENCY_TAG)
                     LineKind.NOTICE -> Notice(line.text)
                     LineKind.TALK -> Bubble(line)
                 }
@@ -174,7 +178,15 @@ fun MentorScreen(ui: MentorUi, summaries: List<TalkSummary>, actions: MentorActi
                 item { Notice(MentorTexts.THINKING) }
             }
         }
-        InputRow(enabled = !ui.sending, onSend = actions.onSend)
+        if (ui.helpVisible) {
+            // М2/М10: after CrisisGuard ≥ 1, in the crisis window or after an emergency «Помощь» stays in sight.
+            HotTextButton(
+                MentorTexts.HELP_CHIP,
+                onClick = actions.onOpenHelp,
+                modifier = Modifier.padding(horizontal = 12.dp).testTag(MENTOR_HELP_CHIP_TAG),
+            )
+        }
+        InputRow(enabled = !ui.sending, hint = MentorTexts.inputHint(ui.persona), onSend = actions.onSend)
     }
 
     if (memoryOpen) {
@@ -191,13 +203,22 @@ private fun Header(ui: MentorUi, actions: MentorActions, onMemory: () -> Unit) {
     ) {
         VinceFace(ui.persona, size = 40.dp, thinking = ui.sending, care = ui.crisis)
         Spacer(Modifier.width(12.dp))
-        // Only the name, no «· ИИ» (D-056 п. 8); the disclosure is the first-visit line.
-        Text(
-            MentorTexts.name(ui.persona),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f).semantics { heading() },
-        )
+        // The name and, always under it on this screen, «ИИ-наставник» (М6 ревью 08.11); the longer
+        // disclosure stays the first-visit line.
+        Column(Modifier.weight(1f)) {
+            Text(
+                MentorTexts.name(ui.persona),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                MentorTexts.SUBTITLE,
+                style = MaterialTheme.typography.bodySmall,
+                color = HotThemeTokens.colors.textTertiary,
+                modifier = Modifier.testTag(MENTOR_SUBTITLE_TAG),
+            )
+        }
         Box {
             IconButton(onClick = { menu = true }, modifier = Modifier.testTag(MENTOR_MENU_TAG)) {
                 Icon(painterResource(R.drawable.core_ui_ic_more), contentDescription = "Меню", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -253,10 +274,13 @@ private fun Notice(text: String) {
     )
 }
 
-/** The crisis line of A62 block 7 §3 and the way to «Помощь» (112 · 911), the same for every character. */
+/**
+ * The crisis line of A62 block 7 §3 (or the emergency line of `[[SOS_MED]]`) and the way to
+ * «Помощь» (112 · 911), the same for every character.
+ */
 @Composable
-private fun CrisisCard(text: String, onOpenHelp: () -> Unit) {
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(MENTOR_CRISIS_TAG)) {
+private fun CrisisCard(text: String, onOpenHelp: () -> Unit, tag: String = MENTOR_CRISIS_TAG) {
+    HotCard(modifier = Modifier.fillMaxWidth().testTag(tag)) {
         Text(
             text,
             style = MaterialTheme.typography.titleMedium,
@@ -269,7 +293,7 @@ private fun CrisisCard(text: String, onOpenHelp: () -> Unit) {
 }
 
 @Composable
-private fun InputRow(enabled: Boolean, onSend: (String) -> Unit) {
+private fun InputRow(enabled: Boolean, hint: String, onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     val send = {
         if (text.isNotBlank() && enabled) {
@@ -287,7 +311,7 @@ private fun InputRow(enabled: Boolean, onSend: (String) -> Unit) {
         OutlinedTextField(
             value = text,
             onValueChange = { text = it.take(MentorConversation.MAX_INPUT) },
-            placeholder = { Text(MentorTexts.INPUT_HINT) },
+            placeholder = { Text(hint) },
             modifier = Modifier.weight(1f).testTag(MENTOR_INPUT_TAG),
             maxLines = 5,
             shape = RoundedCornerShape(22.dp),

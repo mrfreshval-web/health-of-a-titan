@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { isAllowedModel } from "../allowlist";
 import type { Env } from "../env";
 import { costUsd, type BudgetState } from "./budget";
-import { contextPrompt, isPersona, personaPrompt, SOS_MARKER, STABLE_PROMPT, SUMMARY_PROMPT, type ContextPack, type Persona } from "./prompt";
+import { contextPrompt, isPersona, personaPrompt, SOS_MARKER, SOS_MED_MARKER, STABLE_PROMPT, SUMMARY_PROMPT, type ContextPack, type Persona } from "./prompt";
 import { isMode, isTier, route, TIER_MODEL, type ExpertTopic, type Mode, type Tier } from "./router";
 
 /**
@@ -32,7 +32,7 @@ const RESTRICTIONS = new Set([
   "SOBER", "HELP_FIRST", "NO_COACHING", "NO_PUSH", "HIDE_SKEWS", "NO_LOAD", "INTENSITY_CAP", "HIDE_CALORIES", "HIDE_NUTRIENTS",
   "HIDE_FOOD_TALK", "HIDE_WEIGHT", "HIDE_FOOD_WINDOWS", "HIDE_BODY_PHOTO", "NO_FITNESS_AGE", "PATH_GENTLE", "PATH_STANDS",
 ]);
-const FLAGS = new Set(["ed_care", "recent_crisis", "gentle"]);
+const FLAGS = new Set(["food_gentle", "gentle_plus", "gentle"]);
 
 /** Output budget per tier. Thinking counts here too (adaptive thinking is on for these models). */
 const MAX_TOKENS: Record<Tier, number> = { light: 2000, mid: 3000, midplus: 4000, high: 8000 };
@@ -143,9 +143,13 @@ export async function mentorTurn(req: MentorRequest, env: Env, deps: MentorDeps)
   if (req.deviceCrisis >= 2) return { status: 200, body: { type: "crisis", level: req.deviceCrisis, source: "device" } };
   if (!env.ANTHROPIC_API_KEY) return { status: 503, body: { error: "not_configured", missing: "ANTHROPIC_API_KEY" } };
 
+  // A62 §2 «SOS и кризис вне лимитов» (ревью 10, М3): a turn with CrisisGuard ≥ 1 (or the
+  // window of a crisis, which the phone sends as level 1) is never refused or degraded for money;
+  // only the burst limit stays.
+  const care = req.deviceCrisis >= 1;
   const budget = await deps.meter.reserve();
   if (budget === "rate_limited") return { status: 429, body: { error: "rate_limited" } };
-  if (budget === "day_exhausted" || budget === "month_exhausted") {
+  if (!care && (budget === "day_exhausted" || budget === "month_exhausted")) {
     return { status: 429, body: { error: "budget_exhausted", scope: budget === "day_exhausted" ? "day" : "month" } };
   }
 
@@ -155,7 +159,7 @@ export async function mentorTurn(req: MentorRequest, env: Env, deps: MentorDeps)
       ? { tier: "light" as Tier, model: TIER_MODEL.light }
       : route({ text: lastUser, mode: req.mode, floor: req.floor, expertTopics: req.expertTopics, deviceCrisis: req.deviceCrisis });
   // Soft threshold: the chat goes to Haiku; topics with a high cost of error stay on Opus.
-  const degraded = budget === "soft" && r.tier !== "high";
+  const degraded = !care && budget !== "ok" && r.tier !== "high";
   const model = degraded ? TIER_MODEL.light : r.model;
   // LLM_MODELS (wrangler.toml) is the allowlist of the proxy (A14 §5): fail closed.
   if (!isAllowedModel(model, env)) return { status: 503, body: { error: "not_configured", missing: "LLM_MODELS" } };
@@ -202,6 +206,10 @@ export async function mentorTurn(req: MentorRequest, env: Env, deps: MentorDeps)
   if (req.task === "reply" && text.includes(SOS_MARKER)) {
     // The model layer may only raise the level (CrisisGuard.merge): level 2 → «Помощь».
     return { status: 200, body: { type: "crisis", level: 2, source: "model" } };
+  }
+  if (req.task === "reply" && text.includes(SOS_MED_MARKER)) {
+    // Acute physical symptoms (М1): the urgent line and «Помощь», not a crisis of CrisisGuard.
+    return { status: 200, body: { type: "emergency", source: "model" } };
   }
   if (!text) return { status: 502, body: { error: "empty_answer" } };
   return {

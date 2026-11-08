@@ -61,6 +61,7 @@ const TOPICS: Topic[] = [
     tier: "high",
     stems: rx([
       "симптом", "болит", "боль(?!ш)", "болел", "температур", "давлени", "пульс скач", "аритми", "сердц", "голова кружит", "головокруж",
+      "в груди", "грудь давит", "одышк", "задыха", "тяжело дыш", "онеме", "немеет", "немеют", "сознани", "судорог", "инсулин",
       "тошн", "рвот", "кров(?!ат)", "обморок", "отёк", "отек", "сыпь", "анализ", "ферритин", "гемоглобин", "холестерин", "глюкоз", "сахар в крови",
       "лекарств", "таблет", "препарат", "антибиот", "антидепресс", "гормон", "доз(?!вон)", "бад(?!минт)", "добавк", "витамин",
       "травм", "растяж", "вывих", "перелом", "колено", "спина болит", "поясниц",
@@ -136,8 +137,9 @@ export function route(input: RouteInput): Route {
   }
   let mode: Tier = input.mode ? MODE_FLOOR[input.mode] : "light";
   if (input.mode === "training" && trainingHigh) mode = "high";
-  // Level 1 of CrisisGuard (distress, an ambiguous phrase): at least Sonnet (block 2 §9, Agent 10).
-  const crisis: Tier = (input.deviceCrisis ?? 0) >= 1 ? "midplus" : "light";
+  // Level 1 of CrisisGuard (distress, an ambiguous phrase) or the crisis window: Opus — the
+  // psychological heaviness of the high tier (A62 §2; ревью 10, ответ на вопрос 2).
+  const crisis: Tier = (input.deviceCrisis ?? 0) >= 1 ? "high" : "light";
   const floor = input.floor ?? "light";
   const tier = maxTier(topic, mode, floor, crisis);
   const reason: Route["reason"] =

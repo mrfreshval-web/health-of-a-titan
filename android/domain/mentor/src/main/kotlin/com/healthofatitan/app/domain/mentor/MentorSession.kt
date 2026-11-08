@@ -61,6 +61,15 @@ class MentorSession(
         crisisSeen = true
     }
 
+    /**
+     * The model saw a risk in the last words of the person (`[[SOS]]`): from now on they stay on
+     * the screen but never go to the model again (A62 §4 §6), like a crisis caught on the phone.
+     */
+    fun localizeLastPerson() {
+        val i = _lines.indexOfLast { it.speaker == Speaker.PERSON && !it.local }
+        if (i >= 0) _lines[i] = _lines[i].copy(local = true)
+    }
+
     val personTurns: Int get() = _lines.count { it.speaker == Speaker.PERSON && !it.local }
 
     /** The exchange the model sees: non-local lines, merged per speaker, trimmed from the start. */

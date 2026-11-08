@@ -4,15 +4,19 @@ import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.domain.engine.CrisisAssessment
 import com.healthofatitan.app.domain.engine.CrisisGuard
 import com.healthofatitan.app.domain.engine.CrisisLevel
+import com.healthofatitan.app.domain.engine.CrisisReason
+import com.healthofatitan.app.domain.engine.SafetyAnswer
 import com.healthofatitan.app.domain.mentor.ChatLine
 import com.healthofatitan.app.domain.mentor.ContextPack
 import com.healthofatitan.app.domain.mentor.ContextPackBuilder
+import com.healthofatitan.app.domain.mentor.CrisisWindowMode
 import com.healthofatitan.app.domain.mentor.EdCareText
 import com.healthofatitan.app.domain.mentor.GuardReason
 import com.healthofatitan.app.domain.mentor.GuardResult
 import com.healthofatitan.app.domain.mentor.InputDecision
 import com.healthofatitan.app.domain.mentor.MentorConsents
 import com.healthofatitan.app.domain.mentor.MentorGate
+import com.healthofatitan.app.domain.mentor.MentorPolicy
 import com.healthofatitan.app.domain.mentor.MentorSession
 import com.healthofatitan.app.domain.mentor.PackInputs
 import com.healthofatitan.app.domain.mentor.ResponseGuard
@@ -53,7 +57,8 @@ data class MentorSetup(
     val consents: MentorConsents = MentorConsents(),
 )
 
-enum class LineKind { TALK, CRISIS, NOTICE }
+/** [EMERGENCY] — the medical line of `[[SOS_MED]]` with the «Помощь» button (М1). */
+enum class LineKind { TALK, CRISIS, EMERGENCY, NOTICE }
 
 data class UiLine(val speaker: Speaker, val text: String, val kind: LineKind = LineKind.TALK)
 
@@ -65,14 +70,25 @@ data class MentorUi(
     val crisis: Boolean = false,
     /** Open «Помощь» now (CrisisGuard ≥ 2 or the model's marker); the screen calls [MentorConversation.helpOpened]. */
     val openHelp: Boolean = false,
+    /**
+     * «Помощь» as a chip above the input: after CrisisGuard ≥ 1 (also T13, where no question is
+     * asked), inside the crisis window and after an emergency (М2, М10).
+     */
+    val helpVisible: Boolean = false,
 )
 
 /**
  * One conversation with Винс (A62): every message of the person passes CrisisGuard on the phone
- * (A07 §4.1 layer 1) and is logged to the safety bus by level only; level ≥ 2 or an open crisis
- * window → no model, the crisis line with 112 and 911 and «Помощь». The answer passes the model's
- * crisis marker (layer 2, may only raise) and [ResponseGuard] (no calories under `ED_CARE`, no
- * doses, no diagnoses) before the person sees it.
+ * (A07 §4.1 layer 1) and is logged to the safety bus by level only.
+ *
+ * - Level ≥ 2 → no model, the crisis card with 112 and 911 and «Помощь».
+ * - Level 1 → Text 1 of A07 §4.3 once per conversation (a local line, not the model); a short «да»
+ *   to it → `SafetyAnswer.YES` → level 2. With T13 (META) no question, but «Помощь» is in sight.
+ * - Inside the crisis window: [MentorPolicy.CRISIS_WINDOW_MODE] (the card once, then a short line;
+ *   or variant Б — gentle talk on Opus).
+ * - The answer passes the model's markers (`[[SOS]]` may only raise, `[[SOS_MED]]` → emergency),
+ *   CrisisGuard on the model's words (М4) and [ResponseGuard] (no food under hiding, no doses,
+ *   no diagnoses) before the person sees it.
  *
  * Pure of Android: the ViewModel passes the network, the bus, the journal and the settings in.
  */
@@ -84,18 +100,41 @@ class MentorConversation(
     private val logCrisis: suspend (CrisisAssessment) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
     private val assess: (String) -> CrisisAssessment = CrisisGuard::assess,
+    private val windowMode: CrisisWindowMode = MentorPolicy.CRISIS_WINDOW_MODE,
 ) {
     private val mutex = Mutex()
     private var session = MentorSession()
+    private var persona = MentorPersona.DEFAULT
     private var softNoticeShown = false
+
+    /** Text 1 was asked in this conversation (once per conversation, М2). */
+    private var safetyAsked = false
+
+    /** The next message is the answer to Text 1. */
+    private var awaitingAnswer = false
+
+    /** CrisisGuard 1 happened in this conversation: the gentle flag goes with every turn. */
+    private var sessionGentle = false
+
+    /** The highest CrisisGuard level (0–1) sent in this conversation: Opus and no day limit stay. */
+    private var sessionLevel = 0
+
+    /** The full crisis card of the window was shown in this conversation (М10). */
+    private var windowCardShown = false
+
     private val state = MutableStateFlow(MentorUi())
     val ui: StateFlow<MentorUi> = state.asStateFlow()
 
     /** A new conversation: a greeting in the character's manner, said by the app (no model). */
     suspend fun start() = mutex.withLock {
-        val persona = setup().persona
+        persona = setup().persona
         session = MentorSession()
         softNoticeShown = false
+        safetyAsked = false
+        awaitingAnswer = false
+        sessionGentle = false
+        sessionLevel = 0
+        windowCardShown = false
         local(Speaker.MENTOR, MentorTexts.greeting(persona))
         state.value = MentorUi(persona = persona, lines = listOf(UiLine(Speaker.MENTOR, MentorTexts.greeting(persona))))
     }
@@ -110,9 +149,25 @@ class MentorConversation(
 
     private suspend fun turn(text: String) {
         val assessment = assess(text)
+        val s = setup()
+        persona = s.persona
+        if (awaitingAnswer) {
+            awaitingAnswer = false
+            if (assessment.level < CrisisLevel.PASSIVE && MentorGate.consent(text)) {
+                // «Да» to Text 1: level 2 (A07 §4.3). The answer is not sent to the model.
+                val yes = CrisisGuard.answer(SafetyAnswer.YES)
+                logCrisis(yes)
+                session.markCrisis()
+                local(Speaker.PERSON, text)
+                show(UiLine(Speaker.PERSON, text))
+                crisisCard(open = yes.level.autoShowHelp)
+                return
+            }
+            // «Нет» or another topic: the talk goes on, gentle (sessionGentle is already on).
+        }
         if (assessment.level != CrisisLevel.NONE) logCrisis(assessment)
         val bus = safety()
-        when (val decision = MentorGate.before(text, { assessment.level.value }, bus.crisis)) {
+        when (val decision = MentorGate.before(text, { assessment.level.value }, bus.crisis, windowMode)) {
             is InputDecision.Sos -> {
                 // The words of a crisis never go to the model, now or later (A62 §4 §6).
                 session.markCrisis()
@@ -120,19 +175,46 @@ class MentorConversation(
                 show(UiLine(Speaker.PERSON, text))
                 crisisCard(open = assessment.level.autoShowHelp)
             }
+            InputDecision.Window -> {
+                // М10 (temporary, variant А): the window of a recent crisis — no model, no advice.
+                session.markCrisis()
+                local(Speaker.PERSON, text)
+                show(UiLine(Speaker.PERSON, text))
+                if (!windowCardShown) {
+                    windowCardShown = true
+                    crisisCard(open = false)
+                } else {
+                    notice(MentorTexts.window(persona), talk = true)
+                }
+                state.update { it.copy(helpVisible = true) }
+            }
             is InputDecision.Send -> {
                 if (decision.crisisLevel > 0) session.markCrisis()
+                if (decision.care) state.update { it.copy(helpVisible = true) }
+                sessionLevel = maxOf(sessionLevel, decision.crisisLevel)
+                if (assessment.level == CrisisLevel.CLARIFY) {
+                    sessionGentle = true
+                    state.update { it.copy(helpVisible = true) }
+                    if (assessment.reason != CrisisReason.META && !safetyAsked && !decision.care) {
+                        // М2: Text 1, said by the app; this turn does not go to the model.
+                        safetyAsked = true
+                        awaitingAnswer = true
+                        session.add(ChatLine(Speaker.PERSON, text, clock()))
+                        show(UiLine(Speaker.PERSON, text))
+                        notice(MentorTexts.safetyQuestion(persona), talk = true)
+                        return
+                    }
+                }
                 session.add(ChatLine(Speaker.PERSON, text, clock()))
                 show(UiLine(Speaker.PERSON, text))
                 state.update { it.copy(sending = true) }
-                val s = setup()
-                val pack = pack(s, bus)
+                val pack = pack(s, bus, decision.care)
                 val reply = try {
-                    send(MentorCall(s.persona.id, session.window(), pack, session.floor, decision.crisisLevel, s.expertTraining))
+                    send(MentorCall(s.persona.id, session.window(), pack, session.floor, sessionLevel, s.expertTraining))
                 } finally {
                     state.update { it.copy(sending = false) }
                 }
-                answer(reply, bus, decision.crisisLevel)
+                answer(reply, bus, sessionLevel)
             }
         }
     }
@@ -143,12 +225,19 @@ class MentorConversation(
                 session.lift(reply.tier)
                 when (val g = ResponseGuard.check(reply.text, bus.restrictions, bus.edCare)) {
                     is GuardResult.Pass -> {
-                        session.add(ChatLine(Speaker.MENTOR, g.text, clock()))
-                        show(UiLine(Speaker.MENTOR, g.text))
+                        // М4: the model's own words pass CrisisGuard too; ≥ 2 → the card instead.
+                        if (assess(g.text).level >= CrisisLevel.PASSIVE) {
+                            session.markCrisis()
+                            crisisCard(open = false)
+                        } else {
+                            session.add(ChatLine(Speaker.MENTOR, g.text, clock()))
+                            show(UiLine(Speaker.MENTOR, g.text))
+                        }
                     }
                     is GuardResult.Replaced -> notice(
                         when (g.reason) {
-                            GuardReason.ED_CARE -> MentorTexts.ED_CARE_REPLACED
+                            GuardReason.ED_CARE -> MentorTexts.edCareReplaced(persona)
+                            GuardReason.FOOD_HIDDEN -> MentorTexts.foodReplaced(persona)
                             GuardReason.DOSE -> MentorTexts.DOSE_REPLACED
                             GuardReason.DIAGNOSIS -> MentorTexts.DIAGNOSIS_REPLACED
                         },
@@ -164,15 +253,23 @@ class MentorConversation(
                 val level = MentorGate.merge(deviceLevel, reply.level)
                 logCrisis(CrisisAssessment(CrisisLevel.of(level)))
                 session.markCrisis()
+                session.localizeLastPerson()
                 crisisCard(open = CrisisLevel.of(level).autoShowHelp)
             }
-            MentorReply.Refused -> notice(MentorTexts.REFUSED, talk = true)
+            MentorReply.Emergency -> {
+                // М1: the body, not the mood — no crisis journal, no 72 h window; no summary.
+                session.markCrisis()
+                local(Speaker.MENTOR, MentorTexts.emergency(persona))
+                show(UiLine(Speaker.MENTOR, MentorTexts.emergency(persona), LineKind.EMERGENCY))
+                state.update { it.copy(helpVisible = true) }
+            }
+            MentorReply.Refused -> notice(MentorTexts.refused(persona), talk = true)
             is MentorReply.NotConfigured -> notice(MentorTexts.NOT_CONFIGURED)
-            MentorReply.NeedsLogin -> notice(MentorTexts.NEEDS_LOGIN)
+            MentorReply.NeedsLogin -> notice(MentorTexts.needsLogin(persona))
             is MentorReply.Limit -> notice(if (reply.month) MentorTexts.MONTH_LIMIT else MentorTexts.DAY_LIMIT)
-            MentorReply.Busy -> notice(MentorTexts.BUSY)
-            MentorReply.Offline -> notice(MentorTexts.OFFLINE)
-            is MentorReply.Failed -> notice(MentorTexts.FAILED)
+            MentorReply.Busy -> notice(MentorTexts.busy(persona))
+            MentorReply.Offline -> notice(MentorTexts.offline(persona))
+            is MentorReply.Failed -> notice(MentorTexts.failed(persona))
         }
     }
 
@@ -184,7 +281,7 @@ class MentorConversation(
         if (!session.shouldSummarize()) return@withLock
         val s = setup()
         val bus = safety()
-        val reply = send(MentorCall(s.persona.id, session.window(), pack(s, bus), session.floor, 0, s.expertTraining, summary = true))
+        val reply = send(MentorCall(s.persona.id, session.window(), pack(s, bus, care = false), session.floor, 0, s.expertTraining, summary = true))
         val text = (reply as? MentorReply.Text)?.text?.trim().orEmpty()
         val hidden = (bus.edCare || EdCareText.HIDING.any { it in bus.restrictions }) && EdCareText.mentionsHidden(text)
         if (text.isNotEmpty() && !hidden && ResponseGuard.check(text, emptySet(), edCare = false) is GuardResult.Pass) {
@@ -193,13 +290,14 @@ class MentorConversation(
         session = MentorSession()
     }
 
-    private fun pack(s: MentorSetup, bus: MentorSafety): ContextPack = ContextPackBuilder.build(
+    private fun pack(s: MentorSetup, bus: MentorSafety, care: Boolean): ContextPack = ContextPackBuilder.build(
         PackInputs(
             addressForm = s.addressForm,
             restrictions = bus.restrictions,
             edCare = bus.edCare,
-            recentCrisis = bus.crisis,
-            gentle = bus.gentle,
+            // gentle_plus → NO_COACHING + SOBER: only variant Б sends messages of the window out.
+            recentCrisis = care || bus.crisis,
+            gentle = bus.gentle || sessionGentle,
             summaries = memory.summaries.value.map { it.text },
             consents = s.consents,
         ),
@@ -207,7 +305,7 @@ class MentorConversation(
 
     private fun crisisCard(open: Boolean) {
         show(UiLine(Speaker.MENTOR, MentorTexts.CRISIS, LineKind.CRISIS))
-        state.update { it.copy(crisis = true, openHelp = it.openHelp || open) }
+        state.update { it.copy(crisis = true, helpVisible = true, openHelp = it.openHelp || open) }
     }
 
     /** A line of the app; [talk] lines read as Винс's answer, the others as a quiet notice. */

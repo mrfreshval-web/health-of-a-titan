@@ -5,6 +5,8 @@ import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.network.HotJson
 import com.healthofatitan.app.domain.engine.CrisisAssessment
 import com.healthofatitan.app.domain.engine.CrisisLevel
+import com.healthofatitan.app.domain.engine.CrisisReason
+import com.healthofatitan.app.domain.engine.CrisisGuard
 import com.healthofatitan.app.domain.mentor.MentorTier
 import com.healthofatitan.app.domain.mentor.Speaker
 import com.healthofatitan.app.feature.mentor.data.InMemoryMentorMemory
@@ -37,13 +39,17 @@ class MentorConversationTest {
     private var bus = MentorSafety.NORMAL
     private val memory = InMemoryMentorMemory()
 
-    private fun conversation(setup: MentorSetup = MentorSetup(persona = MentorPersona.BRO)) = MentorConversation(
+    private fun conversation(
+        setup: MentorSetup = MentorSetup(persona = MentorPersona.BRO),
+        assess: (String) -> CrisisAssessment = CrisisGuard::assess,
+    ) = MentorConversation(
         send = { calls += it; reply },
         safety = { bus },
         setup = { setup },
         memory = memory,
         logCrisis = { logged += it },
         clock = { 1L },
+        assess = assess,
     )
 
     @Test
@@ -65,6 +71,130 @@ class MentorConversationTest {
     }
 
     @Test
+    fun `M10 the crisis window shows the full card once, then the short line with help`() = runBlocking {
+        bus = MentorSafety(crisis = true)
+        val c = conversation(MentorSetup(persona = MentorPersona.BUTLER)).apply { start() }
+        c.send("привет")
+        assertEquals(LineKind.CRISIS, c.ui.value.lines.last().kind)
+        assertFalse(c.ui.value.openHelp, "the window does not push «Помощь» open by itself")
+        c.send("что по плану?")
+        assertEquals(MentorTexts.window(MentorPersona.BUTLER), c.ui.value.lines.last().text)
+        assertTrue("как вы" in c.ui.value.lines.last().text)
+        assertEquals(1, c.ui.value.lines.count { it.kind == LineKind.CRISIS })
+        assertTrue(c.ui.value.helpVisible)
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun `M1 the model's medical marker shows the emergency line, not the crisis journal`() = runBlocking {
+        reply = MentorReply.Emergency
+        val c = conversation().apply { start() }
+        repeat(3) { c.send("давит в груди при нагрузке") }
+        val ui = c.ui.value
+        assertEquals(LineKind.EMERGENCY, ui.lines.last().kind)
+        assertEquals(MentorTexts.emergency(MentorPersona.BRO), ui.lines.last().text)
+        assertTrue("112" in ui.lines.last().text && "911" in ui.lines.last().text)
+        assertTrue(ui.helpVisible)
+        assertFalse(ui.crisis, "no crisis card, no crisis state")
+        assertTrue(logged.isEmpty(), "no entry in the crisis journal, no 72 h window")
+        c.close()
+        assertTrue(memory.summaries.value.isEmpty(), "no summary of an emergency talk")
+    }
+
+    @Test
+    fun `M2 level 1 asks Text 1 once, without the model, and a yes leads to level 2`() = runBlocking {
+        val c = conversation().apply { start() }
+        c.send("сил больше нет, всё валится")
+        assertTrue(calls.isEmpty(), "Text 1 is the app's line")
+        assertEquals(MentorTexts.safetyQuestion(MentorPersona.BRO), c.ui.value.lines.last().text)
+        assertTrue(c.ui.value.helpVisible)
+        c.send("да, бывают")
+        assertTrue(calls.isEmpty())
+        assertEquals(CrisisLevel.PASSIVE, logged.last().level)
+        assertEquals(CrisisReason.ANSWER, logged.last().reason)
+        assertTrue(c.ui.value.crisis)
+        assertTrue(c.ui.value.openHelp)
+        assertEquals(LineKind.CRISIS, c.ui.value.lines.last().kind)
+    }
+
+    @Test
+    fun `M2 a no goes on as a gentle talk on level 1, the question is asked once`() = runBlocking {
+        val c = conversation().apply { start() }
+        c.send("сил больше нет, всё валится")
+        c.send("нет, просто устал")
+        val call = calls.single()
+        assertEquals(1, call.crisisLevel, "Opus and no day limit for the rest of the talk")
+        assertTrue("gentle" in call.pack.flags)
+        c.send("сил больше нет, всё валится")
+        assertEquals(2, calls.size, "Text 1 is not asked twice")
+        assertEquals(1, c.ui.value.lines.count { it.text == MentorTexts.safetyQuestion(MentorPersona.BRO) })
+    }
+
+    @Test
+    fun `M2 with T13 no question is asked, but help stays in sight`() = runBlocking {
+        val c = conversation(assess = { CrisisAssessment(CrisisLevel.CLARIFY, CrisisReason.META) }).apply { start() }
+        c.send("не спрашивай меня про суицид, давай про сон")
+        assertEquals(1, calls.single().crisisLevel)
+        assertTrue(c.ui.value.helpVisible)
+        assertTrue(c.ui.value.lines.none { it.text == MentorTexts.safetyQuestion(MentorPersona.BRO) })
+    }
+
+    @Test
+    fun `M4 an answer of the model with crisis words is replaced by the card`() = runBlocking {
+        reply = MentorReply.Text("Иногда и правда не хочется жить, это нормально.", MentorTier.MID, softLimit = false)
+        val c = conversation().apply { start() }
+        c.send("как пережить плохой день?")
+        assertEquals(LineKind.CRISIS, c.ui.value.lines.last().kind)
+        assertTrue(c.ui.value.lines.none { "не хочется жить" in it.text })
+    }
+
+    @Test
+    fun `the model's crisis marker makes the person's words local`() = runBlocking {
+        reply = MentorReply.Crisis(2)
+        val c = conversation().apply { start() }
+        c.send("мне как-то странно")
+        reply = MentorReply.Text("Я рядом.", MentorTier.HIGH, softLimit = false)
+        bus = MentorSafety.NORMAL
+        c.send("ну ладно, а что по сну?")
+        assertTrue(calls.last().window.none { it.text.contains("странно") })
+    }
+
+    @Test
+    fun `M5 a hidden weight without ED_CARE gets the neutral line, refusal and month limit point to help`() = runBlocking {
+        bus = MentorSafety(restrictions = setOf("HIDE_WEIGHT"))
+        reply = MentorReply.Text("Твой вес 92 кг — держи курс.", MentorTier.LIGHT, softLimit = false)
+        val c = conversation().apply { start() }
+        c.send("как я?")
+        assertEquals(MentorTexts.foodReplaced(MentorPersona.BRO), c.ui.value.lines.last().text)
+        assertFalse("бережный" in c.ui.value.lines.last().text)
+        reply = MentorReply.Refused
+        c.send("а если так?")
+        assertTrue("112" in c.ui.value.lines.last().text)
+        reply = MentorReply.Limit(month = true)
+        c.send("ещё")
+        assertTrue("112" in c.ui.value.lines.last().text && "911" in c.ui.value.lines.last().text)
+    }
+
+    @Test
+    fun `Vincent speaks on vy`() {
+        assertEquals("Здравствуйте. Чем могу быть полезен?", MentorTexts.greeting(MentorPersona.BUTLER))
+        assertEquals("Напишите Винсенту", MentorTexts.inputHint(MentorPersona.BUTLER))
+        assertEquals("Напиши Сенсею", MentorTexts.inputHint(MentorPersona.SENSEI))
+        listOf(
+            MentorTexts.emergency(MentorPersona.BUTLER),
+            MentorTexts.safetyQuestion(MentorPersona.BUTLER),
+            MentorTexts.window(MentorPersona.BUTLER),
+            MentorTexts.refused(MentorPersona.BUTLER),
+            MentorTexts.offline(MentorPersona.BUTLER),
+            MentorTexts.failed(MentorPersona.BUTLER),
+        ).forEach { line ->
+            assertTrue(Regex("(?iU)(?<!\\p{L})(тебе|тебя|ты|звони|напиши|попробуй|давай)(?!\\p{L})").find(line) == null, line)
+        }
+        assertTrue("Не врач и не психотерапевт" in MentorTexts.DISCLOSURE)
+        assertEquals("ИИ-наставник", MentorTexts.SUBTITLE)
+    }
+
+    @Test
     fun `the model's crisis marker opens help`() = runBlocking {
         reply = MentorReply.Crisis(2)
         val c = conversation().apply { start() }
@@ -78,6 +208,7 @@ class MentorConversationTest {
     fun `level 1 goes to the model with the level and no summary is kept`() = runBlocking {
         val c = conversation().apply { start() }
         c.send("сил больше нет, всё валится")
+        c.send("не, просто тяжёлая неделя")
         assertEquals(1, calls.single().crisisLevel)
         repeat(3) { c.send("ещё вопрос $it") }
         c.close()
@@ -92,9 +223,9 @@ class MentorConversationTest {
         reply = MentorReply.Text("Держи 1800 ккал в день.", MentorTier.MID, softLimit = false)
         val c = conversation().apply { start() }
         c.send("что на ужин?")
-        assertEquals(MentorTexts.ED_CARE_REPLACED, c.ui.value.lines.last().text)
+        assertEquals(MentorTexts.edCareReplaced(MentorPersona.BRO), c.ui.value.lines.last().text)
         val pack = calls.single().pack
-        assertEquals(listOf("ed_care"), pack.flags)
+        assertEquals(listOf("food_gentle"), pack.flags)
         assertEquals(listOf("Договорились ложиться до 23:30."), pack.summaries)
         assertEquals(null, pack.about)
     }

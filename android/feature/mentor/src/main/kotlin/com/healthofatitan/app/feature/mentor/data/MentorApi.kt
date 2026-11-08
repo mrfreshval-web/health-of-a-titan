@@ -33,6 +33,12 @@ sealed interface MentorReply {
     /** The model saw a risk to life (`[[SOS]]`) or the phone's level was ≥ 2: open «Помощь». */
     data class Crisis(val level: Int) : MentorReply
 
+    /**
+     * The model wrote `[[SOS_MED]]` (М1): a medical emergency — 112/911 now, training paused. Not
+     * the crisis journal and not the 72 h window: it is the body, not the mood.
+     */
+    data object Emergency : MentorReply
+
     /** The model declined (stop_reason refusal). */
     data object Refused : MentorReply
 
@@ -134,6 +140,7 @@ class MentorApi(
                             ?.let { MentorReply.Text(it, MentorTier.fromCode(a.tier), a.degraded == "soft") }
                             ?: MentorReply.Failed(res.code)
                         "crisis" -> MentorReply.Crisis(a.level ?: 2)
+                        "emergency" -> MentorReply.Emergency
                         "refused" -> MentorReply.Refused
                         else -> MentorReply.Failed(res.code)
                     }

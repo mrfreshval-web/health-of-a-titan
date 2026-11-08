@@ -8,7 +8,8 @@ package com.healthofatitan.app.domain.mentor
  *
  * In this slice:
  *  - always: the address form, the restriction codes of the safety bus (consumer MENTOR) and the
- *    flags `ed_care`, `recent_crisis`, `gentle` — names only;
+ *    neutral flags `food_gentle`, `gentle_plus`, `gentle` — never the names of states (A07 §7.1,
+ *    ревью 7 М7: «ed_care» names the disorder, so it does not leave the phone);
  *  - the last summaries of past conversations (phone-only chronicle, A62 §11 п. 2), filtered by
  *    [EdCareText] while food and weight are hidden;
  *  - «О себе» only with the consent `about_mentor` (A65 §5.2), filtered the same way.
@@ -24,8 +25,11 @@ data class ContextPack(
     val about: String? = null,
 ) {
     companion object {
-        const val FLAG_ED_CARE = "ed_care"
-        const val FLAG_RECENT_CRISIS = "recent_crisis"
+        /** `ED_CARE` on the phone; «бережный режим еды» for the model. */
+        const val FLAG_FOOD_GENTLE = "food_gentle"
+
+        /** The crisis window, only when the window talks (variant Б of [CrisisWindowMode]). */
+        const val FLAG_GENTLE_PLUS = "gentle_plus"
         const val FLAG_GENTLE = "gentle"
         const val MAX_SUMMARIES = 3
         const val MAX_SUMMARY_CHARS = 600
@@ -45,7 +49,10 @@ data class PackInputs(
     /** Names of [com.healthofatitan.app.domain.safety.Restriction] for the consumer MENTOR. */
     val restrictions: Set<String> = emptySet(),
     val edCare: Boolean = false,
-    /** CrisisGuard ≥ 2 within its window (the bus says so); details never leave the phone. */
+    /**
+     * CrisisGuard ≥ 2 within its window (the bus says so) and the window talks
+     * ([CrisisWindowMode.GENTLE_TALK]); details never leave the phone.
+     */
     val recentCrisis: Boolean = false,
     /** STORM or GRIEF: the bus asks for a sober tone. */
     val gentle: Boolean = false,
@@ -68,8 +75,8 @@ object ContextPackBuilder {
             ?.trim()?.take(ContextPack.MAX_ABOUT_CHARS)
             ?.takeIf { it.isNotEmpty() && keep(it) }
         val flags = buildList {
-            if (inputs.edCare) add(ContextPack.FLAG_ED_CARE)
-            if (inputs.recentCrisis) add(ContextPack.FLAG_RECENT_CRISIS)
+            if (inputs.edCare) add(ContextPack.FLAG_FOOD_GENTLE)
+            if (inputs.recentCrisis) add(ContextPack.FLAG_GENTLE_PLUS)
             if (inputs.gentle) add(ContextPack.FLAG_GENTLE)
         }
         return ContextPack(

@@ -90,6 +90,12 @@ object TodayCopy {
 
     fun week(done: Int, target: Int): String = "неделя $done из $target"
 
+    /**
+     * The mark of the goal on a step of the day (A57 §4.3, A67 С-4): the short name of the goal,
+     * no terms of the Path (lexicon ladder A60 §4.1). DRAFT for the review of Agents 4 and 16.
+     */
+    fun goalMark(name: String): String = "Цель: $name"
+
     // Rhythm (A46 §2.5, A49, D-043).
     const val DAWN = "Рассвет"
     const val TRANSITION = "Переход"
@@ -175,7 +181,7 @@ object TodayCopy {
         M_NEED, M_DEEP, M_REM, M_LIGHT, M_AWAKE, M_EFFICIENCY, M_CONSISTENCY, M_DEBT, M_RHR, M_HRV, M_RHR_TREND, M_RESP,
         M_SPO2, M_SKIN, M_SELF, SRC_SLEEP, SRC_RECOVERY, SRC_CHECKIN, WEEK_SOON, BEHIND, BEHIND_SOON, ARSENAL_SOON,
         BREATHER_LINE, BREATHER_REST, BREATHER_OFF, BREATHER_HIDE, BREATHER_EXHALE, SUPPORT_SOURCE, SUPPORT_NORM,
-        BREATHER_BACK, STEPS_GOAL,
+        BREATHER_BACK, STEPS_GOAL, goalMark("Пробежать 5 км"),
     ) + MEALS.map { it.second }
 }
 

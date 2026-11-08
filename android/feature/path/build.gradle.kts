@@ -20,6 +20,8 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":integration:whoop"))
+    // The bridge Путь → Неделя (A67 С-3): PathWeek and the ids of the week goals.
+    implementation(project(":domain:today"))
     implementation(libs.kotlinx.coroutines.android)
 
     // The stop dictionary of A39 for the texts of the path.

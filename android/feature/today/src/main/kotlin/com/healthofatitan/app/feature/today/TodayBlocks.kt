@@ -464,7 +464,8 @@ private fun TaskRow(task: DayTask, playable: Boolean, onTap: () -> Unit, onDone:
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val sub = listOfNotNull(task.week, if (task.hasMini) (if (mini) TodayCopy.MINI else TodayCopy.FULL) else null)
+                    // A67 С-4: which goal the step serves; the mode still decides full or mini
+                    val sub = listOfNotNull(task.goal?.let(TodayCopy::goalMark), task.week, if (task.hasMini) (if (mini) TodayCopy.MINI else TodayCopy.FULL) else null)
                     if (sub.isNotEmpty()) HotOverline(sub.joinToString(" · "))
                 }
             }

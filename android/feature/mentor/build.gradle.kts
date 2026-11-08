@@ -14,7 +14,8 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":core:security"))
-    implementation(project(":domain:mentor"))
+    // Public types of the screen (UiLine → Speaker) come from here.
+    api(project(":domain:mentor"))
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.kotlinx.coroutines.test)

@@ -135,10 +135,12 @@ class DayActions(
     val onConnectWhoop: () -> Unit = NO_CONNECT,
     /** «Начать с малого» (4.9): the return is seen. */
     val onStartSmall: () -> Unit = {},
+    /** «+ Еда» in «День» (A66 §3.5): a meal slot marked eaten (or taken back). */
+    val onMeal: (LocalDate, String, Boolean) -> Unit = { _, _, _ -> },
 ) {
     fun copyWith(onConnectWhoop: () -> Unit): DayActions = DayActions(
         onToggle, onEvening, onCloseDay, onCrisis, onOpenHelp, onSteps, onOpen,
-        onWater, onTaskDone, onTaskToWeek, onTaskBack, onRitual, onConnectWhoop, onStartSmall,
+        onWater, onTaskDone, onTaskToWeek, onTaskBack, onRitual, onConnectWhoop, onStartSmall, onMeal,
     )
 }
 

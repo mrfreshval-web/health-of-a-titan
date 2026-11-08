@@ -126,7 +126,7 @@ class TodayRulesTest {
     fun `T-01 the order of blocks is the same in every scenario and at any hour`() {
         Scenario.entries.forEach { s ->
             (0..23).forEach { h ->
-                assertEquals(listOf("block_me", "block_tasks", "block_supports", "block_rhythm"), TodayLayout.blocks(s, at(h)).map { it.tag })
+                assertEquals(listOf("block_me", "block_tasks", "block_day", "block_rhythm"), TodayLayout.blocks(s, at(h)).map { it.tag })
             }
         }
     }

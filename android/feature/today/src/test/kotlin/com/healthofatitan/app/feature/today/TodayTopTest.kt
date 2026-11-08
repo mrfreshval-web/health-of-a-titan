@@ -2,15 +2,15 @@ package com.healthofatitan.app.feature.today
 
 import com.healthofatitan.app.core.model.nav.HotRoute
 import com.healthofatitan.app.domain.today.DayMode
+import com.healthofatitan.app.domain.today.DayRowId
+import com.healthofatitan.app.domain.today.DayRowView
+import com.healthofatitan.app.domain.today.DayTap
 import com.healthofatitan.app.domain.today.DayTask
 import com.healthofatitan.app.domain.today.GoalSource
 import com.healthofatitan.app.domain.today.MeView
 import com.healthofatitan.app.domain.today.Scenario
 import com.healthofatitan.app.domain.today.Sphere
 import com.healthofatitan.app.domain.today.StopWords
-import com.healthofatitan.app.domain.today.SupportId
-import com.healthofatitan.app.domain.today.SupportTone
-import com.healthofatitan.app.domain.today.SupportView
 import com.healthofatitan.app.domain.today.TaskKind
 import com.healthofatitan.app.domain.today.TodayCopy
 import com.healthofatitan.app.domain.today.WeekGoal
@@ -56,15 +56,16 @@ class TodayTopTest {
         near(206f, TodayTopRules.FRAME_LEFT + TodayTopRules.FRAME / 2f)
     }
 
-    private fun support(fill: Float, pending: Boolean = false) =
-        SupportView(SupportId.WATER, "питьё", "3", null, fill, "src", estimate = false, pending = pending, tone = SupportTone.CALM, spoken = "")
+    private fun row(fill: Float, counted: Boolean = true) =
+        DayRowView(DayRowId.FOOD, "Питание", "◒", "2 из 4 приёмов", null, fill, counted, tap = DayTap.NUTRITION, spoken = "")
 
     @Test
-    fun `the columns glow by the share of the closed day, each row at most 1`() {
+    fun `the columns glow by the share of the closed day, each row of «День» at most 1`() {
         assertEquals(0f, TodayTopRules.dayShare(emptyList()))
-        near(0.5f, TodayTopRules.dayShare(listOf(support(1f), support(0f))))
-        near(0.5f, TodayTopRules.dayShare(listOf(support(1.8f), support(0f))), 0.001f)
-        near(1f / 3f, TodayTopRules.dayShare(listOf(support(1f), support(0.9f, pending = true), support(0f))))
+        near(0.5f, TodayTopRules.dayShare(listOf(row(1f), row(0f))))
+        near(0.5f, TodayTopRules.dayShare(listOf(row(1.8f), row(0f))), 0.001f)
+        // a row without a norm (load without WHOOP, «по самочувствию») is left out of the share
+        near(0.5f, TodayTopRules.dayShare(listOf(row(1f), row(0.9f, counted = false), row(0f))))
         assertEquals(TodayTopRules.BASE, TodayTopRules.glowTop(0f))
         assertEquals(TodayTopRules.CAPITAL, TodayTopRules.glowTop(1f))
         near((TodayTopRules.BASE + TodayTopRules.CAPITAL) / 2f, TodayTopRules.glowTop(0.5f))

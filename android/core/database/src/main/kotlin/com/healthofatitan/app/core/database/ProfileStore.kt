@@ -23,12 +23,14 @@ import java.util.TimeZone
  *   profile is always empty and nutrition runs «Основа» without filters
  * @property consentAtMs when it was granted, for «согласие 07.11»
  * @property nutritionLevel the chosen nutrition level code (`base | structured | precise`), null = not chosen
+ * @property edCareKept the narrow consent `ed_care_keep` (D-058) is granted: its mark may be turned off
  */
 data class ProfileSnapshot(
     val consented: Boolean = false,
     val consentAtMs: Long? = null,
     val constraints: UserConstraints = UserConstraints.NONE,
     val nutritionLevel: String? = null,
+    val edCareKept: Boolean = false,
 )
 
 /**
@@ -38,11 +40,14 @@ data class ProfileSnapshot(
  * @param events the event journal (A58 §8): a newly marked `ed_history`, `ed_signals` or
  *   `underweight_reported` writes the entry of `ED_CARE` for the safety bus (A60 §3.3 «входы — в
  *   один словарь»). Unmarking writes nothing: only the person's choice ends `ED_CARE` (D-057).
+ * @param transaction runs a withdrawal of consent as one transaction (`HotDatabase.withTransaction`);
+ *   it stands before [now] so that a trailing lambda stays the clock
  */
 class ProfileStore(
     private val nutritionDao: NutritionDao,
     private val consentDao: ConsentDao,
     private val events: EventLogDao? = null,
+    private val transaction: suspend (suspend () -> Unit) -> Unit = { it() },
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val user = HotDatabase.LOCAL_USER
@@ -61,23 +66,80 @@ class ProfileStore(
                 )
             },
             nutritionLevel = byCategory[LEVEL_KEY]?.codes?.takeIf { it.isNotBlank() },
+            edCareKept = consents.firstOrNull { it.consentId == KEEP_CONSENT_ID }?.granted == true,
         )
     }.distinctUntilChanged()
 
-    /** Grants or revokes the S4 consent; a revoke deletes all categories (the level stays). */
+    /** Grants the S4 consent; `false` is [withdrawConsent] without keeping `ED_CARE`. */
     suspend fun setConsent(granted: Boolean) {
+        if (granted) record(CONSENT_ID, CONSENT_VERSION, true, now()) else withdrawConsent(keepEdCare = false)
+    }
+
+    /**
+     * Withdraws the S4 consent (D-058): every category (the level stays), the evening food marks
+     * and every event of `ED_CARE` in the journal — the reasons of entry and the history — are
+     * deleted in one transaction. Crisis events are not S4 and stay (A07).
+     *
+     * @param keepEdCare the person answered «Да» to «Оставить бережный режим еды?» (asked only while
+     *   `ED_CARE` is on): one mark «режим включён» stays — an entry `self_choice` resting on the
+     *   narrow consent [KEEP_CONSENT_ID]. «Нет»: nothing stays.
+     * @param modeOff the mode was already off and only its history hid things (П-2): the kept mark
+     *   is the entry and the person's exit at the same moment — calories, weight and body photo
+     *   stay hidden, the mode itself does not come back
+     * @param step with [modeOff]: the step of the return before the withdrawal; above 1 it is kept (Д-1)
+     * @param returned with [modeOff]: what the person took back on step 3 (`EdCareReturn` codes), kept
+     */
+    suspend fun withdrawConsent(
+        keepEdCare: Boolean,
+        modeOff: Boolean = false,
+        step: Int = 0,
+        returned: Set<String> = emptySet(),
+    ) = transaction {
         val t = now()
+        // «Выключить бережный режим еды» without S4 (Ю-3) does not write a second revoke of S4
+        if (consentDao.latest(user, CONSENT_ID)?.granted == true) record(CONSENT_ID, CONSENT_VERSION, false, t)
+        nutritionDao.deleteAllExcept(user, LEVEL_KEY)
+        nutritionDao.deleteEvenings(user)
+        val journal = events
+        journal?.deleteByPrefix(user, SafetyEventKinds.ED_CARE_PREFIX)
+        if (keepEdCare && journal != null) {
+            record(KEEP_CONSENT_ID, KEEP_CONSENT_VERSION, true, t)
+            val day = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+            journal.append(
+                EventLogEntity(
+                    userId = user,
+                    kind = SafetyEventKinds.ED_CARE_ENTER,
+                    payload = SafetyEventKinds.REASON_SELF_CHOICE,
+                    source = SafetyEventKinds.SOURCE_CONSENT_KEEP,
+                    at = t,
+                    dayKey = day,
+                ),
+            )
+            if (modeOff) {
+                // one mark of what is hidden now: the exit, the step and what came back — no reasons, no chronology
+                fun keep(kind: String, payload: String?) =
+                    EventLogEntity(userId = user, kind = kind, payload = payload, source = SafetyEventKinds.SOURCE_CONSENT_KEEP, at = t, dayKey = day)
+                journal.append(keep(SafetyEventKinds.ED_CARE_EXIT, null))
+                if (step > 1) journal.append(keep(SafetyEventKinds.ED_CARE_STEP, step.toString()))
+                returned.forEach { journal.append(keep(SafetyEventKinds.ED_CARE_RETURN, it)) }
+            }
+        } else if (consentDao.latest(user, KEEP_CONSENT_ID)?.granted == true) {
+            // the mark of an earlier «Да» is gone with the events: its consent ends too
+            record(KEEP_CONSENT_ID, KEEP_CONSENT_VERSION, false, t)
+        }
+    }
+
+    private suspend fun record(consentId: String, version: Int, granted: Boolean, t: Long) {
         consentDao.insert(
             ConsentRecordEntity(
                 userId = user,
-                consentId = CONSENT_ID,
-                consentVersion = CONSENT_VERSION,
+                consentId = consentId,
+                consentVersion = version,
                 granted = granted,
                 tsUtcMs = t,
                 tzOffsetMin = TimeZone.getDefault().getOffset(t) / 60_000,
             ),
         )
-        if (!granted) nutritionDao.deleteAllExcept(user, LEVEL_KEY)
     }
 
     /** Stores the whole profile: changed categories are written, emptied ones deleted. */
@@ -131,6 +193,13 @@ class ProfileStore(
         /** Consent id of the profile of specifics (texts: Agent 7). */
         const val CONSENT_ID = "profile_s4"
         const val CONSENT_VERSION = 1
+
+        /**
+         * The narrow consent to keep only the mark «бережный режим еды включён» after S4 is
+         * withdrawn (D-058). Text: черновик, ждёт ревью Агентов 7 и 10.
+         */
+        const val KEEP_CONSENT_ID = "ed_care_keep"
+        const val KEEP_CONSENT_VERSION = 1
         const val LEVEL_KEY = "level"
         const val SOURCE_PROFILE = "profile"
         private const val SEP = ";"

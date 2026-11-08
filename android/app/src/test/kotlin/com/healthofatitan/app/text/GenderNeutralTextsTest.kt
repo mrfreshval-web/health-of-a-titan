@@ -4,6 +4,7 @@ import com.healthofatitan.app.core.model.mentor.MentorPersona
 import com.healthofatitan.app.core.model.profile.AddressForm
 import com.healthofatitan.app.feature.checkin.CheckinTexts
 import com.healthofatitan.app.feature.me.consent.AgeGateTexts
+import com.healthofatitan.app.feature.nutrition.ConsentWithdrawTexts
 import com.healthofatitan.app.feature.today.DailyTexts
 import org.junit.Test
 import org.yaml.snakeyaml.LoaderOptions
@@ -64,7 +65,9 @@ class GenderNeutralTextsTest {
             "CheckinTexts.discoveryLine(SENSEI)" to CheckinTexts.discoveryLine(MentorPersona.SENSEI, address),
         ) + DailyTexts.trainingOptions(address).associate { (value, label) -> "DailyTexts.trainingOptions.$value" to label } +
             // The gate 18+ (R-13) stands before the address form is chosen: neutral in every form.
-            AgeGateTexts.ALL.mapIndexed { i, g -> "AgeGateTexts.$i" to g.of(address) }
+            AgeGateTexts.ALL.mapIndexed { i, g -> "AgeGateTexts.$i" to g.of(address) } +
+            // The withdrawal of S4 and the one question about ED_CARE (D-058): neutral in every form.
+            ConsentWithdrawTexts.ALL.mapIndexed { i, g -> "ConsentWithdrawTexts.$i" to g.of(address) }
 
     @Test
     fun `the dictionary bans both forms and keeps whole words`() {

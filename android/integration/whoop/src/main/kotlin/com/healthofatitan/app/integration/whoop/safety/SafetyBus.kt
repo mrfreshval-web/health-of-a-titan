@@ -3,6 +3,7 @@ package com.healthofatitan.app.integration.whoop.safety
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.entity.EventLogEntity
+import com.healthofatitan.app.core.model.safety.SafetyEventKinds
 import com.healthofatitan.app.domain.safety.EdCareReason
 import com.healthofatitan.app.domain.safety.EdCareReturn
 import com.healthofatitan.app.domain.safety.JournalEvent
@@ -25,6 +26,11 @@ import java.time.Instant
  *
  * Writers: the crisis log (CrisisGuard ≥ 1, [crisis]), the profile of specifics (`ED_CARE` entry,
  * `ProfileStore`), and the person's own choices of the exit and the return steps.
+ *
+ * A withdrawal of S4 (D-058) deletes every `safety.ed_care.*` event. With «Да» to «Оставить
+ * бережный режим еды?» one entry `self_choice` from the source
+ * [SafetyEventKinds.SOURCE_CONSENT_KEEP] stays (consent `ed_care_keep`): the bus reads it like any
+ * entry, so `ED_CARE` stays on without the old reason, and the exit is the person's choice.
  */
 class SafetyBus(
     private val dao: EventLogDao,

@@ -22,8 +22,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The pure rules of the top of «Сегодня» by mockup 05b (A66 §1.1, §3.2–3.4, §11.2): the sun of
- * Заряд, the glow of the columns, the words of the tiles, «Сейчас» and its line of the link.
+ * The pure rules of the top of «Сегодня», variant B «Тише» (A66 v0.5 §1.1, §3.2а–3.4): the places
+ * of the blocks, the frame and the head, the sun of Заряд, the glow of the columns, the words of the tiles, «Сейчас» and its line of the link.
  */
 class TodayTopTest {
 
@@ -32,10 +32,11 @@ class TodayTopTest {
 
     @Test
     fun `the sun stands linear in Заряд, the norm 50 in the middle of its travel`() {
-        // A66 §3.2 on the screen: y = 452 − 3.02 × Заряд; the scene starts at y 100
-        near(437f - 100f, TodayTopRules.sunCenterY(5f), 0.2f)
-        near(452f - 3.02f * 50f - 100f, TodayTopRules.sunCenterY(50f))
-        near(452f - 3.02f * 95f - 100f, TodayTopRules.sunCenterY(95f))
+        // A66 §3.2а on the screen: y = 322 − 1.99 × Заряд; the scene starts at y 100
+        near(322f - 1.99f * 5f - 100f, TodayTopRules.sunCenterY(5f))
+        near(322f - 1.99f * 50f - 100f, TodayTopRules.sunCenterY(50f))
+        near(222f - 100f, TodayTopRules.sunCenterY(50f) + 0f, 0.6f)
+        near(322f - 1.99f * 95f - 100f, TodayTopRules.sunCenterY(95f))
         val low = TodayTopRules.sunCenterY(5f)
         val high = TodayTopRules.sunCenterY(95f)
         near((low + high) / 2f, TodayTopRules.sunCenterY(50f))
@@ -44,25 +45,83 @@ class TodayTopTest {
         // outside the scale it stays at its ends
         assertEquals(TodayTopRules.sunCenterY(5f), TodayTopRules.sunCenterY(0f))
         assertEquals(TodayTopRules.sunCenterY(95f), TodayTopRules.sunCenterY(100f))
-        assertTrue(TodayTopRules.sunCenterY(95f) > 0f, "the highest sun is still inside the scene")
-        assertTrue(TodayTopRules.sunCenterY(5f) < TodayTopRules.feetY, "the lowest sun is above the horizon")
+        assertTrue(TodayTopRules.sunCenterY(95f) - TodayTopRules.SUN_DIAMETER / 2f > 0f, "the highest sun is still inside the scene")
+        assertTrue(TodayTopRules.sunCenterY(5f) < TodayTopRules.feetY, "the lowest sun is above the feet")
     }
 
     @Test
-    fun `the head of the Titan stays in sight under the mode word on every width`() {
+    fun `the sun runs from the feet to 10 dp above the head on every width`() {
         listOf(360f, 393f, 412f, 448f, 480f).forEach { w ->
             val side = TodayTopRules.frameSide(w)
-            assertTrue(TodayTopRules.headTop(side) >= TodayTopRules.HEAD_ROOM - 0.5f, "width $w: head at ${TodayTopRules.headTop(side)}")
-            assertTrue(side <= w * TodayTopRules.FRAME / TodayTopRules.SCREEN_WIDTH + 0.01f)
+            // Заряд 0 stands on the feet, Заряд 100 about 10 dp above the head (A66 §3.2а)
+            val zero = TodayTopRules.feetY - TodayTopRules.SUN_PER_POINT * (side / TodayTopRules.FRAME) * 0f
+            near(TodayTopRules.feetY, zero)
+            val top = TodayTopRules.feetY - TodayTopRules.SUN_PER_POINT * (side / TodayTopRules.FRAME) * 100f
+            near(TodayTopRules.headTop(side) - 10f, top, 1.5f)
+            assertTrue(TodayTopRules.sunCenterY(95f, side) < TodayTopRules.sunCenterY(5f, side))
+            assertTrue(TodayTopRules.sunCenterY(95f, side) - TodayTopRules.SUN_DIAMETER / 2f >= 0f, "width $w: the sun stays in the scene")
         }
     }
 
     @Test
-    fun `the frame stands as A66 §11_2 says`() {
-        near(352f, TodayTopRules.feetY)
-        near(352f - 0.875f * 440f, TodayTopRules.frameTop)
+    fun `the head of the Titan stays 24 dp under the header on every width`() {
+        listOf(360f, 393f, 412f, 448f, 480f).forEach { w ->
+            val side = TodayTopRules.frameSide(w)
+            val head = TodayTopRules.headTop(side)
+            // the rule of the head (A66 §3.2а): not higher than the bottom of the header + 24 dp
+            assertTrue(head + TodayTopRules.SCENE_TOP >= TodayTopRules.SCENE_TOP + 24f - 0.01f, "width $w: head at ${head + TodayTopRules.SCENE_TOP}")
+            assertTrue(head >= TodayTopRules.HEAD_ROOM - 0.01f)
+            assertTrue(side <= w * TodayTopRules.FRAME / TodayTopRules.SCREEN_WIDTH + 0.01f)
+            // the axis of the Titan is the centre of the screen; the frame never leaves it
+            near(w / 2f, TodayTopRules.frameLeft(w) + side / 2f)
+            assertTrue(TodayTopRules.frameLeft(w) >= 0f)
+            // the feet stand above the mode word
+            assertTrue(TodayTopRules.feetY < TodayTopRules.MODE_WORD_TOP)
+        }
+        assertEquals(TodayTopRules.SCREEN_WIDTH * TodayTopRules.FRAME / TodayTopRules.SCREEN_WIDTH, TodayTopRules.frameSide(412f))
+        assertTrue(TodayTopRules.frameSide(480f) < 480f * TodayTopRules.FRAME / TodayTopRules.SCREEN_WIDTH, "a wide phone caps the frame")
+    }
+
+    @Test
+    fun `the frame stands as A66 §3_2а says`() {
+        near(222f, TodayTopRules.feetY)
+        near(280f, TodayTopRules.frameSide(412f))
+        near(66f, TodayTopRules.frameLeft(412f))
+        near(TodayTopRules.FRAME_LEFT, TodayTopRules.frameLeft(412f))
+        // the head on the screen at y 133 (calm.py: top + 0.2 × S; the render: 0.203 × S)
+        near(133f, TodayTopRules.headTop(280f) + TodayTopRules.SCENE_TOP, 1f)
+        near(322f - 0.875f * 280f - 100f, TodayTopRules.frameTop)
         // the axis of the Titan is the centre of the 412 dp screen
         near(206f, TodayTopRules.FRAME_LEFT + TodayTopRules.FRAME / 2f)
+    }
+
+    @Test
+    fun `the blocks stand where variant B puts them on 412 × 915`() {
+        val top = TodayTopRules.SCENE_TOP
+        // the mode word stands inside the scene on the ground, under the feet
+        near(334f, top + TodayTopRules.MODE_WORD_TOP)
+        near(354f, top + TodayTopRules.SCENE_HEIGHT)
+        // the haiku: three lines 15/19 from y 360
+        near(360f, top + TodayTopRules.SCENE_HEIGHT + TodayTopRules.HAIKU_GAP)
+        near(417f, TodayTopRules.HAIKU_Y + TodayTopRules.HAIKU_LINE * TodayTopRules.HAIKU_LINES)
+        // the tiles from y 436; then the gap of the blocks and «Сейчас» at 540, 84 dp
+        near(436f, TodayTopRules.HAIKU_Y + TodayTopRules.HAIKU_LINE * TodayTopRules.HAIKU_LINES + TodayTopRules.METRICS_GAP)
+        near(540f, TodayTopRules.METRICS_Y + TodayTopRules.METRICS_HEIGHT + TodayTopRules.BLOCK_GAP)
+        assertTrue(TodayTopRules.METRICS_HEIGHT >= TodayTopRules.METRIC_ARC + 4f + 16f + 14f, "the arc, the name and the word fit")
+        near(624f, TodayTopRules.NOW_Y + TodayTopRules.NOW_HEIGHT)
+        assertTrue(TodayTopRules.DAY_Y > TodayTopRules.NOW_Y + TodayTopRules.NOW_HEIGHT)
+        assertTrue(TodayTopRules.DAY_END_Y < TodayTopRules.TAB_BAR_Y, "«День» is seen without a scroll")
+        assertEquals(com.healthofatitan.app.core.ui.component.HotSpacing.cardGap.value, TodayTopRules.BLOCK_GAP)
+    }
+
+    @Test
+    fun `the scene is quieter, the sun is the one glow`() {
+        assertEquals(0.55f, TodayTopRules.COLUMN_SATURATION)
+        assertEquals(0.85f, TodayTopRules.COLUMN_BRIGHTNESS)
+        assertEquals(0.32f, TodayTopRules.COLUMN_GLOW)
+        assertEquals(0.2f, TodayTopRules.SKY_GLOW)
+        assertEquals(38f, TodayTopRules.SUN_DIAMETER)
+        assertEquals(50f, TodayTopRules.METRIC_ARC)
     }
 
     private fun row(fill: Float, counted: Boolean = true) =

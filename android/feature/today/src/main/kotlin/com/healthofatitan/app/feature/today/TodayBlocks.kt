@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -149,9 +151,9 @@ private fun BlockTitle(title: String, hint: String? = null) {
 // ---------------------------------------------------------------- «Я сегодня»
 
 /**
- * The top of «Сегодня» by mockup 05b (A66 §3.2): the scene (sky of the mode, the sun of Заряд on
- * the axis of the Titan, the glow of the columns), the haiku of «Рассвет» all day (T-07) and the
- * three tiles «Заряд · Ночь · Ты». A tap on the scene opens «Почему так». The sober screen (SAF-01,
+ * The top of «Сегодня», variant B «Тише» (A66 v0.5 §3.2а): the scene (sky of the mode, the sun of
+ * Заряд on the axis of the Titan, the quiet glow of the columns, the mode word under the feet), the
+ * haiku of «Рассвет» all day (T-07) under it and the three tiles «Заряд · Ночь · Ты» without cards. A tap on the scene opens «Почему так». The sober screen (SAF-01,
  * crisis, CARE) has no scene, no haiku and no tiles (A66 §3.8).
  */
 @Composable
@@ -191,7 +193,8 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {})
             )
         }
         me.haiku?.let { lines ->
-            // A66 §3.2: three lines, Cormorant italic 18/22, Steel, centred on the ground
+            // A66 §3.2а: under the scene, not over the sky; three lines, Cormorant italic 15/19, Steel
+            Spacer(Modifier.height(TodayTopRules.HAIKU_GAP.dp))
             Column(
                 Modifier.padding(horizontal = TODAY_EDGE).testTag(ME_HAIKU_TAG).semantics(mergeDescendants = true) { },
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,7 +202,7 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {})
                 lines.forEach {
                     Text(
                         it,
-                        style = HotType.haikuCard.copy(lineHeight = 22.sp),
+                        style = HotType.haikuCard.copy(fontSize = TodayTopRules.HAIKU_SIZE.sp, lineHeight = TodayTopRules.HAIKU_LINE.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
@@ -207,12 +210,16 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {})
             }
         }
         if (view.tiles.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height((if (me.haiku != null) TodayTopRules.METRICS_GAP else TodayTopRules.HAIKU_GAP).dp))
+            // A66 §3.2а: the arcs straight on the background, no cards, hairlines between them
+            val hairline = HotThemeTokens.colors.hairline
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = TODAY_EDGE).testTag(ME_NUMBERS_TAG),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                Modifier.fillMaxWidth().padding(horizontal = TODAY_EDGE).height(IntrinsicSize.Min).testTag(ME_NUMBERS_TAG),
             ) {
-                view.tiles.forEach { tile ->
+                view.tiles.forEachIndexed { i, tile ->
+                    if (i > 0) {
+                        Spacer(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(hairline))
+                    }
                     MetricTile(
                         label = tile.label,
                         value = tile.shown,
@@ -222,6 +229,8 @@ fun BlockMe(view: TodayView, onOpen: () -> Unit, onRoute: (String) -> Unit = {})
                         spoken = tile.spoken,
                         onClick = { onRoute(tile.route) },
                         onClickLabel = if (tile.route == HotRoute.WHY) TodayCopy.WHY_TITLE else null,
+                        arcSize = TodayTopRules.METRIC_ARC.dp,
+                        height = TodayTopRules.METRICS_HEIGHT.dp,
                         modifier = Modifier.weight(1f).testTag(ME_TILE_TAG + tile.kind.name.lowercase()),
                     )
                 }
@@ -251,6 +260,9 @@ const val DAY_DRINK_TAG = "day_drink"
 internal val DAY_LABEL_WIDTH = 104.dp
 internal val DAY_BAR_MIN = 40.dp
 
+/** A row of «День» in «Тише»: one line of 20 sp and 4 dp above and below (A66 §3.2а). */
+internal val DAY_ROW_MIN = 32.dp
+
 /** Where a tap on a row of «День» leads (A66 §3.5); «Закрыть день» unfolds in «Ритм дня». */
 internal fun dayTapRoute(tap: DayTap): String? = when (tap) {
     DayTap.TRAINING -> HotRoute.TRAINING
@@ -261,7 +273,8 @@ internal fun dayTapRoute(tap: DayTap): String? = when (tap) {
 }
 
 /**
- * «День» (A66 §3.5): Нагрузка · Питание · Отдых, «обнулится после сна» in the header always. A tap
+ * «День» (A66 §3.5, variant B «Тише» §3.2а: no card, compact rows, seen without a scroll):
+ * Нагрузка · Питание · Отдых, «обнулится после сна» in the header always. A tap
  * on a row opens its place: the training of the day or «Почему так», the food of the day, a
  * breather or «Закрыть день». Never red (T-04). Hidden on the sober screen (A66 §3.8).
  */
@@ -270,7 +283,8 @@ fun BlockDay(view: TodayView, today: LocalDate, actions: DayActions, onCloseDay:
     val block = view.day
     if (!block.shown) return
     val dark = HotThemeTokens.colors.isDark
-    HotCard(modifier = Modifier.fillMaxWidth().testTag(TodayBlock.DAY.tag)) {
+    // A66 §3.2а «Тише»: no frame; the title and the three rows are seen without a scroll
+    Column(Modifier.fillMaxWidth().testTag(TodayBlock.DAY.tag)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             Text(
                 DayCopy.TITLE,
@@ -287,7 +301,7 @@ fun BlockDay(view: TodayView, today: LocalDate, actions: DayActions, onCloseDay:
                 modifier = Modifier.testTag(DAY_RESETS_TAG),
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         val hasFood = block.rows.any { it.id == DayRowId.FOOD }
         block.rows.forEach { row ->
             val food = row.id == DayRowId.FOOD
@@ -350,14 +364,14 @@ private fun DayRow(
         Row(
             Modifier
                 .weight(1f)
-                .heightIn(min = 56.dp)
+                .heightIn(min = DAY_ROW_MIN)
                 .testTag(DAY_ROW_TAG + row.id.key)
                 .clickable(role = Role.Button, onClick = onClick)
                 .clearAndSetSemantics {
                     contentDescription = listOfNotNull(row.spoken, hint?.takeIf { it != row.hint }).joinToString(", ")
                     role = Role.Button
                 }
-                .padding(vertical = 8.dp),
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.Top,
         ) {
             Text(
@@ -370,7 +384,7 @@ private fun DayRow(
             )
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    DayIndicator(row, lit, note, calm, Modifier.weight(1f).widthIn(min = DAY_BAR_MIN).height(10.dp))
+                    DayIndicator(row, lit, note, calm, Modifier.weight(1f).widthIn(min = DAY_BAR_MIN).height(6.dp))
                     row.value?.let {
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -384,10 +398,9 @@ private fun DayRow(
                 }
                 val second = listOfNotNull(hint, DayCopy.ESTIMATE.takeIf { row.estimate }).joinToString(" · ").ifEmpty { null }
                 if (second != null) {
-                    Spacer(Modifier.height(4.dp))
                     Text(
                         second,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 14.sp),
                         color = tertiary,
                         maxLines = 2,
                     )
@@ -395,7 +408,17 @@ private fun DayRow(
             }
         }
         if (onAddFood != null) {
-            HotTextButton(DayCopy.FOOD_ADD, onClick = onAddFood, modifier = Modifier.testTag(DAY_FOOD_ADD_TAG))
+            // compact in the row; the touch target still grows to 48 dp (minimumTouchTargetSize)
+            Text(
+                DayCopy.FOOD_ADD,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = Modifier
+                    .testTag(DAY_FOOD_ADD_TAG)
+                    .clickable(role = Role.Button, onClick = onAddFood)
+                    .padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
+            )
         }
     }
 }
@@ -505,7 +528,7 @@ fun BlockTasks(view: TodayView, today: LocalDate, actions: DayActions, marks: Da
     Column(Modifier.fillMaxWidth().testTag(TodayBlock.TASKS.tag)) {
         pick.now?.let { task ->
             val h = taskHandlers(task, today, actions, marks)
-            NowCard(task, pick.link, view.me.mode?.hotMode(), h.onTap, h.onDone, h.onNotToday)
+            NowCard(task, pick.link, h.onTap, h.onDone, h.onNotToday)
         }
         if (pick.rest.isNotEmpty()) {
             val folded = pick.now != null

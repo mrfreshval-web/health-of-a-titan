@@ -37,6 +37,8 @@ import com.healthofatitan.app.domain.path.Obstacle
 import com.healthofatitan.app.domain.path.PathFlags
 import com.healthofatitan.app.domain.path.PathOverview
 import com.healthofatitan.app.domain.path.PathOverviewBuilder
+import com.healthofatitan.app.domain.path.PathSafety
+import com.healthofatitan.app.domain.safety.SafetyFlag
 import com.healthofatitan.app.domain.path.PauseReason
 import com.healthofatitan.app.domain.path.PracticalGoal
 import com.healthofatitan.app.domain.path.Refusal
@@ -88,6 +90,8 @@ data class PathData(
     /** The average of the last 7 nights, hours: the hint of Э1 and the sufficiency of sleep (R5). */
     val sleepHours: Double? = null,
     val marks: Map<ComponentKey, Int> = emptyMap(),
+    /** GRIEF on the safety bus: the path shows no milestones and no weeks (A66 §5.4, A60 §4.4). */
+    val grief: Boolean = false,
 ) {
     val goal: PracticalGoal? get() = overview.goal
 
@@ -128,7 +132,7 @@ class PathRepository @Inject constructor(
         }
         val context = combine(plans.latest, profiles.profile, bus.state) { plan, profile, safety ->
             val regime = plan?.takeIf { it.dayKey == today }?.regime
-            Triple(regime, PathBus.given(PathGiven.from(codes(profile.constraints)), safety), PathBus.safety(safety))
+            Context(regime, PathBus.given(PathGiven.from(codes(profile.constraints)), safety), PathBus.safety(safety), SafetyFlag.GRIEF in safety)
         }
         combine(
             stored,
@@ -136,7 +140,7 @@ class PathRepository @Inject constructor(
             dao.observeMarks(user),
             dao.observeMetric(user, Metrics.SLP.id, Metrics.SLP.version, from),
             context,
-        ) { (goals, versions), horizons, marks, sleep, (regime, given, safety) ->
+        ) { (goals, versions), horizons, marks, sleep, (regime, given, safety, grief) ->
             val goal = goals.firstOrNull { GoalLifecycle.layer(it.status) == GoalLayer.PATH }
             val taken = marks.filter { it.goalId == goal?.id }
                 .mapNotNull { m -> ComponentKey.fromId(m.component)?.let { it to m.mark } }
@@ -145,7 +149,7 @@ class PathRepository @Inject constructor(
             val transferred = horizons.firstOrNull { it.goalId == goal?.id }?.transferred.orEmpty()
                 .split(',').mapNotNull { ComponentKey.fromId(it.trim()) }.toSet()
             val hours = sleep.mapNotNull { it.value }.takeIf { it.isNotEmpty() }?.average()
-            val data = PathData(today, PathOverview.empty(today), goals, versions, given, regime?.toMode(), hours, taken)
+            val data = PathData(today, PathOverview.empty(today), goals, versions, given, regime?.toMode(), hours, taken, grief)
             data.copy(
                 overview = PathOverviewBuilder.build(
                     today = today,
@@ -267,6 +271,9 @@ class PathRepository @Inject constructor(
     private fun toComponents(g: PracticalGoal) = g.components.mapIndexed { i, c ->
         PathGoalComponentEntity(user, g.id, c.key.id, c.role.name, c.targetMark, c.startMark, c.safeVersion, c.isLever, i)
     }
+
+    /** What the day plan, the profile and the bus give the path. */
+    private data class Context(val regime: Regime?, val given: GivenLayer, val safety: PathSafety, val grief: Boolean)
 
     private companion object {
         const val SLEEP_DAYS = 7L

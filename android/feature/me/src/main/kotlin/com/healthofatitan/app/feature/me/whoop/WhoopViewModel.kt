@@ -27,7 +27,24 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** One-off notes on the WHOOP screen. Texts live in [WhoopTexts]. */
-enum class WhoopNote { CANCELLED, REJECTED, OFFLINE, SERVER_NOT_READY, NEEDS_NETWORK_TO_DISCONNECT, DISCONNECTED, OTHER_ACCOUNT }
+enum class WhoopNote {
+    CANCELLED,
+    REJECTED,
+    OFFLINE,
+    SERVER_NOT_READY,
+    NEEDS_NETWORK_TO_DISCONNECT,
+    DISCONNECTED,
+    OTHER_ACCOUNT,
+
+    /** A65 §2.3: linking a new WHOOP to the account needs a fresh sign-in («Аккаунт» does it). */
+    STEP_UP,
+
+    /** The account already has another WHOOP. */
+    PROVIDER_LINKED,
+
+    /** The account session is gone: «Вход» comes back by itself. */
+    SIGNED_OUT,
+}
 
 enum class WhoopPhase { IDLE, CONNECTING, DISCONNECTING }
 
@@ -74,6 +91,8 @@ class WhoopViewModel @Inject constructor(
                 }
                 LoginStart.Offline -> local.update { it.copy(phase = WhoopPhase.IDLE, note = WhoopNote.OFFLINE) }
                 LoginStart.NotConfigured -> local.update { it.copy(phase = WhoopPhase.IDLE, note = WhoopNote.SERVER_NOT_READY) }
+                LoginStart.StepUpRequired -> local.update { it.copy(phase = WhoopPhase.IDLE, note = WhoopNote.STEP_UP) }
+                LoginStart.SignedOut -> local.update { it.copy(phase = WhoopPhase.IDLE, note = WhoopNote.SIGNED_OUT) }
             }
         }
     }
@@ -93,10 +112,12 @@ class WhoopViewModel @Inject constructor(
                         note = null
                         notAllowed = outcome.whoopUserId
                     }
-                    LoginOutcome.Rejected -> note = WhoopNote.REJECTED
+                    LoginOutcome.Rejected, LoginOutcome.OtherOwner -> note = WhoopNote.REJECTED
                     LoginOutcome.OtherAccount -> note = WhoopNote.OTHER_ACCOUNT
                     LoginOutcome.Offline -> note = WhoopNote.OFFLINE
                     LoginOutcome.NotConfigured -> note = WhoopNote.SERVER_NOT_READY
+                    LoginOutcome.ProviderLinked -> note = WhoopNote.PROVIDER_LINKED
+                    LoginOutcome.StepUpRequired -> note = WhoopNote.STEP_UP
                 }
                 local.update { Local(phase = WhoopPhase.IDLE, notAllowedUserId = notAllowed, note = note) }
             }

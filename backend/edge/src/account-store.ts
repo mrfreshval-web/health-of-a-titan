@@ -13,6 +13,11 @@ import { b64urlEncode, randomBytes } from "./crypto";
  * dates); sessions (device public key, keyed hashes of the current and previous refresh token,
  * dates, revocation); invite hashes; spent nonce ids; an audit trail (event, time, account) for
  * 90 days. No names, e-mails, pictures, health data, tokens of Google or IP addresses.
+ *
+ * Slice А3 adds linking and unlinking of identities, the list of devices with «Завершить» and the
+ * step-up time of a session; slice А5 deletes an account: its identities, sessions and invites go,
+ * and each of its session ids leaves only a tombstone (`tomb:<sid>` → time), so a phone that comes
+ * back later hears `account_deleted` and wipes itself (A65 §6). The tombstone holds no account id.
  */
 
 export type Provider = "google" | "whoop";
@@ -22,6 +27,8 @@ export interface Identity {
   subject: string;
   linkedAt: number;
   lastLoginAt: number;
+  /** «Привязан Google · 08.11 13:40 · Pixel 9 Pro XL» (A65 §2.3): the device that linked it. */
+  linkedDevice?: string;
 }
 
 export interface Account {
@@ -49,6 +56,8 @@ export interface Session {
   rotatedAt: number;
   epoch: number;
   revokedAt: number | null;
+  /** Last proof of the person (sign-in or step-up, A65 §2.3); sessions of slice А1 read createdAt. */
+  authAt?: number;
 }
 
 export type LoginResult =
@@ -72,7 +81,27 @@ export type AuditEvent =
   | "session.refresh_reuse"
   | "session.logout"
   | "session.logout_all"
-  | "invite.created";
+  | "invite.created"
+  | "identity.linked"
+  | "identity.unlinked"
+  | "session.revoked"
+  | "session.step_up"
+  | "account.deleted";
+
+export type LinkResult =
+  | { status: "ok"; account: Account; linked: boolean }
+  /** The identity belongs to another account: no automatic merge (A65 §2.3). */
+  | { status: "in_use" }
+  /** The account already has another identity of this provider: unlink it first. */
+  | { status: "provider_linked" }
+  | { status: "no_account" };
+
+export type UnlinkResult =
+  | { status: "ok"; account: Account; removed: Identity }
+  /** The last identity cannot go: the account would have no way in (A65 §2.3). */
+  | { status: "last_identity" }
+  | { status: "not_linked" }
+  | { status: "no_account" };
 
 export const SLIDING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const ABSOLUTE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
@@ -80,6 +109,18 @@ export const ABSOLUTE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 export const REFRESH_GRACE_MS = 30 * 1000;
 export const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const AUDIT_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+/**
+ * A tombstone outlives every refresh token of the deleted account (absolute TTL) with a margin;
+ * after that the phone hears a plain `401 invalid_grant` instead of `account_deleted`.
+ */
+export const TOMB_TTL_MS = ABSOLUTE_TTL_MS + 30 * 24 * 60 * 60 * 1000;
+/** Step-up (A65 §2.3): linking, unlinking and deletion need a proof of the person this fresh. */
+export const STEP_UP_WINDOW_MS = 10 * 60 * 1000;
+
+/** When the last proof of the person in [session] stops counting as fresh. */
+export function stepUpUntil(session: Session): number {
+  return (session.authAt ?? session.createdAt) + STEP_UP_WINDOW_MS;
+}
 
 export interface AccountStore {
   /** Spends a login nonce: true the first time, false after that. */
@@ -98,6 +139,26 @@ export interface AccountStore {
   revokeAll(accountId: string, now: number): Promise<number>;
   createInvite(input: { hash: string; createdBy: string; now: number }): Promise<{ expiresAt: number }>;
   audit(event: AuditEvent, accountId: string | null, now: number): Promise<void>;
+
+  // Slice А3: identities, devices, step-up
+  /** The account id that owns the identity, or null. */
+  ownerOf(provider: Provider, subject: string): Promise<string | null>;
+  /** The identities of the account, or null when there is no such account. */
+  identitiesOf(accountId: string): Promise<Identity[] | null>;
+  /** Live sessions of the account (the list of devices), oldest first. */
+  sessions(accountId: string, now: number): Promise<Session[]>;
+  /** «Завершить» on a device: only a session of [accountId]. */
+  revokeDevice(accountId: string, sid: string, now: number): Promise<boolean>;
+  /** A fresh proof of the person in this session (sign-in again with an identity of the account). */
+  stepUp(sid: string, now: number): Promise<Session | null>;
+  link(input: { accountId: string; provider: Provider; subject: string; device: string; now: number }): Promise<LinkResult>;
+  unlink(input: { accountId: string; provider: Provider; now: number }): Promise<UnlinkResult>;
+
+  // Slice А5: deletion
+  /** Deletes the account (identities, sessions, invites); returns the identities it had, or null. */
+  deleteAccount(accountId: string, now: number): Promise<Identity[] | null>;
+  /** True when [sid] belonged to an account deleted less than [TOMB_TTL_MS] ago. */
+  isTombstoned(sid: string, now: number): Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -110,6 +171,9 @@ export interface KvStorage {
   delete(key: string): Promise<boolean>;
   list<T>(options: { prefix: string; limit?: number }): Promise<Map<string, T>>;
 }
+
+/** What stands in an invite instead of the id of a deleted account. */
+const DELETED = "deleted";
 
 interface InviteRecord {
   expiresAt: number;
@@ -124,6 +188,7 @@ const K = {
   accountSession: (a: string, sid: string) => `asess:${a}:${sid}`,
   nonce: (exp: number, id: string) => `nonce:${String(exp).padStart(10, "0")}:${id}`,
   invite: (h: string) => `invite:${h}`,
+  tomb: (sid: string) => `tomb:${sid}`,
   audit: (at: number) => `audit:${String(at).padStart(15, "0")}:${b64urlEncode(randomBytes(6))}`,
 };
 
@@ -313,6 +378,136 @@ export class KvAccountStore implements AccountStore {
     return this.serial(() => this.writeAudit(event, accountId, now));
   }
 
+  identitiesOf(accountId: string): Promise<Identity[] | null> {
+    return this.serial(async () => (await this.kv.get<Account>(K.account(accountId)))?.identities ?? null);
+  }
+
+  ownerOf(provider: Provider, subject: string): Promise<string | null> {
+    return this.serial(async () => (await this.kv.get<string>(K.identity(provider, subject))) ?? null);
+  }
+
+  private async sessionIds(accountId: string): Promise<string[]> {
+    const prefix = `asess:${accountId}:`;
+    return [...(await this.kv.list<number>({ prefix })).keys()].map((k) => k.slice(prefix.length));
+  }
+
+  sessions(accountId: string, now: number): Promise<Session[]> {
+    return this.serial(async () => {
+      const out: Session[] = [];
+      for (const sid of await this.sessionIds(accountId)) {
+        const found = await this.live(sid, now);
+        if (found && found.account.id === accountId) out.push(found.session);
+      }
+      return out.sort((a, b) => a.createdAt - b.createdAt);
+    });
+  }
+
+  revokeDevice(accountId: string, sid: string, now: number): Promise<boolean> {
+    return this.serial(async () => {
+      const session = await this.kv.get<Session>(K.session(sid));
+      if (!session || session.accountId !== accountId || session.revokedAt !== null) return false;
+      await this.kv.put(K.session(sid), { ...session, revokedAt: now });
+      await this.writeAudit("session.revoked", accountId, now);
+      return true;
+    });
+  }
+
+  stepUp(sid: string, now: number): Promise<Session | null> {
+    return this.serial(async () => {
+      const found = await this.live(sid, now);
+      if (!found) return null;
+      const updated: Session = { ...found.session, authAt: now };
+      await this.kv.put(K.session(sid), updated);
+      await this.writeAudit("session.step_up", found.account.id, now);
+      return updated;
+    });
+  }
+
+  link(input: { accountId: string; provider: Provider; subject: string; device: string; now: number }): Promise<LinkResult> {
+    return this.serial(async () => {
+      const { accountId, provider, subject, now } = input;
+      const account = await this.kv.get<Account>(K.account(accountId));
+      if (!account || account.status !== "active") return { status: "no_account" };
+      const owner = await this.kv.get<string>(K.identity(provider, subject));
+      if (owner && owner !== accountId) return { status: "in_use" };
+      if (owner === accountId) {
+        const identities = account.identities.map((i) => (i.provider === provider && i.subject === subject ? { ...i, lastLoginAt: now } : i));
+        const updated = { ...account, identities };
+        await this.kv.put(K.account(accountId), updated);
+        return { status: "ok", account: updated, linked: false };
+      }
+      if (account.identities.some((i) => i.provider === provider)) return { status: "provider_linked" };
+      const updated: Account = {
+        ...account,
+        identities: [...account.identities, { provider, subject, linkedAt: now, lastLoginAt: now, linkedDevice: input.device }],
+      };
+      await this.kv.put(K.account(accountId), updated);
+      await this.kv.put(K.identity(provider, subject), accountId);
+      await this.writeAudit("identity.linked", accountId, now);
+      return { status: "ok", account: updated, linked: true };
+    });
+  }
+
+  unlink(input: { accountId: string; provider: Provider; now: number }): Promise<UnlinkResult> {
+    return this.serial(async () => {
+      const { accountId, provider, now } = input;
+      const account = await this.kv.get<Account>(K.account(accountId));
+      if (!account || account.status !== "active") return { status: "no_account" };
+      const removed = account.identities.find((i) => i.provider === provider);
+      if (!removed) return { status: "not_linked" };
+      if (account.identities.length < 2) return { status: "last_identity" };
+      const updated: Account = { ...account, identities: account.identities.filter((i) => i.provider !== provider) };
+      await this.kv.put(K.account(accountId), updated);
+      await this.kv.delete(K.identity(provider, removed.subject));
+      await this.writeAudit("identity.unlinked", accountId, now);
+      return { status: "ok", account: updated, removed };
+    });
+  }
+
+  deleteAccount(accountId: string, now: number): Promise<Identity[] | null> {
+    return this.serial(async () => {
+      const account = await this.kv.get<Account>(K.account(accountId));
+      if (!account) return null;
+      for (const i of account.identities) {
+        if ((await this.kv.get<string>(K.identity(i.provider, i.subject))) === accountId) await this.kv.delete(K.identity(i.provider, i.subject));
+      }
+      for (const sid of await this.sessionIds(accountId)) {
+        await this.kv.delete(K.session(sid));
+        await this.kv.delete(K.accountSession(accountId, sid));
+        await this.kv.put(K.tomb(sid), now);
+      }
+      // Invites: the unused ones of this account go; a used one forgets who made or used it.
+      const invites = await this.kv.list<InviteRecord>({ prefix: "invite:" });
+      for (const [key, invite] of invites) {
+        if (invite.createdBy === accountId && !invite.usedBy) {
+          await this.kv.delete(key);
+        } else if (invite.createdBy === accountId || invite.usedBy === accountId) {
+          await this.kv.put<InviteRecord>(key, {
+            ...invite,
+            createdBy: invite.createdBy === accountId ? DELETED : invite.createdBy,
+            usedBy: invite.usedBy === accountId ? DELETED : invite.usedBy,
+          });
+        }
+      }
+      await this.kv.delete(K.account(accountId));
+      // Older audit lines of this account lose the id; the deletion itself is a line without one.
+      const audit = await this.kv.list<{ e: string; a: string | null; at: number }>({ prefix: "audit:" });
+      for (const [key, line] of audit) if (line.a === accountId) await this.kv.put(key, { ...line, a: null });
+      await this.writeAudit("account.deleted", null, now);
+      return account.identities;
+    });
+  }
+
+  isTombstoned(sid: string, now: number): Promise<boolean> {
+    return this.serial(async () => {
+      const at = await this.kv.get<number>(K.tomb(sid));
+      if (at === undefined) return false;
+      if (now - at <= TOMB_TTL_MS) return true;
+      await this.kv.delete(K.tomb(sid));
+      return false;
+    });
+  }
+
   private async writeAudit(event: AuditEvent, accountId: string | null, now: number): Promise<void> {
     await this.prune("audit:", (key) => Number(key.split(":")[1]) < now - AUDIT_TTL_MS);
     await this.kv.put(K.audit(now), { e: event, a: accountId, at: now });
@@ -331,7 +526,26 @@ export class KvAccountStore implements AccountStore {
 // ---------------------------------------------------------------------------------------------
 // The Durable Object and the Worker-side client
 
-const OPS = ["consumeNonce", "login", "createSession", "liveSession", "rotate", "revokeSession", "revokeAll", "createInvite", "audit"] as const;
+const OPS = [
+  "consumeNonce",
+  "login",
+  "createSession",
+  "liveSession",
+  "rotate",
+  "revokeSession",
+  "revokeAll",
+  "createInvite",
+  "audit",
+  "ownerOf",
+  "identitiesOf",
+  "sessions",
+  "revokeDevice",
+  "stepUp",
+  "link",
+  "unlink",
+  "deleteAccount",
+  "isTombstoned",
+] as const;
 type Op = (typeof OPS)[number];
 
 /**
@@ -399,5 +613,32 @@ export class DurableAccountStore implements AccountStore {
   }
   audit(event: AuditEvent, accountId: string | null, now: number) {
     return this.call<void>("audit", event, accountId, now);
+  }
+  ownerOf(provider: Provider, subject: string) {
+    return this.call<string | null>("ownerOf", provider, subject);
+  }
+  identitiesOf(accountId: string) {
+    return this.call<Identity[] | null>("identitiesOf", accountId);
+  }
+  sessions(accountId: string, now: number) {
+    return this.call<Session[]>("sessions", accountId, now);
+  }
+  revokeDevice(accountId: string, sid: string, now: number) {
+    return this.call<boolean>("revokeDevice", accountId, sid, now);
+  }
+  stepUp(sid: string, now: number) {
+    return this.call<Session | null>("stepUp", sid, now);
+  }
+  link(input: Parameters<AccountStore["link"]>[0]) {
+    return this.call<LinkResult>("link", input);
+  }
+  unlink(input: Parameters<AccountStore["unlink"]>[0]) {
+    return this.call<UnlinkResult>("unlink", input);
+  }
+  deleteAccount(accountId: string, now: number) {
+    return this.call<Identity[] | null>("deleteAccount", accountId, now);
+  }
+  isTombstoned(sid: string, now: number) {
+    return this.call<boolean>("isTombstoned", sid, now);
   }
 }

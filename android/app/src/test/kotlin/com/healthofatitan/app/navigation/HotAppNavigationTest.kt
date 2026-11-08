@@ -56,7 +56,11 @@ import com.healthofatitan.app.feature.me.consent.AGE_GATE_UNDER_TAG
 import com.healthofatitan.app.feature.me.ME_MENTOR_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.ME_NUTRITION_ROW_TAG
+import com.healthofatitan.app.feature.me.ME_ACCOUNT_ROW_TAG
 import com.healthofatitan.app.feature.me.ME_PROFILE_ROW_TAG
+import com.healthofatitan.app.feature.me.account.ACCOUNT_SCREEN_TAG
+import com.healthofatitan.app.feature.me.account.ACCOUNT_SIGN_OUT_TAG
+import com.healthofatitan.app.feature.me.account.AccountTexts
 import com.healthofatitan.app.feature.me.profile.PROFILE_ME_SCREEN_TAG
 import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.profile.addressTag
@@ -354,6 +358,21 @@ class HotAppNavigationTest {
         compose.onNodeWithTag(addressTag(AddressForm.NEUTRAL)).assertIsNotSelected()
         // the sex for calculations is a separate field: still not given
         compose.onNodeWithTag(sexTag(SexForCalc.UNSPECIFIED)).performScrollTo().assertIsSelected()
+        compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
+        compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
+    }
+
+    @Test
+    fun `settings open the account with sign out, inside the Path tab`() {
+        // A65 §2.3: «Настройки › Аккаунт».
+        launch()
+        compose.onNodeWithTag(AVATAR_TAG).performClick()
+        compose.onNodeWithTag(AVATAR_SETTINGS_TAG).performClick()
+        compose.onNodeWithTag(ME_ACCOUNT_ROW_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(ACCOUNT_SCREEN_TAG).assertExists()
+        compose.onNodeWithTag(TOP_BAR_TITLE_TAG).assertTextEquals(AccountTexts.TITLE.n)
+        compose.onNodeWithTag(HotTab.PATH.testTag).assertIsSelected()
+        compose.onNodeWithTag(ACCOUNT_SIGN_OUT_TAG).assertExists()
         compose.onNodeWithTag(TOP_BAR_BACK_TAG).performClick()
         compose.onNodeWithTag(ME_SCREEN_TAG).assertExists()
     }

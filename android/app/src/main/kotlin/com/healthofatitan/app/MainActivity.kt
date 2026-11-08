@@ -19,6 +19,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.healthofatitan.app.core.account.AccountGate
+import com.healthofatitan.app.core.account.AccountSession
+import com.healthofatitan.app.core.account.LocalDataWiper
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.ProfileSettingsStore
@@ -47,6 +49,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -60,6 +63,13 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var whoop: WhoopConnection
+
+    /** A65 §6: an account deleted elsewhere (another phone, the web page) wipes this phone too. */
+    @Inject
+    lateinit var account: AccountSession
+
+    @Inject
+    lateinit var wiper: LocalDataWiper
 
     @Inject
     lateinit var plans: DayPlanRepository
@@ -156,6 +166,10 @@ class MainActivity : ComponentActivity() {
         // should not reach system text analysis anyway: the whole window is excluded from it.
         window.decorView.importantForContentCapture = View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
         if (savedInstanceState == null) pendingRoute = routeOf(intent)
+        lifecycleScope.launch {
+            account.deleted.first { it }
+            wiper.wipe()
+        }
         setContent {
             HotTheme {
                 val syncProgress by whoop.progress.collectAsStateWithLifecycle()
@@ -193,6 +207,7 @@ class MainActivity : ComponentActivity() {
         // A65 §3.5 first: the old WHOOP session becomes an account, then the sync uses it.
         lifecycleScope.launch {
             runCatching { whoop.migrateLegacySession() }
+            runCatching { account.checkAlive() }
             runCatching { whoop.onAppOpen() }
         }
         // A18 И4.4: the date of this open (silence is counted in whole days without one).

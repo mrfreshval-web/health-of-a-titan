@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.healthofatitan.app.core.database.AboutMentorConsentStore
 import com.healthofatitan.app.core.database.AgeGateStore
 import com.healthofatitan.app.core.database.HotDatabase
 import com.healthofatitan.app.core.database.Migrations
@@ -108,6 +109,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAgeGate(db: HotDatabase): AgeGateStore = AgeGateStore(db.consentDao())
+
+    /** «О себе» → Винс only with `about_mentor` (A65 §5.2). */
+    @Provides
+    @Singleton
+    fun provideAboutMentorConsent(db: HotDatabase): AboutMentorConsentStore = AboutMentorConsentStore(db.consentDao())
 
     @Provides
     fun providePersonProfileDao(db: HotDatabase): PersonProfileDao = db.personProfileDao()

@@ -10,7 +10,7 @@ object SignInTexts {
     const val GOOGLE = "Войти через Google"
     const val WHOOP = "Войти через WHOOP"
     const val GOOGLE_OFF = "Вход через Google в этой сборке не настроен."
-    const val PRIVACY = "Почта и имя на сервер HoT не уходят. Данные о здоровье остаются на телефоне."
+    const val PRIVACY = "Почту и имя сервер HoT не хранит. Данные о здоровье хранятся только на телефоне."
     const val HELP = "Помощь"
 
     const val INVITE_TITLE = "У тебя уже есть HoT?"
@@ -18,6 +18,14 @@ object SignInTexts {
     const val INVITE_LABEL = "Код приглашения"
     const val CREATE = "Создать аккаунт"
     const val BACK = "Назад"
+
+    /** A65 §2.3: the phone keeps another account's data; signing in asks to wipe it first. */
+    const val OWNER_TITLE = "На телефоне данные другого аккаунта HoT"
+    const val OWNER_BODY = "На телефоне живёт один аккаунт. Чтобы войти, данные прошлого аккаунта нужно стереть: " +
+        "дни, журнал, профиль, фото, «О себе». Восстановить их не получится. " +
+        "После стирания приложение закроется — останется войти ещё раз."
+    const val OWNER_WIPE = "Стереть и войти"
+    const val OWNER_CANCEL = "Отмена"
 
     fun whoopId(id: String) = "WHOOP ID для приглашения: $id"
 
@@ -33,5 +41,6 @@ object SignInTexts {
     }
 
     val ALL: List<String> = listOf(TITLE, BODY, GOOGLE, WHOOP, GOOGLE_OFF, PRIVACY, HELP, INVITE_TITLE, INVITE_BODY, INVITE_LABEL, CREATE, BACK) +
+        listOf(OWNER_TITLE, OWNER_BODY, OWNER_WIPE, OWNER_CANCEL) +
         SignInNote.entries.map(::note)
 }

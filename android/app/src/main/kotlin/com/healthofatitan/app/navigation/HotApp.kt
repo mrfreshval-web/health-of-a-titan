@@ -67,6 +67,8 @@ import com.healthofatitan.app.feature.checkin.checkinScreens
 import com.healthofatitan.app.core.account.AccountGate
 import com.healthofatitan.app.core.database.AgeGate
 import com.healthofatitan.app.feature.me.consent.AgeGateScreen
+import com.healthofatitan.app.feature.me.account.AccountTexts
+import com.healthofatitan.app.feature.me.account.accountScreen
 import com.healthofatitan.app.feature.me.meScreen
 import com.healthofatitan.app.feature.me.profile.ProfileTexts
 import com.healthofatitan.app.feature.me.profile.profileScreen
@@ -317,8 +319,10 @@ fun HotApp(
                     onOpenNutrition = { open(HotRoute.NUTRITION_PROFILE) },
                     rows = { CheckinSettingsRow(onOpen = { open(HotRoute.CHECKIN_SETTINGS) }) },
                     onOpenProfile = { open(HotRoute.PROFILE) },
+                    onOpenAccount = { open(HotRoute.ACCOUNT) },
                 )
-                profileScreen(stateful = stateful)
+                profileScreen(stateful = stateful, onOpenHelp = { navController.openSos() })
+                accountScreen(stateful = stateful)
                 mentorPersonaScreen(stateful = stateful)
                 nutritionScreens(onOpenLevel = { open(HotRoute.NUTRITION_LEVEL) }, stateful = stateful)
                 whoopScreen(stateful = stateful)
@@ -408,6 +412,7 @@ private val NESTED = mapOf(
     HotRoute.BEHIND to NestedScreen(HotTab.PATH, "За плечами", "Путь"),
     HotRoute.MENTOR_PERSONA to NestedScreen(HotTab.PATH, "Наставник", null),
     HotRoute.PROFILE to NestedScreen(HotTab.PATH, ProfileTexts.TITLE, "Настройки"),
+    HotRoute.ACCOUNT to NestedScreen(HotTab.PATH, AccountTexts.TITLE.n, "Настройки"),
     HotRoute.WHOOP to NestedScreen(HotTab.PATH, "WHOOP", "Настройки · Подключения"),
     HotRoute.NUTRITION_PROFILE to NestedScreen(HotTab.PATH, NutritionTexts.SET_UP, NutritionTexts.PROFILE_BACK),
     HotRoute.NUTRITION_LEVEL to NestedScreen(HotTab.PATH, NutritionTexts.LEVEL_TITLE, NutritionTexts.LEVEL_BACK),

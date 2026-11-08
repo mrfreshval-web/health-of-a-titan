@@ -57,7 +57,7 @@ object ConsentWithdrawTexts {
     /** «Я › Еда и тело» without S4: the withdrawal of `ed_care_keep` is as easy as its grant (Ю-3). */
     val ED_CARE_OFF = G("Выключить бережный режим еды")
 
-    // П-2 (поправка основателя 2026-11-08, ждёт подтверждения): the mode is off, its history keeps
+    // П-2 (поправка основателя 2026-11-08, принята): the mode is off, its history keeps
     // calories, weight and body photo hidden. Заголовок — Агент 10; остальное — черновик, ждёт
     // ревью Агентов 7 и 10.
     val KEEP_TITLE_HISTORY = G("Оставить скрытыми калории, вес и фото тела?")

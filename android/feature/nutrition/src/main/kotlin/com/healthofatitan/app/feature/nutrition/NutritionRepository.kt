@@ -18,6 +18,7 @@ import com.healthofatitan.app.domain.nutrition.NutritionDayPlan
 import com.healthofatitan.app.domain.nutrition.NutritionEngine
 import com.healthofatitan.app.domain.nutrition.ProfileFold
 import com.healthofatitan.app.domain.nutrition.ProfileMode
+import com.healthofatitan.app.domain.safety.EdCareReturn
 import com.healthofatitan.app.integration.whoop.day.DayPlanRepository
 import com.healthofatitan.app.integration.whoop.day.DayView
 import com.healthofatitan.app.integration.whoop.safety.SafetyBus
@@ -54,6 +55,7 @@ fun interface NutritionContentSource {
  * @property edCareActive `ED_CARE` is on in the safety bus: a withdrawal of S4 asks
  *   «Оставить бережный режим еды?» once (D-058)
  * @property edCareHistory `ED_CARE` was ever on and its history is in the journal (`ed_care_history`)
+ * @property edCareWeightBack the mode is off and the person took the weight back on step 3 (Д-1)
  */
 data class NutritionState(
     val content: NutritionContent? = null,
@@ -67,6 +69,7 @@ data class NutritionState(
     val loaded: Boolean = false,
     val edCareActive: Boolean = false,
     val edCareHistory: Boolean = false,
+    val edCareWeightBack: Boolean = false,
 ) {
     val chosenLevel: Level get() = Level.of(profile.nutritionLevel) ?: Level.BASE
 }
@@ -93,7 +96,9 @@ class NutritionRepository @Inject constructor(
     fun state(clock: Flow<LocalDateTime>): Flow<NutritionState> {
         val today = clock.map { it.toLocalDate() }.distinctUntilChanged()
         val evening = today.flatMapLatest { d -> dao.observeEvening(user, d.toString()) }
-        val safety = bus.state.map { EdCareSeen(it.edCare.active, it.edCare.history) }.distinctUntilChanged()
+        val safety = bus.state.map {
+            EdCareSeen(it.edCare.active, it.edCare.history, !it.edCare.active && EdCareReturn.WEIGHT_TREND in it.edCare.returned)
+        }.distinctUntilChanged()
         val inputs = combine(content, profiles.profile, days.latest, chips) { c, p, d, ch -> Inputs(c, p, d, ch) }
         return combine(inputs, clock, evening, safety) { i, now, ev, ed -> build(i, now, EveningMark.of(ev?.mark), ed) }
     }
@@ -102,7 +107,13 @@ class NutritionRepository @Inject constructor(
         val edCare = ed.active
         val today = now.toLocalDate()
         val dayChips = i.chips.takeIf { it.day == today } ?: DayChips(today)
-        val c = i.content ?: return NutritionState(profile = i.profile, loaded = true, edCareActive = edCare, edCareHistory = ed.history)
+        val c = i.content ?: return NutritionState(
+            profile = i.profile,
+            loaded = true,
+            edCareActive = edCare,
+            edCareHistory = ed.history,
+            edCareWeightBack = ed.weightBack,
+        )
         val folded = ProfileFold.fold(i.profile.constraints, c.profile, i.profile.consented).underEdCare(edCare)
         val chosen = Level.of(i.profile.nutritionLevel) ?: Level.BASE
         val plan = NutritionEngine.plan(DayFacts.input(i.day, today, chosen, folded, dayChips.conditions, dayChips.replaced), c)
@@ -117,6 +128,7 @@ class NutritionRepository @Inject constructor(
             loaded = true,
             edCareActive = edCare,
             edCareHistory = ed.history,
+            edCareWeightBack = ed.weightBack,
         )
     }
 
@@ -141,10 +153,7 @@ class NutritionRepository @Inject constructor(
      * «режим включён» stays) or its history still hides things (П-2: one mark «скрыто» stays);
      * otherwise everything is deleted.
      */
-    suspend fun withdrawConsent(keepEdCare: Boolean) {
-        val ed = bus.current().edCare
-        profiles.withdrawConsent(keepEdCare = keepEdCare && (ed.active || ed.history), modeOff = !ed.active)
-    }
+    suspend fun withdrawConsent(keepEdCare: Boolean) = withdrawS4(profiles, bus, keepEdCare)
 
     suspend fun save(constraints: UserConstraints) = profiles.save(constraints)
 
@@ -154,7 +163,7 @@ class NutritionRepository @Inject constructor(
 
     suspend fun setLevel(level: Level) = profiles.setNutritionLevel(level.code)
 
-    private data class EdCareSeen(val active: Boolean, val history: Boolean)
+    private data class EdCareSeen(val active: Boolean, val history: Boolean, val weightBack: Boolean)
 
     private data class Inputs(val content: NutritionContent?, val profile: ProfileSnapshot, val day: DayView?, val chips: DayChips)
 
@@ -201,3 +210,18 @@ internal fun FoldedProfile.underEdCare(edCareActive: Boolean): FoldedProfile =
     } else {
         copy(mode = ProfileMode.ED_CARE, levelCap = Level.BASE, hideNumbers = true, photoFeedbackOff = true)
     }
+
+/**
+ * Withdraws S4 by the state of the bus read before the deletion (D-058). With only the history
+ * kept (П-2) the step of the return and what was taken back stay as they were (Д-1): «Да,
+ * оставить скрытыми» hides nothing more than is hidden now.
+ */
+internal suspend fun withdrawS4(profiles: ProfileStore, bus: SafetyBus, keepEdCare: Boolean) {
+    val ed = bus.current().edCare
+    profiles.withdrawConsent(
+        keepEdCare = keepEdCare && (ed.active || ed.history),
+        modeOff = !ed.active,
+        step = ed.step,
+        returned = ed.returned.mapTo(linkedSetOf()) { it.code },
+    )
+}

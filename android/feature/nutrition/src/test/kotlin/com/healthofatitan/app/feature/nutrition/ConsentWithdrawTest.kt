@@ -18,6 +18,7 @@ import com.healthofatitan.app.domain.nutrition.FoldedProfile
 import com.healthofatitan.app.domain.nutrition.Level
 import com.healthofatitan.app.domain.nutrition.ProfileMode
 import com.healthofatitan.app.domain.safety.EdCareReason
+import com.healthofatitan.app.domain.safety.EdCareReturn
 import com.healthofatitan.app.domain.safety.Restriction
 import com.healthofatitan.app.domain.safety.SafetyConsumer
 import com.healthofatitan.app.domain.safety.SafetyFlag
@@ -214,12 +215,89 @@ class ConsentWithdrawTest {
     }
 
     @Test
-    fun `the off button of the kept mode answers no`() {
+    fun `the off button of the kept mode asks first and then answers no`() {
         var off = 0
         compose.setContent { HotTheme { EdCareOff(onOff = { off++ }, active = false) } }
         compose.onNodeWithText(ConsentWithdrawTexts.HIDDEN_OFF.n).assertExists()
         compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
+        assertEquals(0, off, "one tap deletes nothing (Д-3)")
+        compose.onNodeWithText(ConsentWithdrawTexts.HIDDEN_OFF_TITLE.n).assertExists()
+        compose.onNodeWithTag(ED_CARE_OFF_CANCEL_TAG).performClick()
+        assertEquals(0, off, "«Не сейчас» deletes nothing")
+        compose.onNodeWithTag(ED_CARE_OFF_CONFIRM_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
+        compose.onNodeWithTag(ED_CARE_OFF_CONFIRM_TAG).performClick()
         assertEquals(1, off)
+    }
+
+    @Test
+    fun `the off confirmation of the mode on names the mode`() {
+        var off = 0
+        compose.setContent { HotTheme { EdCareOff(onOff = { off++ }, active = true) } }
+        compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.OFF_TITLE.n).assertExists()
+        compose.onNodeWithText(ConsentWithdrawTexts.OFF_YES.n).performClick()
+        assertEquals(1, off)
+    }
+
+    @Test
+    fun `with the weight taken back the texts name only calories and body photo`() {
+        compose.setContent { HotTheme { EdCareOff(onOff = {}, active = false, weightBack = true) } }
+        compose.onNodeWithText(ConsentWithdrawTexts.HIDDEN_OFF_NO_WEIGHT.n).assertExists()
+        compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.HIDDEN_OFF_TITLE_NO_WEIGHT.n).assertExists()
+    }
+
+    @Test
+    fun `the question with the weight taken back names only calories and body photo`() {
+        compose.setContent { HotTheme { ConsentWithdraw(edCareActive = false, edCareHistory = true, weightBack = true, onWithdraw = {}) } }
+        compose.onNodeWithTag(WITHDRAW_BUTTON_TAG).performClick()
+        compose.onNodeWithTag(WITHDRAW_CONFIRM_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.KEEP_TITLE_HISTORY_NO_WEIGHT.n).assertExists()
+        compose.onNodeWithText(ConsentWithdrawTexts.KEEP_BODY_HISTORY_NO_WEIGHT.n).assertExists()
+    }
+
+    @Test
+    fun `yes with only the history keeps the step and what was taken back (afterExit as before)`() = runTest {
+        store.setConsent(true)
+        bus.enterEdCare(EdCareReason.SELF_CHOICE)
+        assertTrue(bus.chooseEdCareExit())
+        bus.chooseEdCareStep(3)
+        bus.chooseEdCareReturn(EdCareReturn.WEIGHT_TREND)
+        bus.chooseEdCareReturn(EdCareReturn.PROTEIN)
+        val before = bus.current().edCare
+        assertTrue(Restriction.HIDE_WEIGHT !in before.afterExit())
+
+        withdrawS4(store, bus, keepEdCare = true)
+
+        val after = bus.current().edCare
+        assertFalse(after.active)
+        assertEquals(before.afterExit(), after.afterExit())
+        assertEquals(3, after.step)
+        assertEquals(before.returned, after.returned)
+        assertTrue(edCareRows().all { it.source == SafetyEventKinds.SOURCE_CONSENT_KEEP }, "no reasons, no chronology")
+        assertTrue(edCareRows().none { it.payload == EdCareReason.SELF_CHOICE.code && it.source == SafetyBus.SOURCE_PERSON })
+    }
+
+    @Test
+    fun `yes with history on step 1 keeps step 1`() = runTest {
+        store.setConsent(true)
+        bus.enterEdCare(EdCareReason.SELF_CHOICE)
+        assertTrue(bus.chooseEdCareExit())
+        val before = bus.current().edCare
+        withdrawS4(store, bus, keepEdCare = true)
+        assertEquals(before.afterExit(), bus.current().edCare.afterExit())
+        assertTrue(db.eventLogDao().count(user, SafetyEventKinds.ED_CARE_STEP) == 0)
+    }
+
+    @Test
+    fun `the kept consent is seen in the profile for the off button`() = runTest {
+        edCareOn()
+        assertFalse(store.profile.first().edCareKept)
+        withdrawS4(store, bus, keepEdCare = true)
+        assertTrue(store.profile.first().edCareKept)
+        withdrawS4(store, bus, keepEdCare = false)
+        assertFalse(store.profile.first().edCareKept)
     }
 
     @Test

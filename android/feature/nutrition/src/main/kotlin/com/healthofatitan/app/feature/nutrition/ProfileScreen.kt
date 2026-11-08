@@ -90,7 +90,11 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         if (dict == null) return@Column
         if (!snap.consented) {
             Consent(actions)
-            if (state.edCareActive || state.edCareHistory) EdCareOff(onOff = { actions.onWithdraw(false) }, active = state.edCareActive)
+            // Д-4: only the kept mark of D-058 (consent `ed_care_keep`) is turned off here; any
+            // other entry ends by the cooldown and the questions of the exit (D-057 п. 2).
+            if (snap.edCareKept && (state.edCareActive || state.edCareHistory)) {
+                EdCareOff(onOff = { actions.onWithdraw(false) }, active = state.edCareActive, weightBack = state.edCareWeightBack)
+            }
             Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
             return@Column
         }
@@ -160,7 +164,12 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         }
 
         Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
-        ConsentWithdraw(edCareActive = state.edCareActive, edCareHistory = state.edCareHistory, onWithdraw = actions.onWithdraw)
+        ConsentWithdraw(
+            edCareActive = state.edCareActive,
+            edCareHistory = state.edCareHistory,
+            weightBack = state.edCareWeightBack,
+            onWithdraw = actions.onWithdraw,
+        )
     }
 }
 

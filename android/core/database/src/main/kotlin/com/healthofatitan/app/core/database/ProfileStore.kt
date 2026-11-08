@@ -23,12 +23,14 @@ import java.util.TimeZone
  *   profile is always empty and nutrition runs «Основа» without filters
  * @property consentAtMs when it was granted, for «согласие 07.11»
  * @property nutritionLevel the chosen nutrition level code (`base | structured | precise`), null = not chosen
+ * @property edCareKept the narrow consent `ed_care_keep` (D-058) is granted: its mark may be turned off
  */
 data class ProfileSnapshot(
     val consented: Boolean = false,
     val consentAtMs: Long? = null,
     val constraints: UserConstraints = UserConstraints.NONE,
     val nutritionLevel: String? = null,
+    val edCareKept: Boolean = false,
 )
 
 /**
@@ -64,6 +66,7 @@ class ProfileStore(
                 )
             },
             nutritionLevel = byCategory[LEVEL_KEY]?.codes?.takeIf { it.isNotBlank() },
+            edCareKept = consents.firstOrNull { it.consentId == KEEP_CONSENT_ID }?.granted == true,
         )
     }.distinctUntilChanged()
 
@@ -83,8 +86,15 @@ class ProfileStore(
      * @param modeOff the mode was already off and only its history hid things (П-2): the kept mark
      *   is the entry and the person's exit at the same moment — calories, weight and body photo
      *   stay hidden, the mode itself does not come back
+     * @param step with [modeOff]: the step of the return before the withdrawal; above 1 it is kept (Д-1)
+     * @param returned with [modeOff]: what the person took back on step 3 (`EdCareReturn` codes), kept
      */
-    suspend fun withdrawConsent(keepEdCare: Boolean, modeOff: Boolean = false) = transaction {
+    suspend fun withdrawConsent(
+        keepEdCare: Boolean,
+        modeOff: Boolean = false,
+        step: Int = 0,
+        returned: Set<String> = emptySet(),
+    ) = transaction {
         val t = now()
         // «Выключить бережный режим еды» without S4 (Ю-3) does not write a second revoke of S4
         if (consentDao.latest(user, CONSENT_ID)?.granted == true) record(CONSENT_ID, CONSENT_VERSION, false, t)
@@ -106,7 +116,12 @@ class ProfileStore(
                 ),
             )
             if (modeOff) {
-                journal.append(EventLogEntity(userId = user, kind = SafetyEventKinds.ED_CARE_EXIT, payload = null, source = SafetyEventKinds.SOURCE_CONSENT_KEEP, at = t, dayKey = day))
+                // one mark of what is hidden now: the exit, the step and what came back — no reasons, no chronology
+                fun keep(kind: String, payload: String?) =
+                    EventLogEntity(userId = user, kind = kind, payload = payload, source = SafetyEventKinds.SOURCE_CONSENT_KEEP, at = t, dayKey = day)
+                journal.append(keep(SafetyEventKinds.ED_CARE_EXIT, null))
+                if (step > 1) journal.append(keep(SafetyEventKinds.ED_CARE_STEP, step.toString()))
+                returned.forEach { journal.append(keep(SafetyEventKinds.ED_CARE_RETURN, it)) }
             }
         } else if (consentDao.latest(user, KEEP_CONSENT_ID)?.granted == true) {
             // the mark of an earlier «Да» is gone with the events: its consent ends too

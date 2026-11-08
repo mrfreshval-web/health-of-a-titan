@@ -21,11 +21,15 @@ const val WITHDRAW_CANCEL_TAG = "s4_withdraw_cancel"
 const val KEEP_ED_CARE_YES_TAG = "s4_keep_ed_care_yes"
 const val KEEP_ED_CARE_NO_TAG = "s4_keep_ed_care_no"
 const val ED_CARE_OFF_TAG = "ed_care_keep_off"
+const val ED_CARE_OFF_CONFIRM_TAG = "ed_care_keep_off_confirm"
+const val ED_CARE_OFF_CANCEL_TAG = "ed_care_keep_off_cancel"
 
 /**
  * The texts of the withdrawal of S4 (D-058). Neutral form, no words about a diagnosis.
- * Ревью Агентов 7 и 10 · 2026-11-08 (Ю-1, Ю-2, Ю-3, П-3, П-4). The text of [KEEP_BODY] is the
- * text of the consent `ed_care_keep` v1: a change of it is a new consent version.
+ * Ревью Агентов 7 и 10 · 2026-11-08 (Ю-1, Ю-2, Ю-3, П-3, П-4; дорецензия Д-1…Д-4). The texts of
+ * [KEEP_BODY] and [KEEP_BODY_HISTORY] are the text of the consent `ed_care_keep` v1: a change of
+ * them is a new consent version. The `*_NO_WEIGHT` lines stand when the person already took the
+ * weight back on step 3 (Д-1): «калории и фото тела» instead of «калории, вес и фото тела».
  */
 object ConsentWithdrawTexts {
     val REVOKE = G("Отозвать согласие на данные о здоровье")
@@ -58,23 +62,43 @@ object ConsentWithdrawTexts {
     val ED_CARE_OFF = G("Выключить бережный режим еды")
 
     // П-2 (поправка основателя 2026-11-08, принята): the mode is off, its history keeps
-    // calories, weight and body photo hidden. Заголовок — Агент 10; остальное — черновик, ждёт
-    // ревью Агентов 7 и 10.
+    // calories, weight and body photo hidden.
     val KEEP_TITLE_HISTORY = G("Оставить скрытыми калории, вес и фото тела?")
+    val KEEP_TITLE_HISTORY_NO_WEIGHT = G("Оставить скрытыми калории и фото тела?")
     val KEEP_BODY_HISTORY = G(
-        "Бережный режим еды выключен, но калории, вес и фото тела пока скрыты. " +
-            "Можно оставить их скрытыми — тогда на этом телефоне останется одна отметка об этом, а остальное удалится. " +
+        "Бережный режим еды выключен, а калории, вес и фото тела скрыты. " +
+            "Можно оставить их скрытыми — тогда на этом телефоне останется одна отметка о том, что они скрыты, " +
+            "а остальное удалится; режим при этом не включится. " +
             "Удалить отметку можно в любой момент в «Я › Еда и тело». " +
             "Если не оставлять, удалится всё, а калории, вес и фото тела снова станут видны.",
+    )
+    val KEEP_BODY_HISTORY_NO_WEIGHT = G(
+        "Бережный режим еды выключен, а калории и фото тела скрыты. " +
+            "Можно оставить их скрытыми — тогда на этом телефоне останется одна отметка о том, что они скрыты, " +
+            "а остальное удалится; режим при этом не включится. " +
+            "Удалить отметку можно в любой момент в «Я › Еда и тело». " +
+            "Если не оставлять, удалится всё, а калории и фото тела снова станут видны.",
     )
     val KEEP_YES_HISTORY = G("Да, оставить скрытыми")
     val KEEP_NO_HISTORY = G("Нет, показать снова")
     val HIDDEN_OFF = G("Показать снова калории, вес и фото тела")
+    val HIDDEN_OFF_NO_WEIGHT = G("Показать снова калории и фото тела")
+
+    // Д-3: the confirmation before the kept mark is deleted.
+    val OFF_TITLE = G("Выключить бережный режим еды?")
+    val OFF_BODY = G("Отметка удалится с этого телефона, а калории, вес и фото тела снова станут видны.")
+    val OFF_YES = G("Выключить")
+    val HIDDEN_OFF_TITLE = G("Показать снова калории, вес и фото тела?")
+    val HIDDEN_OFF_TITLE_NO_WEIGHT = G("Показать снова калории и фото тела?")
+    val HIDDEN_OFF_BODY = G("Отметка удалится с этого телефона, и они снова станут видны.")
+    val HIDDEN_OFF_YES = G("Показать")
 
     val ALL: List<G> = listOf(
         REVOKE, CONFIRM_TITLE, CONFIRM_BODY, CONFIRM_BODY_HISTORY, CONFIRM_YES, CONFIRM_NO,
         KEEP_TITLE, KEEP_BODY, KEEP_YES, KEEP_NO, ED_CARE_OFF,
-        KEEP_TITLE_HISTORY, KEEP_BODY_HISTORY, KEEP_YES_HISTORY, KEEP_NO_HISTORY, HIDDEN_OFF,
+        KEEP_TITLE_HISTORY, KEEP_TITLE_HISTORY_NO_WEIGHT, KEEP_BODY_HISTORY, KEEP_BODY_HISTORY_NO_WEIGHT,
+        KEEP_YES_HISTORY, KEEP_NO_HISTORY, HIDDEN_OFF, HIDDEN_OFF_NO_WEIGHT,
+        OFF_TITLE, OFF_BODY, OFF_YES, HIDDEN_OFF_TITLE, HIDDEN_OFF_TITLE_NO_WEIGHT, HIDDEN_OFF_BODY, HIDDEN_OFF_YES,
     )
 }
 
@@ -114,6 +138,8 @@ fun withdrawNext(step: WithdrawStep, event: WithdrawEvent, ask: Boolean): Withdr
  * and its history it is the usual withdrawal, no question.
  *
  * @param edCareHistory `ED_CARE` was on and its history is in the journal
+ * @param weightBack the person already took the weight back on step 3: the texts name only
+ *   calories and body photo (Д-1)
  * @param onWithdraw called once with `keepEdCare`
  */
 @Composable
@@ -122,6 +148,7 @@ fun ConsentWithdraw(
     onWithdraw: (keepEdCare: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     edCareHistory: Boolean = false,
+    weightBack: Boolean = false,
 ) {
     var step by rememberSaveable { mutableStateOf(WithdrawStep.NONE) }
     val ask = edCareActive || edCareHistory
@@ -153,8 +180,22 @@ fun ConsentWithdraw(
         WithdrawStep.ASK_KEEP -> AlertDialog(
             onDismissRequest = { on(WithdrawEvent.BACK) },
             properties = DialogProperties(dismissOnClickOutside = false),
-            title = { Text((if (edCareActive) t.KEEP_TITLE else t.KEEP_TITLE_HISTORY).text()) },
-            text = { Text((if (edCareActive) t.KEEP_BODY else t.KEEP_BODY_HISTORY).text()) },
+            title = {
+                val title = when {
+                    edCareActive -> t.KEEP_TITLE
+                    weightBack -> t.KEEP_TITLE_HISTORY_NO_WEIGHT
+                    else -> t.KEEP_TITLE_HISTORY
+                }
+                Text(title.text())
+            },
+            text = {
+                val body = when {
+                    edCareActive -> t.KEEP_BODY
+                    weightBack -> t.KEEP_BODY_HISTORY_NO_WEIGHT
+                    else -> t.KEEP_BODY_HISTORY
+                }
+                Text(body.text())
+            },
             confirmButton = {
                 TextButton(onClick = { on(WithdrawEvent.KEEP_YES) }, modifier = Modifier.testTag(KEEP_ED_CARE_YES_TAG)) {
                     Text((if (edCareActive) t.KEEP_YES else t.KEEP_YES_HISTORY).text())
@@ -172,10 +213,44 @@ fun ConsentWithdraw(
 /**
  * «Выключить бережный режим еды» on «Я › Еда и тело» without S4 while the kept mark holds
  * `ED_CARE` on (Ю-3), or «Показать снова калории, вес и фото тела» when the kept mark only hides
- * them (П-2): the path «Нет» — the mark is deleted and `ed_care_keep` is withdrawn.
+ * them (П-2): the path «Нет» — the mark is deleted and `ed_care_keep` is withdrawn. A confirmation
+ * comes first (Д-3): «Назад», a tap outside and «Не сейчас» delete nothing.
+ *
+ * @param weightBack the weight is already back: the texts name only calories and body photo (Д-1)
  */
 @Composable
-fun EdCareOff(onOff: () -> Unit, modifier: Modifier = Modifier, active: Boolean = true) {
-    val label = if (active) ConsentWithdrawTexts.ED_CARE_OFF else ConsentWithdrawTexts.HIDDEN_OFF
-    HotTextButton(label.text(), onClick = onOff, modifier = modifier.testTag(ED_CARE_OFF_TAG))
+fun EdCareOff(onOff: () -> Unit, modifier: Modifier = Modifier, active: Boolean = true, weightBack: Boolean = false) {
+    var confirm by rememberSaveable { mutableStateOf(false) }
+    val t = ConsentWithdrawTexts
+    val label = when {
+        active -> t.ED_CARE_OFF
+        weightBack -> t.HIDDEN_OFF_NO_WEIGHT
+        else -> t.HIDDEN_OFF
+    }
+    HotTextButton(label.text(), onClick = { confirm = true }, modifier = modifier.testTag(ED_CARE_OFF_TAG))
+    if (!confirm) return
+    val title = when {
+        active -> t.OFF_TITLE
+        weightBack -> t.HIDDEN_OFF_TITLE_NO_WEIGHT
+        else -> t.HIDDEN_OFF_TITLE
+    }
+    AlertDialog(
+        onDismissRequest = { confirm = false },
+        title = { Text(title.text()) },
+        text = { Text((if (active) t.OFF_BODY else t.HIDDEN_OFF_BODY).text()) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    confirm = false
+                    onOff()
+                },
+                modifier = Modifier.testTag(ED_CARE_OFF_CONFIRM_TAG),
+            ) { Text((if (active) t.OFF_YES else t.HIDDEN_OFF_YES).text()) }
+        },
+        dismissButton = {
+            TextButton(onClick = { confirm = false }, modifier = Modifier.testTag(ED_CARE_OFF_CANCEL_TAG)) {
+                Text(t.CONFIRM_NO.text())
+            }
+        },
+    )
 }

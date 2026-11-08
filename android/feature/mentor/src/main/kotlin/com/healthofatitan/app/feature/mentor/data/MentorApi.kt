@@ -80,7 +80,8 @@ class MentorApi(
 
     @Serializable
     internal data class Body(
-        val v: Int = 1,
+        // No defaults here: HotJson does not encode default values, and the Worker requires `v`.
+        val v: Int,
         val task: String,
         val persona: String,
         @SerialName("tier_floor") val tierFloor: String,
@@ -105,6 +106,7 @@ class MentorApi(
     internal fun body(call: MentorCall): String = json.encodeToString(
         Body.serializer(),
         Body(
+            v = 1,
             task = if (call.summary) "summary" else "reply",
             persona = call.persona,
             tierFloor = call.floor.code,

@@ -8,6 +8,7 @@ import com.healthofatitan.app.core.database.dao.DawnDao
 import com.healthofatitan.app.core.database.dao.DayDao
 import com.healthofatitan.app.core.database.dao.EventLogDao
 import com.healthofatitan.app.core.database.dao.MetricDao
+import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.security.FieldCipher
 import com.healthofatitan.app.integration.whoop.EdgeClient
@@ -76,8 +77,8 @@ object WhoopModule {
 
     @Provides
     @Singleton
-    fun provideAccessTokens(edge: EdgeClient, store: WhoopCredentialStore, clock: Clock): WhoopAccessTokens =
-        WhoopAccessTokens(edge, store, clock)
+    fun provideAccessTokens(edge: EdgeClient, store: WhoopCredentialStore, clock: Clock, account: AccountSession): WhoopAccessTokens =
+        WhoopAccessTokens(edge, store, clock, account)
 
     @Provides
     @Singleton
@@ -108,9 +109,11 @@ object WhoopModule {
         scheduler: WhoopSyncScheduler,
         dao: MetricDao,
         clock: Clock,
+        account: AccountSession,
     ): WhoopConnection = WhoopConnection(
         config, edge, store, tokens, syncer, scheduler, dao, clock,
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        account = account,
     )
 
     /** A09 §7a: tomorrow's alarm sets tonight's bedtime; reading it needs no permission. */

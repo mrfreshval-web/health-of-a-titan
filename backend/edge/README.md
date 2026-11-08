@@ -26,6 +26,23 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
 
 Без `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, `TOKEN_ENC_KEY` или привязки `WHOOP_VAULT` маршруты WHOOP отвечают `503 not_configured`.
 
+## Аккаунт HoT (A65, D-062; срезы А1 и А2)
+
+| Маршрут | Доступ | Что делает |
+|---|---|---|
+| `POST /auth/nonce` | лимит по IP | одноразовый `nonce` (5 мин) для Google и миграции |
+| `POST /auth/google` | лимит по IP | ID-токен Google (подпись по JWKS, `aud`, `iss`, `exp`, `iat`, `nonce`) + ключ устройства → сессия; нет аккаунта → `404 no_account` и `signup_ticket` |
+| `POST /auth/signup` | лимит по IP | `signup_ticket` + код приглашения → новый аккаунт |
+| `POST /auth/refresh` | лимит по IP | ротация refresh, подпись ключом устройства; повтор старого refresh в 30 с — тот же ответ, позже — отзыв всей сессии |
+| `POST /auth/logout` · `/auth/logout-all` | access | выйти · выйти везде (`session_epoch++`) |
+| `POST /auth/migrate` | `Bearer hs1.…` + ключ устройства | старая сессия среза 1 → аккаунт с identity WHOOP; `hs1` гасится |
+| `POST /auth/invites` | access, только аккаунты основателя | код приглашения (26 символов, 14 дней) |
+
+- `POST /whoop/token` теперь возвращает сессию аккаунта (`access`, `refresh`, `account_id`, `identities`) и `whoop_access_token`. Новый пользователь WHOOP без аккаунта — `403 invite_required` (ничего не хранится, грант отозван); пользователь из `ALLOWED_WHOOP_USER_IDS` получает аккаунт сразу (переходный период).
+- Access — JWS EdDSA (Ed25519, `kid`), 15 мин, не хранится. Refresh `hr1.<sid>.<32 байта>`: в хранилище только HMAC с «перцем» (ключ из `TOKEN_ENC_KEY`), текущий и предыдущий.
+- Хранилище — Durable Object `AccountVault` за интерфейсом `AccountStore`; токены WHOOP — `WhoopVault` за `TokenVault` (перенос в РФ — срез Б1, A65 §7.2).
+- Секреты: `AUTH_SIGNING_KEY` (`node scripts/gen-signing-key.mjs | gh secret set AUTH_SIGNING_KEY`), `GOOGLE_WEB_CLIENT_ID`; при ротации ключа — `AUTH_SIGNING_KEY_PREVIOUS` на 15 минут. Без них маршруты `/auth/*` и `/whoop/token` отвечают `503 not_configured`.
+
 ## Винс: `POST /llm/mentor` (A62, D-056)
 
 Код — `src/mentor/` (`router.ts` — маршрутизация по теме, `prompt.ts` — системный промпт, `budget.ts` — деньги и `MentorMeter`, `mentor.ts` — обработчик). Клиент Anthropic — официальный `@anthropic-ai/sdk`.
@@ -33,7 +50,7 @@ CI: `.github/workflows/backend.yml` — typecheck и тесты на кажды�
 - **Запрос телефона:** `{v:1, task:"reply"|"summary", persona:"sensei"|"bro"|"butler", tier_floor, crisis_level, expert_topics, context:{address_form, restrictions, flags, summaries, about?}, messages:[{role, content}]}`. Неизвестные поля и коды отбрасываются; фото, данные WHOOP и Health Connect, причины `ED_CARE` в контракте не предусмотрены.
 - **Маршрут по цене ошибки темы (A62 §2):** болтовня и поддержка — `claude-haiku-5-5`; питание — Haiku; цели, стресс, «Работа», тренировки — `claude-sonnet-5-5`; симптомы, анализы, лекарства, боль и травма, беременность, сигналы РПП, психологическая тяжесть, режим «Здоровье» и тренировки при «уровне эксперта» — `claude-opus-5-5`. Лифт только вверх: телефон присылает `tier_floor` — высший уровень разговора. CrisisGuard уровня 1 — не ниже Sonnet. Классификатор Haiku — следующий шаг, словарь остаётся полом.
 - **Кризис:** `crisis_level ≥ 2` модель не видит никогда — ответ `{type:"crisis"}` без вызова и вне лимитов. Модель — второй слой: на риск для жизни она отвечает только `[[SOS]]`, Worker превращает это в `{type:"crisis", level:2}`, телефон открывает «Помощь» (112 · 911).
-- **Деньги (D-056):** `MentorMeter` (Durable Object на пользователя, миграция `v2-mentor-meter`) хранит только суммы в USD за день и месяц. Мягкий порог $0,40 в день — разговор на Haiku (темы высокого уровня остаются на Opus); жёсткий $1,50 в день и $10 в месяц — `429 {error:"budget_exhausted"}`; не больше 12 запросов в минуту. Дни и месяцы — по UTC.
+- **Деньги (D-056):** `MentorMeter` (Durable Object на пользователя, миграция `v3-mentor-meter`) хранит только суммы в USD за день и месяц. Мягкий порог $0,40 в день — разговор на Haiku (темы высокого уровня остаются на Opus); жёсткий $1,50 в день и $10 в месяц — `429 {error:"budget_exhausted"}`; не больше 12 запросов в минуту. Дни и месяцы — по UTC.
 - **Кэш промпта:** неизменная часть промпта первой, затем характер и ContextPack с точками кэша. Opus и Sonnet — с серверным `fallbacks: "default"` (бета `server-side-fallback-2026-07-01`) на случай отказа модели.
 - **Ошибки:** нет `ANTHROPIC_API_KEY` или ключ отклонён → `503 {error:"not_configured", missing:"ANTHROPIC_API_KEY"}`; нет привязки `MENTOR_METER` → `503 … "MENTOR_METER"` (без счётчика денег модель не вызывается); модель вне `LLM_MODELS` → `503 … "LLM_MODELS"`.
 - **Логи:** как и везде — только `{m, s, ms}`; ни слов, ни тем, ни моделей.

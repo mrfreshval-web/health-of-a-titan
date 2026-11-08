@@ -1,25 +1,55 @@
+import type { AccountStore } from "./account-store";
 import { bearerToken, isAllowedWhoopUser } from "./allowlist";
+import {
+  accessClaims,
+  authContext,
+  type AuthContext,
+  authGoogle,
+  authInvites,
+  authLogout,
+  authLogoutAll,
+  authMigrate,
+  authNonce,
+  authRefresh,
+  authSignup,
+  deviceProof,
+  inviteOf,
+  issueSession,
+  json,
+  liveCaller,
+  noContent,
+  NotConfigured,
+  unauthorized,
+  whoopSubject,
+} from "./auth";
 import { ConfigError, deriveKeys } from "./crypto";
 import type { Env } from "./env";
+import type { GoogleIdTokenVerifier } from "./google";
 import { isValidChallenge, issueState, verifyState } from "./oauth-state";
 import { isValidUserId, sessionHash, sessionUserId } from "./session";
+import { DurableTokenVault, type TokenVault } from "./token-vault";
 import type { AccessResult } from "./vault";
 import { MentorMeter, type BudgetState } from "./mentor/budget";
 import { mentorTurn, parseMentorRequest, type Meter } from "./mentor/mentor";
 import { authorizeUrl, DEFAULT_REDIRECT_URI, WHOOP_AUTHORIZE_URL, WHOOP_SCOPES, WhoopClient, WhoopError } from "./whoop";
 
 export { WhoopVault } from "./vault";
+export { AccountVault } from "./account-store";
+export { json };
 export { MentorMeter };
 
 export const VERSION = "0.1.0";
 
 /**
- * - "rate-limit": no credential yet (login), limited per IP when RATE_LIMITER is bound;
- * - "session": the phone's device session (`Bearer hs1.…`), verified by the user's vault;
- * - "app": the same session plus the allowlist — every future app endpoint (A14 §5 AppAuth);
+ * - "rate-limit": no credential yet (login, refresh), limited per IP when RATE_LIMITER is bound;
+ * - "session": the account access token (`Bearer <JWS>`) and a live session in the store, or —
+ *   until the migration window closes — the legacy device session `Bearer hs1.…` (A65 §3.5);
+ * - "account": the account access token, signature only (≤ 15 min, A65 §3.4);
+ * - "account-live": the access token and a live session in the store (sensitive routes);
+ * - "app": every app endpoint (A14 §5 AppAuth): the account access token, signature only;
  * - "webhook-hmac": WHOOP signature (slice 3).
  */
-type Auth = "none" | "rate-limit" | "session" | "app" | "webhook-hmac";
+type Auth = "none" | "rate-limit" | "session" | "account" | "account-live" | "app" | "webhook-hmac";
 
 interface Route {
   method: "GET" | "POST";
@@ -36,6 +66,15 @@ interface Route {
  * the Durable Object, the phone asks `/whoop/access` instead.
  */
 export const ROUTES: readonly Route[] = [
+  // HoT account (A65 §10, D-062): slice А1 (core) and А2 (Google + WHOOP login).
+  { method: "POST", path: "/auth/nonce", auth: "rate-limit", slice: "А1", implemented: true },
+  { method: "POST", path: "/auth/google", auth: "rate-limit", slice: "А2", implemented: true },
+  { method: "POST", path: "/auth/signup", auth: "rate-limit", slice: "А2", implemented: true },
+  { method: "POST", path: "/auth/refresh", auth: "rate-limit", slice: "А1", implemented: true },
+  { method: "POST", path: "/auth/migrate", auth: "rate-limit", slice: "А1", implemented: true },
+  { method: "POST", path: "/auth/logout", auth: "account", slice: "А1", implemented: true },
+  { method: "POST", path: "/auth/logout-all", auth: "account-live", slice: "А1", implemented: true },
+  { method: "POST", path: "/auth/invites", auth: "account-live", slice: "А1", implemented: true },
   { method: "POST", path: "/whoop/authorize", auth: "rate-limit", slice: "1", implemented: true },
   { method: "POST", path: "/whoop/token", auth: "rate-limit", slice: "1", implemented: true },
   { method: "POST", path: "/whoop/access", auth: "session", slice: "1", implemented: true },
@@ -50,24 +89,12 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/tts", auth: "app", slice: "5b" },
 ];
 
-const BASE_HEADERS = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-} as const;
-
-export function json(status: number, body: unknown, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...BASE_HEADERS, ...extra } });
-}
-
-const unauthorized = (error = "unauthorized") => json(401, { error }, { "WWW-Authenticate": "Bearer" });
-
 function matchRoute(path: string): Route | undefined {
   return ROUTES.find((r) => (r.path.endsWith("/") ? path.startsWith(r.path) && path.length > r.path.length : path === r.path));
 }
 
-/** Small JSON bodies only on the WHOOP routes. */
-const MAX_JSON_BYTES = 8 * 1024;
+/** Small JSON bodies only on the WHOOP and account routes. */
+const MAX_JSON_BYTES = 16 * 1024;
 
 async function readJson(request: Request): Promise<Record<string, unknown> | null> {
   const length = Number(request.headers.get("Content-Length") ?? "0");
@@ -82,34 +109,8 @@ async function readJson(request: Request): Promise<Record<string, unknown> | nul
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Vault access (Worker → Durable Object)
-
-interface VaultClient {
-  call<T>(op: "connect" | "access" | "verify" | "disconnect", body: unknown): Promise<T>;
-}
-
-function vaultFor(env: Env, userId: string): VaultClient | null {
-  const ns = env.WHOOP_VAULT;
-  if (!ns) return null;
-  const stub = ns.get(ns.idFromName(`whoop-user:${userId}`));
-  return {
-    async call<T>(op: string, body: unknown): Promise<T> {
-      const res = await stub.fetch(`https://vault/${op}`, { method: "POST", body: JSON.stringify(body) });
-      return (await res.json()) as T;
-    },
-  };
-}
-
-/** Resolves the device session to its WHOOP user id, or null. */
-async function authenticateSession(request: Request, env: Env): Promise<{ userId: string; hash: string; vault: VaultClient } | null> {
-  const token = bearerToken(request);
-  const userId = sessionUserId(token);
-  if (!token || !userId) return null;
-  const vault = vaultFor(env, userId);
-  if (!vault) return null;
-  return { userId, hash: await sessionHash(token), vault };
-}
+const notConfigured = () => json(503, { error: "not_configured" });
+const invalidRequest = () => json(400, { error: "invalid_request" });
 
 // ---------------------------------------------------------------------------------------------
 // WHOOP routes
@@ -118,12 +119,10 @@ function whoopConfigured(env: Env): boolean {
   return Boolean(env.WHOOP_CLIENT_ID && env.WHOOP_CLIENT_SECRET && env.TOKEN_ENC_KEY && env.WHOOP_VAULT);
 }
 
-const notConfigured = () => json(503, { error: "not_configured" });
-
 async function whoopAuthorize(request: Request, env: Env, nowSeconds: number): Promise<Response> {
   if (!whoopConfigured(env)) return notConfigured();
   const body = await readJson(request);
-  if (!body || !isValidChallenge(body.code_challenge)) return json(400, { error: "invalid_request" });
+  if (!body || !isValidChallenge(body.code_challenge)) return invalidRequest();
   const keys = await deriveKeys(env.TOKEN_ENC_KEY);
   const state = await issueState(keys.stateMac, body.code_challenge, nowSeconds);
   const redirectUri = env.WHOOP_REDIRECT_URI || DEFAULT_REDIRECT_URI;
@@ -138,15 +137,25 @@ async function whoopAuthorize(request: Request, env: Env, nowSeconds: number): P
   });
 }
 
-async function whoopToken(request: Request, env: Env, nowSeconds: number, http?: typeof fetch): Promise<Response> {
-  if (!whoopConfigured(env)) return notConfigured();
+/**
+ * «Войти через WHOOP» (A65 §2.2): the PKCE + signed-state flow of slice 1, unchanged on the wire,
+ * plus the device key. The answer is now an account session instead of `hs1`. A WHOOP user
+ * without an account gets one with a valid invite, or when on ALLOWED_WHOOP_USER_IDS (the
+ * founder, until the allowlist is retired); otherwise nothing is kept and the grant is revoked.
+ */
+async function whoopToken(request: Request, ctx: AuthContext, http?: typeof fetch): Promise<Response> {
+  const { env, nowSeconds } = ctx;
   const body = await readJson(request);
   const code = body?.code;
-  if (!body || typeof code !== "string" || code.length < 1 || code.length > 2048) return json(400, { error: "invalid_request" });
+  if (!body || typeof code !== "string" || code.length < 1 || code.length > 2048) return invalidRequest();
   const keys = await deriveKeys(env.TOKEN_ENC_KEY);
   const check = await verifyState(keys.stateMac, body.state, body.code_verifier, nowSeconds);
   if (check === "expired") return json(400, { error: "state_expired" });
   if (check !== "ok") return json(400, { error: "invalid_state" });
+  const device = await deviceProof(body, String(body.state));
+  if (!device) return json(400, { error: "invalid_device_proof" });
+  const invite = await inviteOf(body);
+  if (!ctx.vault) return notConfigured();
 
   const whoop = new WhoopClient({
     clientId: env.WHOOP_CLIENT_ID!,
@@ -158,16 +167,31 @@ async function whoopToken(request: Request, env: Env, nowSeconds: number, http?:
     const tokens = await whoop.exchangeCode(code);
     const userId = await whoop.userId(tokens.accessToken);
     if (!isValidUserId(userId)) return json(502, { error: "whoop_unavailable" });
-    if (!isAllowedWhoopUser(userId, env)) {
-      // Not on the allowlist: keep nothing and close the grant at WHOOP. The user id is not a
-      // secret; the app shows it so the founder can add it to ALLOWED_WHOOP_USER_IDS.
+    const login =
+      invite === "invalid"
+        ? ({ status: "invite_invalid" } as const)
+        : await ctx.store.login({
+            provider: "whoop",
+            subject: userId,
+            inviteHash: invite,
+            bootstrap: isAllowedWhoopUser(userId, env),
+            now: nowSeconds * 1000,
+          });
+    if (login.status !== "ok") {
+      // No account and no (valid) invite: keep nothing, close the grant at WHOOP. The user id is
+      // not a secret; the app shows it so the founder can invite this person.
       await whoop.revoke(tokens.accessToken);
-      return json(403, { error: "not_allowed", whoop_user_id: userId });
+      return json(403, { error: login.status === "no_account" ? "invite_required" : "invite_invalid", whoop_user_id: userId });
     }
-    const vault = vaultFor(env, userId)!;
-    const { session } = await vault.call<{ session?: string }>("connect", { userId, tokens });
-    if (!session) return json(502, { error: "vault_unavailable" });
-    return json(200, { session, access_token: tokens.accessToken, expires_at: tokens.expiresAt, whoop_user_id: userId });
+    await ctx.vault.connect(userId, tokens);
+    const session = await issueSession(ctx, login.account, device);
+    await ctx.store.audit("login.whoop", login.account.id, nowSeconds * 1000);
+    return json(200, {
+      ...session,
+      whoop_user_id: userId,
+      whoop_access_token: tokens.accessToken,
+      whoop_expires_at: tokens.expiresAt,
+    });
   } catch (e) {
     if (e instanceof WhoopError) {
       if (e.kind === "invalid_grant") return json(400, { error: "invalid_code" });
@@ -185,22 +209,40 @@ const ACCESS_STATUS: Record<Exclude<AccessResult["status"], "ok">, [number, stri
   misconfigured: [503, "not_configured"],
 };
 
-async function whoopAccess(request: Request, env: Env): Promise<Response> {
-  if (!whoopConfigured(env)) return notConfigured();
-  const auth = await authenticateSession(request, env);
-  if (!auth) return unauthorized();
-  const result = await auth.vault.call<AccessResult>("access", { sessionHash: auth.hash });
+/** Who asks for WHOOP tokens: an account session (its WHOOP identity) or a legacy `hs1` session. */
+type WhoopCaller = { kind: "account"; whoopUserId: string | null } | { kind: "legacy"; whoopUserId: string; hash: string } | null;
+
+async function whoopCaller(request: Request, ctx: AuthContext | null): Promise<WhoopCaller> {
+  const token = bearerToken(request);
+  const legacyUser = sessionUserId(token);
+  if (token && legacyUser) return { kind: "legacy", whoopUserId: legacyUser, hash: await sessionHash(token) };
+  if (!ctx) return null;
+  const caller = await liveCaller(ctx, request);
+  return caller ? { kind: "account", whoopUserId: whoopSubject(caller.account) } : null;
+}
+
+async function whoopAccess(request: Request, vault: TokenVault, ctx: AuthContext | null): Promise<Response> {
+  const caller = await whoopCaller(request, ctx);
+  if (!caller) return unauthorized();
+  if (!caller.whoopUserId) return json(409, { error: "whoop_not_linked" });
+  const result =
+    caller.kind === "legacy" ? await vault.legacyAccess(caller.whoopUserId, caller.hash) : await vault.access(caller.whoopUserId);
   if (result.status === "ok") return json(200, { access_token: result.accessToken, expires_at: result.expiresAt });
   const [status, error] = ACCESS_STATUS[result.status] ?? [502, "vault_unavailable"];
   return status === 401 ? unauthorized(error) : json(status, { error });
 }
 
-async function whoopDisconnect(request: Request, env: Env): Promise<Response> {
-  if (!whoopConfigured(env)) return notConfigured();
-  const auth = await authenticateSession(request, env);
-  if (!auth) return unauthorized();
-  const { ok } = await auth.vault.call<{ ok?: boolean }>("disconnect", { sessionHash: auth.hash });
-  return ok ? new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } }) : unauthorized();
+/**
+ * «Отключить WHOOP»: the tokens are revoked and wiped; the WHOOP identity of the account stays
+ * (logging in with WHOOP again reconnects). Unlinking identities is slice А3.
+ */
+async function whoopDisconnect(request: Request, vault: TokenVault, ctx: AuthContext | null): Promise<Response> {
+  const caller = await whoopCaller(request, ctx);
+  if (!caller) return unauthorized();
+  if (!caller.whoopUserId) return noContent();
+  const ok =
+    caller.kind === "legacy" ? await vault.legacyDisconnect(caller.whoopUserId, caller.hash) : await vault.disconnect(caller.whoopUserId);
+  return ok ? noContent() : unauthorized();
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -247,6 +289,9 @@ export interface HandleOptions {
   /** Outbound fetch to WHOOP (tests). */
   fetch?: typeof fetch;
   nowSeconds?: number;
+  /** Test doubles of the account store and the Google verifier. */
+  store?: AccountStore;
+  google?: GoogleIdTokenVerifier;
 }
 
 export async function handle(request: Request, env: Env, options: HandleOptions = {}): Promise<Response> {
@@ -270,29 +315,58 @@ export async function handle(request: Request, env: Env, options: HandleOptions 
     if (!success) return json(429, { error: "rate_limited" }, { "Retry-After": "60" });
   }
 
+  const ctx = authContext(env, nowSeconds, options);
   try {
+    if (route.path.startsWith("/auth/")) {
+      if (!ctx) return notConfigured();
+      switch (route.path) {
+        case "/auth/nonce":
+          return await authNonce(ctx);
+        case "/auth/logout":
+          return await authLogout(ctx, request);
+        case "/auth/logout-all":
+          return await authLogoutAll(ctx, request);
+        case "/auth/invites":
+          return await authInvites(ctx, request);
+      }
+      const body = await readJson(request);
+      if (!body) return invalidRequest();
+      switch (route.path) {
+        case "/auth/google":
+          return await authGoogle(ctx, body);
+        case "/auth/signup":
+          return await authSignup(ctx, body);
+        case "/auth/refresh":
+          return await authRefresh(ctx, body);
+        case "/auth/migrate":
+          return await authMigrate(ctx, request, body);
+      }
+    }
+
     switch (route.path) {
       case "/whoop/authorize":
         return await whoopAuthorize(request, env, nowSeconds);
       case "/whoop/token":
-        return await whoopToken(request, env, nowSeconds, options.fetch);
+        if (!whoopConfigured(env) || !ctx) return notConfigured();
+        return await whoopToken(request, ctx, options.fetch);
       case "/whoop/access":
-        return await whoopAccess(request, env);
-      case "/whoop/disconnect":
-        return await whoopDisconnect(request, env);
+      case "/whoop/disconnect": {
+        if (!whoopConfigured(env)) return notConfigured();
+        // Without the account secrets the legacy `hs1` calls still work during the rollout.
+        const vault = ctx?.vault ?? new DurableTokenVault(env.WHOOP_VAULT!);
+        return route.path === "/whoop/access" ? await whoopAccess(request, vault, ctx) : await whoopDisconnect(request, vault, ctx);
+      }
     }
 
-    // AppAuth (A14 §5, refined in slice 1): a valid device session of an allowed user is required
-    // before anything else, also for endpoints that are still stubs.
+    // AppAuth (A14 §5, A65 §3.4): a valid account access token is required before anything else,
+    // also for endpoints that are still stubs.
     if (route.auth === "app") {
-      const auth = await authenticateSession(request, env);
-      if (!auth) return unauthorized();
-      const { userId } = await auth.vault.call<{ userId: string | null }>("verify", { sessionHash: auth.hash });
-      if (!userId) return unauthorized();
-      if (route.path === "/llm/mentor") return await mentor(request, env, userId, options.fetch);
+      const claims = ctx ? await accessClaims(ctx, request) : null;
+      if (!claims) return unauthorized();
+      if (route.path === "/llm/mentor") return await mentor(request, env, claims.sub, options.fetch);
     }
   } catch (e) {
-    if (e instanceof ConfigError) return notConfigured();
+    if (e instanceof ConfigError || e instanceof NotConfigured) return notConfigured();
     return json(502, { error: "upstream_error" });
   }
 

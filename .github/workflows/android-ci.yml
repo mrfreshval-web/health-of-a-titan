@@ -45,6 +45,9 @@ jobs:
       # Not a secret: the Worker address (Settings → Secrets and variables → Actions → Variables).
       # Empty → the app builds and says «сервер HoT не настроен» on the WHOOP screen.
       EDGE_BASE_URL: ${{ vars.EDGE_BASE_URL }}
+      # Not a secret: the Google OAuth Web client id for «Войти через Google» (A65 §8). Empty → the
+      # button says Google is not set up in this build.
+      GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     defaults:
       run:
         working-directory: android

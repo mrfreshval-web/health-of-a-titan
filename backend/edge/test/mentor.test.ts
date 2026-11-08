@@ -5,7 +5,7 @@ import { costUsd, DEFAULT_LIMITS, MentorMeter } from "../src/mentor/budget";
 import { mentorTurn, parseMentorRequest, type Meter } from "../src/mentor/mentor";
 import { contextPrompt, STABLE_PROMPT } from "../src/mentor/prompt";
 import { route } from "../src/mentor/router";
-import { makeEnv, MemoryStorage, pkcePair } from "./helpers";
+import { FakeDevice, makeEnv, MemoryStorage, pkcePair } from "./helpers";
 
 const post = (path: string, body?: unknown, token?: string) =>
   new Request(`https://edge.test${path}`, {
@@ -309,8 +309,9 @@ describe("POST /llm/mentor through the Worker", () => {
     const { verifier, challenge } = await pkcePair();
     const a = await handle(post("/whoop/authorize", { code_challenge: challenge }), e);
     const { state } = (await a.json()) as { state: string };
-    const res = await handle(post("/whoop/token", { code: "good-code", state, code_verifier: verifier }), e, { fetch: whoop.fetch });
-    return ((await res.json()) as { session: string }).session;
+    const proof = await (await FakeDevice.create()).login(state);
+    const res = await handle(post("/whoop/token", { code: "good-code", state, code_verifier: verifier, ...proof }), e, { fetch: whoop.fetch });
+    return ((await res.json()) as { access: string }).access;
   }
 
   class MeterNs {

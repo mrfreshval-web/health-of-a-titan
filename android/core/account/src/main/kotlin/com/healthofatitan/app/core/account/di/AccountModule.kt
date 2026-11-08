@@ -3,6 +3,9 @@ package com.healthofatitan.app.core.account.di
 import android.content.Context
 import android.os.Build
 import com.healthofatitan.app.core.account.AccountConfig
+import com.healthofatitan.app.core.account.AccountProfileStore
+import com.healthofatitan.app.core.account.FileProfileBlobs
+import com.healthofatitan.app.core.account.GoogleProfileImport
 import com.healthofatitan.app.core.account.AccountCredentialStore
 import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.account.AuthApi
@@ -20,6 +23,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import java.io.File
 import java.time.Clock
 import javax.inject.Singleton
 
@@ -49,4 +53,14 @@ object AccountModule {
     @Provides
     @Singleton
     fun provideGoogleIdSource(config: AccountConfig): GoogleIdSource = CredentialManagerGoogleIdSource(config)
+
+    /** The profile of the account on the phone (A65 §2.4, §5): name, body data, avatar, «О себе». */
+    @Provides
+    @Singleton
+    fun provideAccountProfile(@ApplicationContext context: Context, cipher: FieldCipher, json: Json): AccountProfileStore =
+        AccountProfileStore(FileProfileBlobs(File(context.filesDir, AccountProfileStore.DIR)), cipher, json)
+
+    @Provides
+    @Singleton
+    fun provideGoogleProfileImport(profile: AccountProfileStore, http: OkHttpClient): GoogleProfileImport = GoogleProfileImport(profile, http)
 }

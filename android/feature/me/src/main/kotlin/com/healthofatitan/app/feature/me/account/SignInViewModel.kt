@@ -9,6 +9,7 @@ import com.healthofatitan.app.core.account.AccountNotConfiguredException
 import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.core.account.GoogleIdResult
 import com.healthofatitan.app.core.account.GoogleIdSource
+import com.healthofatitan.app.core.account.GoogleProfileImport
 import com.healthofatitan.app.core.account.SignInOutcome
 import com.healthofatitan.app.integration.whoop.AuthRedirect
 import com.healthofatitan.app.integration.whoop.AuthorizeConfig
@@ -55,6 +56,8 @@ class SignInViewModel @Inject constructor(
     private val google: GoogleIdSource,
     config: AccountConfig,
     private val saved: SavedStateHandle,
+    /** Name, masked e-mail and the photo of Google stay on the phone (A65 §2.4). */
+    private val googleProfile: GoogleProfileImport,
 ) : ViewModel() {
 
     private val local = MutableStateFlow(
@@ -88,13 +91,24 @@ class SignInViewModel @Inject constructor(
                 return@launch idle(SignInNote.OFFLINE)
             }
             when (val g = google.idToken(activityContext, nonce)) {
-                is GoogleIdResult.Ok -> onOutcome(account.completeGoogle(g.idToken, nonce))
+                is GoogleIdResult.Ok -> {
+                    val outcome = account.completeGoogle(g.idToken, nonce)
+                    if (outcome == SignInOutcome.SignedIn) importGoogle(g) else pendingGoogle = g
+                    onOutcome(outcome)
+                }
                 GoogleIdResult.Cancelled -> idle(SignInNote.CANCELLED)
                 GoogleIdResult.NoGoogleAccount -> idle(SignInNote.NO_GOOGLE_ACCOUNT)
                 GoogleIdResult.NotConfigured -> idle(SignInNote.GOOGLE_NOT_CONFIGURED)
                 GoogleIdResult.Failed -> idle(SignInNote.REJECTED)
             }
         }
+    }
+
+    /** The Google answer of a sign-in that still waits for an invite: imported once the account exists. */
+    private var pendingGoogle: GoogleIdResult.Ok? = null
+
+    private fun importGoogle(g: GoogleIdResult.Ok) {
+        viewModelScope.launch { runCatching { googleProfile.import(g) } }
     }
 
     private fun onOutcome(outcome: SignInOutcome) {
@@ -132,6 +146,8 @@ class SignInViewModel @Inject constructor(
                 }
                 LoginStart.Offline -> idle(SignInNote.OFFLINE)
                 LoginStart.NotConfigured -> idle(SignInNote.NOT_CONFIGURED)
+                // signed out here: a link or a step-up cannot start from «Вход»
+                LoginStart.StepUpRequired, LoginStart.SignedOut -> idle(SignInNote.REJECTED)
             }
         }
     }
@@ -163,7 +179,8 @@ class SignInViewModel @Inject constructor(
                             )
                         }
                     }
-                    LoginOutcome.OtherAccount -> idle(SignInNote.OTHER_ACCOUNT)
+                    LoginOutcome.OtherAccount, LoginOutcome.ProviderLinked -> idle(SignInNote.OTHER_ACCOUNT)
+                    LoginOutcome.StepUpRequired -> idle(SignInNote.REJECTED)
                     LoginOutcome.Rejected -> idle(SignInNote.REJECTED)
                     LoginOutcome.Offline -> idle(SignInNote.OFFLINE)
                     LoginOutcome.NotConfigured -> idle(SignInNote.NOT_CONFIGURED)
@@ -182,7 +199,11 @@ class SignInViewModel @Inject constructor(
             return
         }
         local.update { it.copy(phase = SignInPhase.SIGNUP, note = null) }
-        viewModelScope.launch { onOutcome(account.signup(ticket, trimmed)) }
+        viewModelScope.launch {
+            val outcome = account.signup(ticket, trimmed)
+            if (outcome == SignInOutcome.SignedIn) pendingGoogle?.let(::importGoogle)
+            onOutcome(outcome)
+        }
     }
 
     /** «Назад» from the invite step. */

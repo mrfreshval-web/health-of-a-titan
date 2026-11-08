@@ -1,6 +1,11 @@
 package com.healthofatitan.app.core.account
 
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
@@ -33,6 +38,44 @@ sealed interface SignInOutcome {
     data object NotConfigured : SignInOutcome
 }
 
+/** «Я › Аккаунт» as the Worker sees it now. */
+sealed interface AccountViewResult {
+    data class Ok(val view: AccountView) : AccountViewResult
+
+    data object SignedOut : AccountViewResult
+
+    data object Offline : AccountViewResult
+
+    data class Failed(val code: Int) : AccountViewResult
+}
+
+/** The end of a change in «Я › Аккаунт» (A65 §2.3, §3.4, §6). */
+sealed interface AccountChange {
+    /** Done; [identities] when the Worker answered with the new list of ways in. */
+    data class Done(val identities: List<IdentityDto>? = null) : AccountChange
+
+    /** Sign in again with an identity of the account first (step-up, ≤ 10 min). */
+    data object StepUpRequired : AccountChange
+
+    /** This Google or WHOOP belongs to another HoT account: no merge (A65 §2.3). */
+    data class IdentityInUse(val provider: String) : AccountChange
+
+    /** The account already has a Google (or a WHOOP): unlink it first. */
+    data object ProviderLinked : AccountChange
+
+    /** The last way in cannot be unlinked. */
+    data object LastIdentity : AccountChange
+
+    /** The step-up came with another Google or WHOOP than the account's own. */
+    data object Mismatch : AccountChange
+
+    data object SignedOut : AccountChange
+
+    data object Offline : AccountChange
+
+    data class Failed(val code: Int) : AccountChange
+}
+
 /**
  * The HoT account on the phone (A65 §3, D-062): one place for the session.
  *
@@ -56,6 +99,15 @@ class AccountSession(
     private var cached: Pair<String, Long>? = null // access token, expiresAt epoch ms
 
     val credentials: StateFlow<AccountCredentials?> get() = store.credentials
+
+    private val deletedFlag = MutableStateFlow(false)
+
+    /**
+     * The Worker said `account_deleted` (A65 §6: deleted on another phone or on the web page). The
+     * app wipes the phone when this turns true; until then the session stays as it is, so a wipe
+     * interrupted by a kill happens again on the next start.
+     */
+    val deleted: StateFlow<Boolean> = deletedFlag.asStateFlow()
 
     val isSignedIn: Boolean get() = store.credentials.value != null
 
@@ -84,6 +136,11 @@ class AccountSession(
             }
             RefreshResult.SignedOut -> {
                 signOutLocally()
+                AccountAccess.SignedOut
+            }
+            RefreshResult.Deleted -> {
+                cached = null
+                deletedFlag.value = true
                 AccountAccess.SignedOut
             }
             is RefreshResult.Unavailable -> AccountAccess.Unavailable(r.code)
@@ -150,6 +207,91 @@ class AccountSession(
         val ok = runCatching { api.logoutAll(access.token) }.getOrDefault(false)
         if (ok) signOutLocally()
         return ok
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // «Я › Аккаунт» (slices А3 and А5)
+
+    /**
+     * One account call with the access token; a token the Worker refuses as stale is refreshed
+     * once. Null when there is no session. Throws [IOException] without a connection.
+     */
+    private suspend fun authorized(call: suspend (String) -> AuthApi.Answer): AuthApi.Answer? {
+        var stale: String? = null
+        repeat(2) {
+            val token = when (val a = accessToken(stale)) {
+                is AccountAccess.Ok -> a.token
+                AccountAccess.SignedOut -> return null
+                is AccountAccess.Unavailable -> return AuthApi.Answer(a.code, null, "")
+            }
+            val answer = call(token)
+            if (answer.code != 401 || answer.error != "unauthorized") return answer
+            stale = token
+        }
+        return null
+    }
+
+    /** «Я › Аккаунт»: identities, devices, the step-up window. */
+    suspend fun account(): AccountViewResult = try {
+        val answer = authorized { api.call("/auth/account", it, get = true) }
+        when {
+            answer == null || answer.code == 401 -> AccountViewResult.SignedOut
+            answer.ok -> AccountViewResult.Ok(api.accountView(answer.text))
+            else -> AccountViewResult.Failed(answer.code)
+        }
+    } catch (_: IOException) {
+        AccountViewResult.Offline
+    } catch (_: kotlinx.serialization.SerializationException) {
+        AccountViewResult.Failed(0)
+    }
+
+    private suspend fun change(path: String, body: JsonObject? = null): AccountChange = try {
+        val answer = authorized { api.call(path, it, body) }
+        when {
+            answer == null -> AccountChange.SignedOut
+            answer.ok -> {
+                val identities = runCatching { api.identities(answer.text) }.getOrNull()?.takeIf { it.isNotEmpty() }
+                identities?.let(::applyIdentities)
+                AccountChange.Done(identities)
+            }
+            answer.error == "step_up_required" -> AccountChange.StepUpRequired
+            answer.error == "identity_in_use" -> AccountChange.IdentityInUse(api.error(answer.text).provider.orEmpty())
+            answer.error == "provider_linked" -> AccountChange.ProviderLinked
+            answer.error == "last_identity" -> AccountChange.LastIdentity
+            answer.error == "identity_mismatch" -> AccountChange.Mismatch
+            answer.code == 401 && answer.error == "unauthorized" -> AccountChange.SignedOut
+            else -> AccountChange.Failed(answer.code)
+        }
+    } catch (_: IOException) {
+        AccountChange.Offline
+    }
+
+    /** The identities the Worker answered after a link or an unlink: the stored session follows. */
+    fun applyIdentities(identities: List<IdentityDto>) {
+        store.credentials.value?.let { store.save(it.withIdentities(identities)) }
+    }
+
+    /** Step-up with Google (A65 §2.3): an ID token from Credential Manager for a fresh [googleNonce]. */
+    suspend fun reauthGoogle(idToken: String): AccountChange = change("/auth/reauth/google", buildJsonObject { put("id_token", idToken) })
+
+    /** «Привязать Google»: a fresh Google sign-in; needs a step-up ≤ 10 min. */
+    suspend fun linkGoogle(idToken: String): AccountChange = change("/auth/link/google", buildJsonObject { put("id_token", idToken) })
+
+    /** «Отвязать»: never the last way in; WHOOP → its tokens are revoked on the server. */
+    suspend fun unlink(provider: String): AccountChange = change("/auth/unlink", buildJsonObject { put("provider", provider) })
+
+    /** «Завершить» on one device of the list. */
+    suspend fun revokeDevice(id: String): AccountChange = change("/auth/devices/revoke", buildJsonObject { put("id", id) })
+
+    /**
+     * «Удалить аккаунт» (A65 §6): the server part. After [AccountChange.Done] the caller wipes the
+     * phone; this session no longer exists anywhere.
+     */
+    suspend fun deleteAccount(): AccountChange = change("/auth/delete")
+
+    /** A refresh at app start, so a deleted account is noticed (and wiped) without any screen. */
+    suspend fun checkAlive() {
+        if (store.credentials.value != null) runCatching { accessToken() }
     }
 
     fun signOutLocally() {

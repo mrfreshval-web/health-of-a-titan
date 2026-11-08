@@ -15,6 +15,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
+/** `401 account_deleted` on refresh: the account is gone, the phone wipes itself (A65 §6). */
+const val ACCOUNT_DELETED = "account_deleted"
+
 /** The Worker is not configured (EDGE_BASE_URL or its secrets missing): a founder action. */
 class AccountNotConfiguredException : IOException("account not configured")
 
@@ -46,6 +49,9 @@ sealed interface RefreshResult {
     /** The session is gone (logout, «Выйти везде», reuse detected, expired): sign in again. */
     data object SignedOut : RefreshResult
 
+    /** The account was deleted (in the app on another phone or on the web page): wipe the phone (A65 §6). */
+    data object Deleted : RefreshResult
+
     data class Unavailable(val code: Int) : RefreshResult
 }
 
@@ -73,9 +79,11 @@ class AuthApi(
     private data class NonceOk(val nonce: String)
 
     @Serializable
-    private data class ErrorBody(
+    internal data class ErrorBody(
         val error: String? = null,
         @SerialName("signup_ticket") val signupTicket: String? = null,
+        /** `409 identity_in_use` / `provider_linked`: which provider. */
+        val provider: String? = null,
     )
 
     @Serializable
@@ -98,7 +106,7 @@ class AuthApi(
         ),
     )
 
-    private fun error(text: String): ErrorBody = runCatching { json.decodeFromString(ErrorBody.serializer(), text) }.getOrDefault(ErrorBody())
+    internal fun error(text: String): ErrorBody = runCatching { json.decodeFromString(ErrorBody.serializer(), text) }.getOrDefault(ErrorBody())
 
     private fun tokens(text: String): AccountTokens = json.decodeFromString(AccountTokens.serializer(), text)
 
@@ -159,6 +167,7 @@ class AuthApi(
             val text = res.body.string()
             return when {
                 res.isSuccessful -> RefreshResult.Ok(tokens(text))
+                res.code == 401 && error(text).error == ACCOUNT_DELETED -> RefreshResult.Deleted
                 res.code == 401 -> RefreshResult.SignedOut
                 else -> RefreshResult.Unavailable(res.code)
             }
@@ -173,6 +182,36 @@ class AuthApi(
     suspend fun logoutAll(access: String): Boolean {
         http.newCall(request("/auth/logout-all", null, access)).await().use { res -> return res.code == 204 }
     }
+
+    /**
+     * One call of the account routes of slices А3 and А5 with the access token: the status, the
+     * `error` code and the body. [body] null with [get] = true is `GET`.
+     */
+    suspend fun call(path: String, access: String, body: JsonObject? = null, get: Boolean = false): Answer {
+        val request = if (get) {
+            if (!config.isConfigured) throw AccountNotConfiguredException()
+            Request.Builder().url(config.url(path)).get().header("Authorization", "Bearer $access").build()
+        } else {
+            request(path, body, access)
+        }
+        http.newCall(request).await().use { res ->
+            if (res.code == 503) throw AccountNotConfiguredException()
+            val text = res.body.string()
+            return Answer(res.code, if (res.isSuccessful) null else error(text).error, text)
+        }
+    }
+
+    /** What [call] got back. */
+    data class Answer(val code: Int, val error: String?, val text: String) {
+        val ok: Boolean get() = code in 200..299
+    }
+
+    fun accountView(text: String): AccountView = json.decodeFromString(AccountView.serializer(), text)
+
+    fun identities(text: String): List<IdentityDto> = json.decodeFromString(IdentitiesOk.serializer(), text).identities
+
+    @Serializable
+    private data class IdentitiesOk(val identities: List<IdentityDto> = emptyList())
 
     suspend fun migrate(legacySession: String, nonce: String, proof: DeviceProof): MigrateResult {
         val body = buildJsonObject { put("nonce", nonce) }.withProof(proof)

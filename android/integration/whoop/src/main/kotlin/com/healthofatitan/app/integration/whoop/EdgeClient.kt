@@ -2,6 +2,7 @@ package com.healthofatitan.app.integration.whoop
 
 import com.healthofatitan.app.core.account.AccountTokens
 import com.healthofatitan.app.core.account.DeviceProof
+import com.healthofatitan.app.core.account.IdentityDto
 import com.healthofatitan.app.core.network.EdgeConfig
 import com.healthofatitan.app.core.network.await
 import kotlinx.serialization.SerialName
@@ -59,6 +60,52 @@ sealed interface TokenResult {
     data object Rejected : TokenResult
 }
 
+/**
+ * What the WHOOP round trip is for (A65 §2.2–2.3): `login` («Войти через WHOOP»), `link` (WHOOP
+ * joins the signed-in account; the same WHOOP again just reconnects) or `reauth` (the step-up of
+ * this session with the account's own WHOOP).
+ */
+enum class WhoopIntent(val code: String) { LOGIN("login"), LINK("link"), REAUTH("reauth") }
+
+/** `/whoop/authorize` with a session (`link`, `reauth`). */
+sealed interface IntentAuthorize {
+    data class Ready(val config: AuthorizeConfig) : IntentAuthorize
+
+    /** Linking a new WHOOP needs a fresh proof of the person first (A65 §2.3). */
+    data object StepUpRequired : IntentAuthorize
+
+    /** `reauth` for an account without WHOOP. */
+    data object NotLinked : IntentAuthorize
+
+    /** The account session was refused: sign in again. */
+    data object SignedOut : IntentAuthorize
+}
+
+/** `/whoop/token` with a session (`link`, `reauth`): no new session either way. */
+sealed interface IntentToken {
+    /** `link`: WHOOP is a way in of this account now; its first access token. */
+    data class Linked(val identities: List<IdentityDto>, val accessToken: String, val expiresAt: Long, val whoopUserId: String) : IntentToken
+
+    /** `reauth`: this session counts as fresh until [stepUpUntil]. */
+    data class Reauthed(val stepUpUntil: Long, val accessToken: String, val expiresAt: Long, val whoopUserId: String) : IntentToken
+
+    /** This WHOOP belongs to another HoT account; nothing changed (no automatic merge). */
+    data object InUse : IntentToken
+
+    /** The account already has another WHOOP. */
+    data object ProviderLinked : IntentToken
+
+    data object StepUpRequired : IntentToken
+
+    /** `reauth` came back with a WHOOP that is not the account's own. */
+    data object Mismatch : IntentToken
+
+    data object SignedOut : IntentToken
+
+    /** The code or state was rejected. */
+    data object Rejected : IntentToken
+}
+
 sealed interface AccessResult {
     data class Token(val accessToken: String, val expiresAt: Long) : AccessResult
 
@@ -92,7 +139,10 @@ class EdgeClient(
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
     @Serializable
-    private data class AuthorizeBody(@SerialName("code_challenge") val codeChallenge: String)
+    private data class AuthorizeBody(
+        @SerialName("code_challenge") val codeChallenge: String,
+        val intent: String? = null,
+    )
 
     @Serializable
     private data class TokenBody(
@@ -103,6 +153,23 @@ class EdgeClient(
         @SerialName("device_sig") val deviceSig: String,
         @SerialName("device_name") val deviceName: String,
         val invite: String? = null,
+    )
+
+    @Serializable
+    private data class IntentTokenBody(
+        val code: String,
+        val state: String,
+        @SerialName("code_verifier") val codeVerifier: String,
+        val intent: String,
+    )
+
+    @Serializable
+    private data class IntentTokenOk(
+        @SerialName("whoop_access_token") val accessToken: String,
+        @SerialName("whoop_expires_at") val expiresAt: Long,
+        @SerialName("whoop_user_id") val whoopUserId: String,
+        val identities: List<IdentityDto> = emptyList(),
+        @SerialName("step_up_until") val stepUpUntil: Long = 0,
     )
 
     @Serializable
@@ -141,6 +208,48 @@ class EdgeClient(
             if (res.code == 503) throw EdgeNotConfiguredException()
             if (!res.isSuccessful) throw IOException("authorize ${res.code}")
             return json.decodeFromString(AuthorizeConfig.serializer(), res.body.string())
+        }
+    }
+
+    /** `link` or `reauth` with the account access token [bearer]: the state is bound to this session. */
+    suspend fun authorizeFor(challenge: String, intent: WhoopIntent, bearer: String): IntentAuthorize {
+        val body = json.encodeToString(AuthorizeBody.serializer(), AuthorizeBody(challenge, intent.code))
+        http.newCall(post("/whoop/authorize", body, bearer)).await().use { res ->
+            val text = res.body.string()
+            return when {
+                res.isSuccessful -> IntentAuthorize.Ready(json.decodeFromString(AuthorizeConfig.serializer(), text))
+                res.code == 403 && error(text)?.error == "step_up_required" -> IntentAuthorize.StepUpRequired
+                res.code == 409 -> IntentAuthorize.NotLinked
+                res.code == 401 -> IntentAuthorize.SignedOut
+                res.code == 503 -> throw EdgeNotConfiguredException()
+                else -> throw IOException("authorize ${res.code}")
+            }
+        }
+    }
+
+    /** Step 2 of `link` / `reauth`: the code with the same [bearer] that started it. */
+    suspend fun tokenFor(code: String, state: String, verifier: String, intent: WhoopIntent, bearer: String): IntentToken {
+        val body = json.encodeToString(IntentTokenBody.serializer(), IntentTokenBody(code, state, verifier, intent.code))
+        http.newCall(post("/whoop/token", body, bearer)).await().use { res ->
+            val text = res.body.string()
+            val e = if (res.isSuccessful) null else error(text)?.error
+            return when {
+                res.isSuccessful -> json.decodeFromString(IntentTokenOk.serializer(), text).let {
+                    if (intent == WhoopIntent.REAUTH) {
+                        IntentToken.Reauthed(it.stepUpUntil, it.accessToken, it.expiresAt, it.whoopUserId)
+                    } else {
+                        IntentToken.Linked(it.identities, it.accessToken, it.expiresAt, it.whoopUserId)
+                    }
+                }
+                e == "identity_in_use" -> IntentToken.InUse
+                e == "provider_linked" -> IntentToken.ProviderLinked
+                e == "step_up_required" -> IntentToken.StepUpRequired
+                e == "identity_mismatch" -> IntentToken.Mismatch
+                res.code == 401 -> IntentToken.SignedOut
+                res.code == 400 -> IntentToken.Rejected
+                res.code == 503 -> throw EdgeNotConfiguredException()
+                else -> throw IOException("token ${res.code}")
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import com.healthofatitan.app.domain.nutrition.NutritionDayPlan
 import com.healthofatitan.app.domain.nutrition.ProfileMode
 import com.healthofatitan.app.domain.safety.Restriction
 import com.healthofatitan.app.domain.safety.SafetyConsumer
+import com.healthofatitan.app.domain.safety.SafetyState
 import com.healthofatitan.app.domain.today.FoodMeal
 import com.healthofatitan.app.domain.today.TodayFood
 import com.healthofatitan.app.integration.whoop.day.TodayFoodSource
@@ -13,6 +14,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
@@ -60,7 +62,8 @@ object TodayFoodModule {
                 delay(TICK_MS)
             }
         }
-        combine(repo.state(clock), bus.state) { s, b ->
+        // An unreadable bus is not «no ED_CARE»: the strictest column hides the numbers (rule 3 of the bus).
+        combine(repo.state(clock), bus.state.catch { emit(SafetyState(unknown = true)) }) { s, b ->
             todayFood(s.plan?.takeIf { it.dayKey == day }, b.restrictions(SafetyConsumer.TODAY))
         }.distinctUntilChanged()
     }

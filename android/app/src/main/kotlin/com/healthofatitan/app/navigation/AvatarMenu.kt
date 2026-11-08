@@ -76,11 +76,12 @@ fun AvatarMenu(
             border = BorderStroke(1.dp, tokens.rule),
             modifier = Modifier
                 .size(44.dp)
-                .semantics { contentDescription = "Профиль: помощь, наставник, настройки" }
+                .semantics { contentDescription = "Меню: помощь, наставник, настройки" }
                 .testTag(AVATAR_TAG),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.core_ui_ic_me), contentDescription = null, modifier = Modifier.size(22.dp))
+                // «≡» in a circle (A66 §2.2): a person here promised a profile the menu does not have.
+                Icon(painterResource(R.drawable.core_ui_ic_menu), contentDescription = null, modifier = Modifier.size(22.dp))
             }
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

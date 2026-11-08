@@ -49,6 +49,15 @@ class TodayTopTest {
     }
 
     @Test
+    fun `the head of the Titan stays in sight under the mode word on every width`() {
+        listOf(360f, 393f, 412f, 448f, 480f).forEach { w ->
+            val side = TodayTopRules.frameSide(w)
+            assertTrue(TodayTopRules.headTop(side) >= TodayTopRules.HEAD_ROOM - 0.5f, "width $w: head at ${TodayTopRules.headTop(side)}")
+            assertTrue(side <= w * TodayTopRules.FRAME / TodayTopRules.SCREEN_WIDTH + 0.01f)
+        }
+    }
+
+    @Test
     fun `the frame stands as A66 §11_2 says`() {
         near(352f, TodayTopRules.feetY)
         near(352f - 0.875f * 440f, TodayTopRules.frameTop)

@@ -147,6 +147,24 @@ object TodayTopRules {
     /** The top of the Titan frame in dp from the top of the scene (above it: the frame is cut). */
     val frameTop: Float get() = feetY - FEET * FRAME
 
+    /** The top of the head in the render, as a share of the frame (the capitals stand higher). */
+    const val HEAD = 0.203f
+
+    /** The head stays below the word of the mode and «оценка» at the top of the scene. */
+    const val HEAD_ROOM = 64f
+
+    /**
+     * The side of the Titan frame on a scene [width] dp wide: 440 : 412 of the width (A66 §11.2), but
+     * never so large that the head goes under the mode word or out of the scene on a wide phone.
+     */
+    fun frameSide(width: Float): Float = minOf(width * FRAME / SCREEN_WIDTH, (feetY - HEAD_ROOM) / (FEET - HEAD))
+
+    /** The top of the head in dp from the top of the scene for a frame of [side] dp. */
+    fun headTop(side: Float): Float = feetY - (FEET - HEAD) * side
+
+    /** The width of the 05b mockup the frame was drawn on. */
+    const val SCREEN_WIDTH = 412f
+
     /**
      * The share of the closed day (A66 §1.1): the mean of the counted rows of «День», each at most 1
      * (under `ED_CARE` two rows, A66 §3.5). A row without a norm to count against is left out.

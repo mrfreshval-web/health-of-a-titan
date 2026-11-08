@@ -148,8 +148,8 @@ internal fun TodayScene(
             },
     ) {
         val width = maxWidth
-        // the frame keeps its 440 : 412 ratio to the width; the axis of the Titan is the centre
-        val frame = width * (TodayTopRules.FRAME / SCREEN_WIDTH)
+        // the frame keeps its 440 : 412 ratio to the width, the head below the mode word; the axis is the centre
+        val frame = TodayTopRules.frameSide(width.value).dp
         Spacer(
             Modifier
                 .fillMaxSize()
@@ -266,7 +266,6 @@ internal fun TodayScene(
     }
 }
 
-private const val SCREEN_WIDTH = 412f
 private const val SUN_RADIUS = 28f
 private const val GROUND = 60f
 private const val GREET_FROM = 0.92f

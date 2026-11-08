@@ -83,7 +83,8 @@ class ProfileStore(
      */
     suspend fun withdrawConsent(keepEdCare: Boolean) = transaction {
         val t = now()
-        record(CONSENT_ID, CONSENT_VERSION, false, t)
+        // «Выключить бережный режим еды» without S4 (Ю-3) does not write a second revoke of S4
+        if (consentDao.latest(user, CONSENT_ID)?.granted == true) record(CONSENT_ID, CONSENT_VERSION, false, t)
         nutritionDao.deleteAllExcept(user, LEVEL_KEY)
         nutritionDao.deleteEvenings(user)
         val journal = events

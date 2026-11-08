@@ -53,6 +53,7 @@ fun interface NutritionContentSource {
  * @property eveningDue the one-tap evening mark is asked (after 18:00, not in ed_care)
  * @property edCareActive `ED_CARE` is on in the safety bus: a withdrawal of S4 asks
  *   «Оставить бережный режим еды?» once (D-058)
+ * @property edCareHistory `ED_CARE` was ever on and its history is in the journal (`ed_care_history`)
  */
 data class NutritionState(
     val content: NutritionContent? = null,
@@ -65,6 +66,7 @@ data class NutritionState(
     val levelCap: Level = Level.PRECISE,
     val loaded: Boolean = false,
     val edCareActive: Boolean = false,
+    val edCareHistory: Boolean = false,
 ) {
     val chosenLevel: Level get() = Level.of(profile.nutritionLevel) ?: Level.BASE
 }
@@ -91,15 +93,16 @@ class NutritionRepository @Inject constructor(
     fun state(clock: Flow<LocalDateTime>): Flow<NutritionState> {
         val today = clock.map { it.toLocalDate() }.distinctUntilChanged()
         val evening = today.flatMapLatest { d -> dao.observeEvening(user, d.toString()) }
-        val safety = bus.state.map { it.edCare.active }.distinctUntilChanged()
+        val safety = bus.state.map { EdCareSeen(it.edCare.active, it.edCare.history) }.distinctUntilChanged()
         val inputs = combine(content, profiles.profile, days.latest, chips) { c, p, d, ch -> Inputs(c, p, d, ch) }
         return combine(inputs, clock, evening, safety) { i, now, ev, ed -> build(i, now, EveningMark.of(ev?.mark), ed) }
     }
 
-    private fun build(i: Inputs, now: LocalDateTime, evening: EveningMark?, edCare: Boolean): NutritionState {
+    private fun build(i: Inputs, now: LocalDateTime, evening: EveningMark?, ed: EdCareSeen): NutritionState {
+        val edCare = ed.active
         val today = now.toLocalDate()
         val dayChips = i.chips.takeIf { it.day == today } ?: DayChips(today)
-        val c = i.content ?: return NutritionState(profile = i.profile, loaded = true, edCareActive = edCare)
+        val c = i.content ?: return NutritionState(profile = i.profile, loaded = true, edCareActive = edCare, edCareHistory = ed.history)
         val folded = ProfileFold.fold(i.profile.constraints, c.profile, i.profile.consented).underEdCare(edCare)
         val chosen = Level.of(i.profile.nutritionLevel) ?: Level.BASE
         val plan = NutritionEngine.plan(DayFacts.input(i.day, today, chosen, folded, dayChips.conditions, dayChips.replaced), c)
@@ -113,6 +116,7 @@ class NutritionRepository @Inject constructor(
             levelCap = folded.levelCap,
             loaded = true,
             edCareActive = edCare,
+            edCareHistory = ed.history,
         )
     }
 
@@ -146,6 +150,8 @@ class NutritionRepository @Inject constructor(
     suspend fun deleteAll() = profiles.deleteAll()
 
     suspend fun setLevel(level: Level) = profiles.setNutritionLevel(level.code)
+
+    private data class EdCareSeen(val active: Boolean, val history: Boolean)
 
     private data class Inputs(val content: NutritionContent?, val profile: ProfileSnapshot, val day: DayView?, val chips: DayChips)
 

@@ -90,6 +90,7 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         if (dict == null) return@Column
         if (!snap.consented) {
             Consent(actions)
+            if (state.edCareActive) EdCareOff(onOff = { actions.onWithdraw(false) })
             Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
             return@Column
         }
@@ -159,7 +160,7 @@ fun NutritionProfileScreen(state: NutritionState, actions: ProfileActions, modif
         }
 
         Text(dict.disclaimer, style = MaterialTheme.typography.bodySmall, color = HotThemeTokens.colors.textTertiary)
-        ConsentWithdraw(edCareActive = state.edCareActive, onWithdraw = actions.onWithdraw)
+        ConsentWithdraw(edCareActive = state.edCareActive, edCareHistory = state.edCareHistory, onWithdraw = actions.onWithdraw)
     }
 }
 

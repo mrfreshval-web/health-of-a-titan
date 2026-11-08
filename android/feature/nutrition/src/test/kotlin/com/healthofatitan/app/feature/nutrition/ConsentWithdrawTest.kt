@@ -3,6 +3,7 @@ package com.healthofatitan.app.feature.nutrition
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -149,6 +150,19 @@ class ConsentWithdrawTest {
     }
 
     @Test
+    fun `turning the kept mode off without S4 deletes the mark and withdraws ed_care_keep`() = runTest {
+        edCareOn()
+        store.withdrawConsent(keepEdCare = true)
+        val s4 = consent(ProfileStore.CONSENT_ID)
+        store.withdrawConsent(keepEdCare = false) // «Выключить бережный режим еды» (Ю-3)
+
+        assertTrue(edCareRows().isEmpty())
+        assertEquals(false, consent(ProfileStore.KEEP_CONSENT_ID)?.granted)
+        assertEquals(s4, consent(ProfileStore.CONSENT_ID), "no second revoke of S4")
+        assertFalse(SafetyFlag.ED_CARE in bus.current())
+    }
+
+    @Test
     fun `the food of the day folds the kept ED_CARE without the profile`() {
         val none = FoldedProfile.none(consented = false)
         assertEquals(none, none.underEdCare(edCareActive = false))
@@ -197,5 +211,27 @@ class ConsentWithdrawTest {
         compose.onNodeWithTag(WITHDRAW_CANCEL_TAG).performClick()
         assertTrue(answers.isEmpty())
         compose.onNodeWithTag(WITHDRAW_CONFIRM_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the off button of the kept mode answers no`() {
+        var off = 0
+        compose.setContent { HotTheme { EdCareOff(onOff = { off++ }) } }
+        compose.onNodeWithTag(ED_CARE_OFF_TAG).performClick()
+        assertEquals(1, off)
+    }
+
+    @Test
+    fun `the confirmation says the hidden things come back when only the history is left`() {
+        compose.setContent { HotTheme { ConsentWithdraw(edCareActive = false, edCareHistory = true, onWithdraw = {}) } }
+        compose.onNodeWithTag(WITHDRAW_BUTTON_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.CONFIRM_BODY_HISTORY.n, substring = true).assertExists()
+    }
+
+    @Test
+    fun `the confirmation without any ED_CARE has no line about it`() {
+        compose.setContent { HotTheme { ConsentWithdraw(edCareActive = false, onWithdraw = {}) } }
+        compose.onNodeWithTag(WITHDRAW_BUTTON_TAG).performClick()
+        compose.onNodeWithText(ConsentWithdrawTexts.CONFIRM_BODY_HISTORY.n, substring = true).assertDoesNotExist()
     }
 }

@@ -19,6 +19,17 @@ class_name = "WhoopVault"
 tag = "v1-whoop-vault"
 new_sqlite_classes = ["WhoopVault"]
 
+# Durable Object AccountVault: the account store of HoT (A65 §4.1, D-062) — accounts,
+# identities, sessions (hashes of refresh tokens only), invites, audit. One instance. Behind the
+# AccountStore interface: moves to Yandex Cloud before the first tester from RU (A65 §7.2, Б1).
+[[durable_objects.bindings]]
+name = "ACCOUNT_VAULT"
+class_name = "AccountVault"
+
+[[migrations]]
+tag = "v2-account-vault"
+new_sqlite_classes = ["AccountVault"]
+
 # Rate limit for the unauthenticated OAuth routes (/whoop/authorize, /whoop/token): 20 per
 # minute per IP. namespace_id is any account-unique integer string.
 [[ratelimits]]
@@ -41,4 +52,6 @@ WHOOP_REDIRECT_URI = "com.healthofatitan.app://oauth/whoop"
 
 # Secrets (names only, values never here):
 #   WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET, ALLOWED_WHOOP_USER_IDS, TOKEN_ENC_KEY,
-#   ANTHROPIC_API_KEY, GOOGLE_TTS_API_KEY, FCM_SERVICE_ACCOUNT_JSON
+#   ANTHROPIC_API_KEY, GOOGLE_TTS_API_KEY, FCM_SERVICE_ACCOUNT_JSON,
+#   AUTH_SIGNING_KEY (+ AUTH_SIGNING_KEY_PREVIOUS during a rotation) — `node scripts/gen-signing-key.mjs`,
+#   GOOGLE_WEB_CLIENT_ID — Google Cloud Console → OAuth client «Web application» (A65 §8).

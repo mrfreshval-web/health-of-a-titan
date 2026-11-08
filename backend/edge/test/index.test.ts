@@ -85,7 +85,7 @@ describe("routes", () => {
     for (const missing of [{ AUTH_SIGNING_KEY: undefined }, { ACCOUNT_VAULT: undefined }]) {
       const { env } = makeEnv(missing);
       for (const r of ROUTES.filter((x) => x.path.startsWith("/auth/"))) {
-        expect((await handle(post(r.path, {}), env)).status).toBe(503);
+        expect((await handle(r.method === "GET" ? req("GET", r.path) : post(r.path, {}), env)).status).toBe(503);
       }
       expect((await handle(post("/whoop/token", {}), env)).status).toBe(503);
     }

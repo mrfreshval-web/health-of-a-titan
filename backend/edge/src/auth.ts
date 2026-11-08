@@ -1,5 +1,5 @@
 import { type AccessClaims, loadSigningKeys, signAccessToken, verifyAccessToken } from "./access-token";
-import { type Account, type AccountStore, DurableAccountStore } from "./account-store";
+import { type Account, type AccountStore, DurableAccountStore, type Session } from "./account-store";
 import { bearerToken } from "./allowlist";
 import {
   checkNonce,
@@ -130,14 +130,25 @@ export async function issueSession(ctx: AuthContext, account: Account, device: D
   return sessionBody(account, access, refresh);
 }
 
-function sessionBody(account: Account, access: { token: string; exp: number }, refresh: string): Record<string, unknown> {
+export function sessionBody(account: Account, access: { token: string; exp: number }, refresh: string): Record<string, unknown> {
   return {
     access: access.token,
     access_expires_at: access.exp * 1000,
     refresh,
     account_id: account.id,
-    identities: account.identities.map((i) => ({ provider: i.provider, subject: i.subject, linked_at: i.linkedAt })),
+    identities: identitiesBody(account),
   };
+}
+
+/** The identities of an account as the phone sees them (never an e-mail or a name). */
+export function identitiesBody(account: Account): Array<Record<string, unknown>> {
+  return account.identities.map((i) => ({
+    provider: i.provider,
+    subject: i.subject,
+    linked_at: i.linkedAt,
+    last_login_at: i.lastLoginAt,
+    ...(i.linkedDevice ? { linked_device: i.linkedDevice } : {}),
+  }));
 }
 
 /** Claims of the bearer access token (signature and expiry only), or null. */
@@ -146,12 +157,18 @@ export async function accessClaims(ctx: AuthContext, request: Request): Promise<
 }
 
 /** Access token **and** a live session in the store: for sensitive routes (A65 §3.4). */
-export async function liveCaller(ctx: AuthContext, request: Request): Promise<{ claims: AccessClaims; account: Account } | null> {
+export async function liveCaller(ctx: AuthContext, request: Request): Promise<LiveCaller | null> {
   const claims = await accessClaims(ctx, request);
   if (!claims) return null;
   const live = await ctx.store.liveSession(claims.sid, nowMs(ctx));
   if (!live || live.account.id !== claims.sub) return null;
-  return { claims, account: live.account };
+  return { claims, account: live.account, session: live.session };
+}
+
+export interface LiveCaller {
+  claims: AccessClaims;
+  account: Account;
+  session: Session;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -163,7 +180,7 @@ export async function authNonce(ctx: AuthContext): Promise<Response> {
 }
 
 /** Checks and spends a login nonce; null when it is fine, else the error answer. */
-async function spendNonce(ctx: AuthContext, nonce: unknown): Promise<Response | null> {
+export async function spendNonce(ctx: AuthContext, nonce: unknown): Promise<Response | null> {
   const check = await checkNonce((await keys(ctx)).nonceMac, nonce, ctx.nowSeconds);
   if (!check.ok) return unauthorized(check.reason === "expired" ? "nonce_expired" : "invalid_nonce");
   if (!(await ctx.store.consumeNonce(check.id, check.exp, nowMs(ctx)))) return unauthorized("nonce_used");
@@ -214,7 +231,7 @@ export async function authRefresh(ctx: AuthContext, body: Record<string, unknown
   if (!sid || typeof refresh !== "string" || typeof ts !== "number" || !Number.isInteger(ts)) return json(400, { error: "invalid_request" });
   if (Math.abs(ts - ctx.nowSeconds) > DEVICE_SIG_WINDOW_SECONDS) return json(400, { error: "clock_skew" });
   const live = await ctx.store.liveSession(sid, nowMs(ctx));
-  if (!live) return unauthorized("invalid_grant");
+  if (!live) return unauthorized((await ctx.store.isTombstoned(sid)) ? "account_deleted" : "invalid_grant");
   if (!(await verifyDeviceSignature(live.session.devicePub, await refreshMessage(refresh, ts), body.sig))) {
     return unauthorized("invalid_device_proof");
   }

@@ -1,4 +1,16 @@
-import type { AccountStore } from "./account-store";
+import {
+  authAccount,
+  authDelete,
+  authLinkGoogle,
+  authReauthGoogle,
+  authRevokeDevice,
+  authUnlink,
+  isFresh,
+  linkAnswer,
+  stepUpRequired,
+  webDelete,
+} from "./account-routes";
+import { type AccountStore, stepUpUntil } from "./account-store";
 import { bearerToken, isAllowedWhoopUser } from "./allowlist";
 import {
   accessClaims,
@@ -16,6 +28,7 @@ import {
   inviteOf,
   issueSession,
   json,
+  type LiveCaller,
   liveCaller,
   noContent,
   NotConfigured,
@@ -25,7 +38,8 @@ import {
 import { ConfigError, deriveKeys } from "./crypto";
 import type { Env } from "./env";
 import type { GoogleIdTokenVerifier } from "./google";
-import { isValidChallenge, issueState, verifyState } from "./oauth-state";
+import { deletePage, DELETE_PAGE_SCRIPT, deletePageScript } from "./delete-page";
+import { isStateIntent, isValidChallenge, issueState, sessionBinding, type StateBinding, verifyState } from "./oauth-state";
 import { isValidUserId, sessionHash, sessionUserId } from "./session";
 import { DurableTokenVault, type TokenVault } from "./token-vault";
 import type { AccessResult } from "./vault";
@@ -46,7 +60,7 @@ export const VERSION = "0.1.0";
  * - "app": every app endpoint (A14 §5 AppAuth): the account access token, signature only;
  * - "webhook-hmac": WHOOP signature (slice 3).
  */
-type Auth = "none" | "rate-limit" | "session" | "account" | "account-live" | "app" | "webhook-hmac";
+type Auth = "none" | "rate-limit" | "session" | "account" | "account-live" | "app" | "webhook-hmac" | "public";
 
 interface Route {
   method: "GET" | "POST";
@@ -72,6 +86,17 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/auth/logout", auth: "account", slice: "А1", implemented: true },
   { method: "POST", path: "/auth/logout-all", auth: "account-live", slice: "А1", implemented: true },
   { method: "POST", path: "/auth/invites", auth: "account-live", slice: "А1", implemented: true },
+  // Slice А3: identities, devices, step-up (A65 §2.3, §3.4).
+  { method: "GET", path: "/auth/account", auth: "account-live", slice: "А3", implemented: true },
+  { method: "POST", path: "/auth/devices/revoke", auth: "account-live", slice: "А3", implemented: true },
+  { method: "POST", path: "/auth/reauth/google", auth: "account-live", slice: "А3", implemented: true },
+  { method: "POST", path: "/auth/link/google", auth: "account-live", slice: "А3", implemented: true },
+  { method: "POST", path: "/auth/unlink", auth: "account-live", slice: "А3", implemented: true },
+  // Slice А5: deletion in the app and on the web page for Google Play (A65 §6).
+  { method: "POST", path: "/auth/delete", auth: "account-live", slice: "А5", implemented: true },
+  { method: "GET", path: "/account/delete", auth: "public", slice: "А5", implemented: true },
+  { method: "GET", path: DELETE_PAGE_SCRIPT, auth: "public", slice: "А5", implemented: true },
+  { method: "POST", path: "/account/delete", auth: "rate-limit", slice: "А5", implemented: true },
   { method: "POST", path: "/whoop/authorize", auth: "rate-limit", slice: "1", implemented: true },
   { method: "POST", path: "/whoop/token", auth: "rate-limit", slice: "1", implemented: true },
   { method: "POST", path: "/whoop/access", auth: "session", slice: "1", implemented: true },
@@ -84,8 +109,9 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/tts", auth: "app", slice: "5b" },
 ];
 
-function matchRoute(path: string): Route | undefined {
-  return ROUTES.find((r) => (r.path.endsWith("/") ? path.startsWith(r.path) && path.length > r.path.length : path === r.path));
+/** The routes of [path] (one per method). */
+function matchRoutes(path: string): Route[] {
+  return ROUTES.filter((r) => (r.path.endsWith("/") ? path.startsWith(r.path) && path.length > r.path.length : path === r.path));
 }
 
 /** Small JSON bodies only on the WHOOP and account routes. */
@@ -114,12 +140,34 @@ function whoopConfigured(env: Env): boolean {
   return Boolean(env.WHOOP_CLIENT_ID && env.WHOOP_CLIENT_SECRET && env.TOKEN_ENC_KEY && env.WHOOP_VAULT);
 }
 
-async function whoopAuthorize(request: Request, env: Env, nowSeconds: number): Promise<Response> {
+/**
+ * For `intent=link | reauth` (A65 §2.2–2.3) the state is bound to the caller's account session;
+ * `login` needs no session. Returns the binding, or the answer that refuses the request.
+ */
+async function stateBinding(request: Request, ctx: AuthContext | null, intent: unknown): Promise<{ bind: StateBinding; caller: LiveCaller | null } | Response> {
+  if (intent === undefined || intent === null || intent === "login") return { bind: { intent: "login", binding: "" }, caller: null };
+  if (!isStateIntent(intent)) return invalidRequest();
+  if (!ctx) return notConfigured();
+  const caller = await liveCaller(ctx, request);
+  if (!caller) return unauthorized();
+  return { bind: { intent, binding: await sessionBinding(caller.account.id, caller.session.sid) }, caller };
+}
+
+async function whoopAuthorize(request: Request, env: Env, nowSeconds: number, ctx: AuthContext | null): Promise<Response> {
   if (!whoopConfigured(env)) return notConfigured();
   const body = await readJson(request);
   if (!body || !isValidChallenge(body.code_challenge)) return invalidRequest();
+  const bound = await stateBinding(request, ctx, body.intent);
+  if (bound instanceof Response) return bound;
+  const { bind, caller } = bound;
+  if (caller && ctx) {
+    const whoopId = whoopSubject(caller.account);
+    // reauth: only an account with WHOOP; link of a new WHOOP: the step-up comes first (A65 §2.3)
+    if (bind.intent === "reauth" && !whoopId) return json(409, { error: "whoop_not_linked" });
+    if (bind.intent === "link" && !whoopId && !isFresh(ctx, caller.session)) return stepUpRequired();
+  }
   const keys = await deriveKeys(env.TOKEN_ENC_KEY);
-  const state = await issueState(keys.stateMac, body.code_challenge, nowSeconds);
+  const state = await issueState(keys.stateMac, body.code_challenge, nowSeconds, bind);
   const redirectUri = env.WHOOP_REDIRECT_URI || DEFAULT_REDIRECT_URI;
   const clientId = env.WHOOP_CLIENT_ID!;
   return json(200, {
@@ -143,10 +191,13 @@ async function whoopToken(request: Request, ctx: AuthContext, http?: typeof fetc
   const body = await readJson(request);
   const code = body?.code;
   if (!body || typeof code !== "string" || code.length < 1 || code.length > 2048) return invalidRequest();
+  const bound = await stateBinding(request, ctx, body.intent);
+  if (bound instanceof Response) return bound;
   const keys = await deriveKeys(env.TOKEN_ENC_KEY);
-  const check = await verifyState(keys.stateMac, body.state, body.code_verifier, nowSeconds);
+  const check = await verifyState(keys.stateMac, body.state, body.code_verifier, nowSeconds, bound.bind);
   if (check === "expired") return json(400, { error: "state_expired" });
   if (check !== "ok") return json(400, { error: "invalid_state" });
+  if (bound.caller) return whoopLinkOrReauth(ctx, bound.caller, bound.bind.intent, code, http);
   const device = await deviceProof(body, String(body.state));
   if (!device) return json(400, { error: "invalid_device_proof" });
   const invite = await inviteOf(body);
@@ -187,6 +238,60 @@ async function whoopToken(request: Request, ctx: AuthContext, http?: typeof fetc
       whoop_access_token: tokens.accessToken,
       whoop_expires_at: tokens.expiresAt,
     });
+  } catch (e) {
+    if (e instanceof WhoopError) {
+      if (e.kind === "invalid_grant") return json(400, { error: "invalid_code" });
+      return json(502, { error: e.kind === "rejected" ? "whoop_rejected" : "whoop_unavailable" });
+    }
+    throw e;
+  }
+}
+
+/**
+ * `intent=link`: WHOOP joins the signed-in account (a Google account connects WHOOP, A65 §2.3);
+ * the same WHOOP again just reconnects its tokens. `intent=reauth`: the step-up of a session with
+ * the account's own WHOOP. No new session either way. A WHOOP that belongs to another account is
+ * `409 identity_in_use`: its tokens are not stored, and its grant is left alone (it serves that
+ * account); a grant of a WHOOP user that nobody owns is revoked.
+ */
+async function whoopLinkOrReauth(ctx: AuthContext, caller: LiveCaller, intent: "login" | "link" | "reauth", code: string, http?: typeof fetch): Promise<Response> {
+  if (!ctx.vault) return notConfigured();
+  const whoop = new WhoopClient({
+    clientId: ctx.env.WHOOP_CLIENT_ID!,
+    clientSecret: ctx.env.WHOOP_CLIENT_SECRET!,
+    redirectUri: ctx.env.WHOOP_REDIRECT_URI || DEFAULT_REDIRECT_URI,
+    fetch: http,
+  });
+  const now = ctx.nowSeconds * 1000;
+  try {
+    const tokens = await whoop.exchangeCode(code);
+    const userId = await whoop.userId(tokens.accessToken);
+    if (!isValidUserId(userId)) return json(502, { error: "whoop_unavailable" });
+    const owner = await ctx.store.ownerOf("whoop", userId);
+    const mine = owner === caller.account.id;
+    const drop = async () => {
+      if (!owner) await whoop.revoke(tokens.accessToken);
+    };
+    const whoopBody = { whoop_user_id: userId, whoop_access_token: tokens.accessToken, whoop_expires_at: tokens.expiresAt };
+    if (intent === "reauth") {
+      if (!mine) {
+        await drop();
+        return json(403, { error: "identity_mismatch" });
+      }
+      await ctx.vault.connect(userId, tokens);
+      const session = await ctx.store.stepUp(caller.session.sid, now);
+      if (!session) return unauthorized();
+      return json(200, { step_up_until: stepUpUntil(session), ...whoopBody });
+    }
+    if (owner && !mine) return json(409, { error: "identity_in_use", provider: "whoop" });
+    if (!mine && !isFresh(ctx, caller.session)) {
+      await drop();
+      return stepUpRequired();
+    }
+    const answer = await linkAnswer(ctx, caller, "whoop", userId, whoopBody);
+    if (answer.status === 200) await ctx.vault.connect(userId, tokens);
+    else await drop();
+    return answer;
   } catch (e) {
     if (e instanceof WhoopError) {
       if (e.kind === "invalid_grant") return json(400, { error: "invalid_code" });
@@ -260,10 +365,14 @@ export async function handle(request: Request, env: Env, options: HandleOptions 
     return json(200, { status: "ok", service: "hot-edge", version: VERSION });
   }
 
-  const route = matchRoute(pathname);
-  if (!route) return json(404, { error: "not_found" });
-  if (request.method !== route.method) {
-    return json(405, { error: "method_not_allowed" }, { Allow: route.method });
+  const routes = matchRoutes(pathname);
+  if (routes.length === 0) return json(404, { error: "not_found" });
+  const route = routes.find((r) => r.method === request.method);
+  if (!route) return json(405, { error: "method_not_allowed" }, { Allow: routes.map((r) => r.method).join(", ") });
+
+  // The web page of deletion (A65 §6): static, no cookies, no forms, nothing collected.
+  if (route.auth === "public") {
+    return route.path === DELETE_PAGE_SCRIPT ? deletePageScript() : deletePage(env.GOOGLE_WEB_CLIENT_ID);
   }
 
   if (route.auth === "rate-limit" && env.RATE_LIMITER) {
@@ -285,6 +394,10 @@ export async function handle(request: Request, env: Env, options: HandleOptions 
           return await authLogoutAll(ctx, request);
         case "/auth/invites":
           return await authInvites(ctx, request);
+        case "/auth/account":
+          return await authAccount(ctx, request);
+        case "/auth/delete":
+          return await authDelete(ctx, request);
       }
       const body = await readJson(request);
       if (!body) return invalidRequest();
@@ -297,12 +410,27 @@ export async function handle(request: Request, env: Env, options: HandleOptions 
           return await authRefresh(ctx, body);
         case "/auth/migrate":
           return await authMigrate(ctx, request, body);
+        case "/auth/devices/revoke":
+          return await authRevokeDevice(ctx, request, body);
+        case "/auth/reauth/google":
+          return await authReauthGoogle(ctx, request, body);
+        case "/auth/link/google":
+          return await authLinkGoogle(ctx, request, body);
+        case "/auth/unlink":
+          return await authUnlink(ctx, request, body);
       }
+    }
+
+    if (route.path === "/account/delete") {
+      if (!ctx) return notConfigured();
+      const body = await readJson(request);
+      if (!body) return invalidRequest();
+      return await webDelete(ctx, body);
     }
 
     switch (route.path) {
       case "/whoop/authorize":
-        return await whoopAuthorize(request, env, nowSeconds);
+        return await whoopAuthorize(request, env, nowSeconds, ctx);
       case "/whoop/token":
         if (!whoopConfigured(env) || !ctx) return notConfigured();
         return await whoopToken(request, ctx, options.fetch);

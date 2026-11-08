@@ -137,8 +137,10 @@ object SafetyPolicy {
     private fun training(flag: SafetyFlag): Set<Restriction> = when (flag) {
         SafetyFlag.EMERGENCY, SafetyFlag.CRISIS_L2, SafetyFlag.CRISIS_L3 -> STOP + Restriction.NO_LOAD
         SafetyFlag.SICK -> setOf(Restriction.NO_LOAD)
-        SafetyFlag.PREGNANT, SafetyFlag.POSTPARTUM_12M, SafetyFlag.LACTATING, SafetyFlag.MEDS_HR, SafetyFlag.MEDS_PSY,
-        SafetyFlag.CHRONIC, SafetyFlag.INJURY, SafetyFlag.SCREEN_NOT_CLEARED, SafetyFlag.AGE_65P,
+        // Food windows are not a tool in pregnancy and lactation, in every consumer (review of Agent 3, П-1).
+        SafetyFlag.PREGNANT, SafetyFlag.LACTATING -> setOf(Restriction.INTENSITY_CAP, Restriction.HIDE_FOOD_WINDOWS)
+        SafetyFlag.POSTPARTUM_12M, SafetyFlag.MEDS_HR, SafetyFlag.MEDS_PSY, SafetyFlag.CHRONIC, SafetyFlag.INJURY,
+        SafetyFlag.SCREEN_NOT_CLEARED, SafetyFlag.AGE_65P,
         -> setOf(Restriction.INTENSITY_CAP)
         SafetyFlag.ED_CARE -> ED_HIDDEN
         SafetyFlag.STORM -> setOf(Restriction.SOBER)

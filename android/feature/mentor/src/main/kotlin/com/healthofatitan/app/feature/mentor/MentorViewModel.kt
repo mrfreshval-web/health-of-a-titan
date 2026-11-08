@@ -12,6 +12,8 @@ import com.healthofatitan.app.domain.safety.SafetyConsumer
 import com.healthofatitan.app.domain.safety.SafetyFlag
 import com.healthofatitan.app.feature.mentor.data.EncryptedMentorMemory
 import com.healthofatitan.app.feature.mentor.data.MentorApi
+import com.healthofatitan.app.feature.mentor.data.MentorCall
+import com.healthofatitan.app.feature.mentor.data.MentorReply
 import com.healthofatitan.app.feature.mentor.data.MentorMemory
 import com.healthofatitan.app.feature.mentor.data.TalkSummary
 import com.healthofatitan.app.core.account.AccountAccess

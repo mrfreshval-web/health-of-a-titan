@@ -14,7 +14,8 @@ import com.healthofatitan.app.feature.mentor.data.EncryptedMentorMemory
 import com.healthofatitan.app.feature.mentor.data.MentorApi
 import com.healthofatitan.app.feature.mentor.data.MentorMemory
 import com.healthofatitan.app.feature.mentor.data.TalkSummary
-import com.healthofatitan.app.integration.whoop.WhoopCredentialStore
+import com.healthofatitan.app.core.account.AccountAccess
+import com.healthofatitan.app.core.account.AccountSession
 import com.healthofatitan.app.integration.whoop.day.DailyLoopRepository
 import com.healthofatitan.app.integration.whoop.safety.SafetyBus
 import dagger.Module
@@ -40,7 +41,7 @@ import javax.inject.Singleton
 class MentorViewModel @Inject constructor(
     api: MentorApi,
     private val memory: MentorMemory,
-    credentials: WhoopCredentialStore,
+    account: AccountSession,
     bus: SafetyBus,
     loop: DailyLoopRepository,
     settings: MentorSettings,
@@ -48,7 +49,7 @@ class MentorViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val conversation = MentorConversation(
-        send = { call -> api.send(call, credentials.credentials.value?.session) },
+        send = { call -> sendWithAccess(api, account, call) },
         safety = {
             val s = bus.current()
             MentorSafety(
@@ -112,4 +113,24 @@ object MentorModule {
     @Singleton
     fun provideMentorMemory(@ApplicationContext context: Context, cipher: FieldCipher, json: Json): MentorMemory =
         EncryptedMentorMemory(context, cipher, json)
+}
+
+/**
+ * A65 §3.4: `/llm/mentor` takes the account access token. A token refused on the way (expired,
+ * rotated key) gets one fresh try, as in WhoopAccessTokens; no account means «войти».
+ */
+internal suspend fun sendWithAccess(api: MentorApi, account: AccountSession, call: MentorCall): MentorReply {
+    suspend fun token(stale: String? = null): String? = try {
+        when (val a = account.accessToken(stale)) {
+            is AccountAccess.Ok -> a.token
+            else -> null
+        }
+    } catch (e: java.io.IOException) {
+        null
+    }
+    val first = token() ?: return if (account.isSignedIn) MentorReply.Offline else MentorReply.NeedsLogin
+    val reply = api.send(call, first)
+    if (reply != MentorReply.NeedsLogin) return reply
+    val second = token(stale = first) ?: return MentorReply.NeedsLogin
+    return api.send(call, second)
 }

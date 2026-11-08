@@ -45,7 +45,7 @@ sealed interface MentorReply {
     /** No ANTHROPIC_API_KEY (or no EDGE_BASE_URL): a founder action, said plainly. */
     data class NotConfigured(val missing: String?) : MentorReply
 
-    /** The device session is missing or gone: connect WHOOP again (A65 replaces this later). */
+    /** No HoT account on this phone, or it was signed out: sign in again (A65). */
     data object NeedsLogin : MentorReply
 
     /** D-056: the day or the month is spent. */

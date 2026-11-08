@@ -11,6 +11,7 @@ android {
 // the chronicle on the phone. CrisisGuard and the safety bus come from :integration:whoop.
 dependencies {
     implementation(project(":integration:whoop"))
+    implementation(project(":core:account"))
     implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":core:security"))

@@ -227,7 +227,7 @@ class AccountSession(
     suspend fun migrate(legacySession: String): MigrateResult {
         val nonce = api.nonce()
         val r = api.migrate(legacySession, nonce, proof(nonce))
-        if (r is MigrateResult.Ok) establish(r.tokens)
+        if (r is MigrateResult.Ok && !establish(r.tokens)) return MigrateResult.OtherOwner
         return r
     }
 

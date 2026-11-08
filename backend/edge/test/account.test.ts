@@ -364,6 +364,29 @@ describe("deletion (A65 §6, slice А5)", () => {
     expect(w.accounts.storage.dump()).not.toContain("tomb:");
   });
 
+  it("a failing WHOOP vault leaves the account in place; a retry wipes the tokens and deletes", async () => {
+    const w = await world();
+    const f = await founder(w);
+    const vault = w.ns.entry("whoop-user:4242").storage;
+    expect(vault.dump()).not.toBe("[]");
+    const real = w.ns.get.bind(w.ns);
+    w.ns.get = () => ({
+      fetch: async () => {
+        throw new Error("vault unavailable");
+      },
+    });
+    const failed = await w.call(post("/auth/delete", undefined, f.access)).catch(() => null);
+    expect(failed === null || failed.status >= 500).toBe(true);
+    // nothing is deleted: the session works, so the deletion can be repeated
+    expect((await w.call(get("/auth/account", f.access))).status).toBe(200);
+    w.ns.get = real;
+    const res = await w.call(post("/auth/delete", undefined, f.access));
+    expect(res.status).toBe(200);
+    // no WHOOP tokens stay on the server
+    expect(vault.dump()).toBe("[]");
+    expect(w.whoop.revoked.length).toBe(1);
+  });
+
   it("the founder's used invite forgets the deleted account", async () => {
     const w = await world();
     const f = await founder(w);

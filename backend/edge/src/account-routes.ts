@@ -141,11 +141,14 @@ export async function authUnlink(ctx: AuthContext, request: Request, body: Recor
  * no tokens, so there is nothing to revoke there.
  */
 export async function deleteAccount(ctx: AuthContext, accountId: string): Promise<Identity[] | null> {
-  const identities = await ctx.store.deleteAccount(accountId, nowMs(ctx));
-  // The account is gone first; then its WHOOP grant is revoked (best effort) and its tokens wiped.
-  const whoop = identities?.find((i) => i.provider === "whoop");
+  const identities = await ctx.store.identitiesOf(accountId);
+  if (!identities) return null;
+  // WHOOP first (idempotent: revoke at WHOOP best effort, tokens always wiped). If the vault call
+  // fails, the account is not deleted yet and the deletion can simply be repeated — no WHOOP
+  // tokens are ever left on the server without an owner.
+  const whoop = identities.find((i) => i.provider === "whoop");
   if (whoop && ctx.vault) await ctx.vault.disconnect(whoop.subject);
-  return identities;
+  return ctx.store.deleteAccount(accountId, nowMs(ctx));
 }
 
 export async function authDelete(ctx: AuthContext, request: Request): Promise<Response> {

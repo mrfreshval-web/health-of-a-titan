@@ -285,7 +285,8 @@ class WhoopConnection(
                 tokens.clear()
                 store.clear()
             }
-            is MigrateResult.Unavailable -> Unit
+            // Another account owns the data on the phone: «Вход» asks first (A65 §2.3).
+            is MigrateResult.Unavailable, MigrateResult.OtherOwner -> Unit
         }
     }
 

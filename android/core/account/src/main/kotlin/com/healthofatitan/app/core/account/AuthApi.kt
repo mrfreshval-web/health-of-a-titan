@@ -62,6 +62,9 @@ sealed interface MigrateResult {
     data object Rejected : MigrateResult
 
     data class Unavailable(val code: Int) : MigrateResult
+
+    /** The account is fine, but the phone keeps another account's data: nothing was kept. */
+    data object OtherOwner : MigrateResult
 }
 
 /**

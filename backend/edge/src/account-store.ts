@@ -143,6 +143,8 @@ export interface AccountStore {
   // Slice А3: identities, devices, step-up
   /** The account id that owns the identity, or null. */
   ownerOf(provider: Provider, subject: string): Promise<string | null>;
+  /** The identities of the account, or null when there is no such account. */
+  identitiesOf(accountId: string): Promise<Identity[] | null>;
   /** Live sessions of the account (the list of devices), oldest first. */
   sessions(accountId: string, now: number): Promise<Session[]>;
   /** «Завершить» on a device: only a session of [accountId]. */
@@ -376,6 +378,10 @@ export class KvAccountStore implements AccountStore {
     return this.serial(() => this.writeAudit(event, accountId, now));
   }
 
+  identitiesOf(accountId: string): Promise<Identity[] | null> {
+    return this.serial(async () => (await this.kv.get<Account>(K.account(accountId)))?.identities ?? null);
+  }
+
   ownerOf(provider: Provider, subject: string): Promise<string | null> {
     return this.serial(async () => (await this.kv.get<string>(K.identity(provider, subject))) ?? null);
   }
@@ -531,6 +537,7 @@ const OPS = [
   "createInvite",
   "audit",
   "ownerOf",
+  "identitiesOf",
   "sessions",
   "revokeDevice",
   "stepUp",
@@ -609,6 +616,9 @@ export class DurableAccountStore implements AccountStore {
   }
   ownerOf(provider: Provider, subject: string) {
     return this.call<string | null>("ownerOf", provider, subject);
+  }
+  identitiesOf(accountId: string) {
+    return this.call<Identity[] | null>("identitiesOf", accountId);
   }
   sessions(accountId: string, now: number) {
     return this.call<Session[]>("sessions", accountId, now);

@@ -102,7 +102,8 @@ class TodayPolishTest {
             assertEquals(listOf(TodayBlock.ME, TodayBlock.TASKS, TodayBlock.SUPPORTS, TodayBlock.RHYTHM), view.blocks)
         }
         compose.setContent { HotTheme { TodayScreen(TodayUiState(whoop = whoop), onConnectWhoop = {}, day = day()) } }
-        val tops = TodayLayout.ORDER.map { compose.onNodeWithTag(it.tag).fetchSemanticsNode().boundsInRoot.top }
+        // positionInRoot, not boundsInRoot: the scene pushes «Ритм дня» below the fold, where bounds clip to 0
+        val tops = TodayLayout.ORDER.map { compose.onNodeWithTag(it.tag).fetchSemanticsNode().positionInRoot.y }
         assertEquals(tops.sorted(), tops)
     }
 

@@ -54,7 +54,8 @@ class UnifiedConsentStore(
 
     companion object {
         const val CONSENT_ID = "unified"
-        const val VERSION = 1
+        /** v2: the legal review of A68 «Приложение B» (2026-11-08); a v1 tick asks again. */
+        const val VERSION = 2
 
         /** The id of the AI transfer (A68 §2, condition 7 of the review of PR #58). */
         const val MENTOR_AI_ID = "mentor_ai"
